@@ -88,26 +88,32 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists stories_set_updated_at on stories;
 create trigger stories_set_updated_at
 before update on stories
 for each row execute procedure set_updated_at();
 
+drop trigger if exists stories_set_created_by on stories;
 create trigger stories_set_created_by
 before insert on stories
 for each row execute procedure set_created_by();
 
+drop trigger if exists ads_set_updated_at on ads;
 create trigger ads_set_updated_at
 before update on ads
 for each row execute procedure set_updated_at();
 
+drop trigger if exists events_set_updated_at on events;
 create trigger events_set_updated_at
 before update on events
 for each row execute procedure set_updated_at();
 
+drop trigger if exists alerts_set_updated_at on alerts;
 create trigger alerts_set_updated_at
 before update on alerts
 for each row execute procedure set_updated_at();
 
+drop trigger if exists story_slots_set_updated_at on story_slots;
 create trigger story_slots_set_updated_at
 before update on story_slots
 for each row execute procedure set_updated_at();
@@ -115,12 +121,13 @@ for each row execute procedure set_updated_at();
 create or replace function handle_new_user()
 returns trigger as $$
 begin
-  insert into profiles (id, email)
+  insert into public.profiles (id, email)
   values (new.id, new.email);
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure handle_new_user();
@@ -130,7 +137,7 @@ returns boolean as $$
   select exists (
     select 1 from profiles where id = auth.uid() and is_admin = true
   );
-$$ language sql stable;
+$$ language sql stable security definer set search_path = public;
 
 alter table profiles enable row level security;
 alter table stories enable row level security;
@@ -139,33 +146,40 @@ alter table ads enable row level security;
 alter table events enable row level security;
 alter table alerts enable row level security;
 
+drop policy if exists "Profiles admin read" on profiles;
 create policy "Profiles admin read"
 on profiles for select
 using (is_admin());
 
+drop policy if exists "Profiles admin write" on profiles;
 create policy "Profiles admin write"
 on profiles for all
 using (is_admin())
 with check (is_admin());
 
+drop policy if exists "Stories public read published" on stories;
 create policy "Stories public read published"
 on stories for select
 using (status = 'published');
 
+drop policy if exists "Stories admin full" on stories;
 create policy "Stories admin full"
 on stories for all
 using (is_admin())
 with check (is_admin());
 
+drop policy if exists "Story slots public read" on story_slots;
 create policy "Story slots public read"
 on story_slots for select
 using (true);
 
+drop policy if exists "Story slots admin full" on story_slots;
 create policy "Story slots admin full"
 on story_slots for all
 using (is_admin())
 with check (is_admin());
 
+drop policy if exists "Ads public read active" on ads;
 create policy "Ads public read active"
 on ads for select
 using (
@@ -173,11 +187,13 @@ using (
   and current_date between start_date and end_date
 );
 
+drop policy if exists "Ads admin full" on ads;
 create policy "Ads admin full"
 on ads for all
 using (is_admin())
 with check (is_admin());
 
+drop policy if exists "Events public read upcoming" on events;
 create policy "Events public read upcoming"
 on events for select
 using (
@@ -185,11 +201,13 @@ using (
   and start_at >= now() - interval '1 day'
 );
 
+drop policy if exists "Events admin full" on events;
 create policy "Events admin full"
 on events for all
 using (is_admin())
 with check (is_admin());
 
+drop policy if exists "Alerts public read active window" on alerts;
 create policy "Alerts public read active window"
 on alerts for select
 using (
@@ -198,6 +216,7 @@ using (
   and (end_at is null or end_at >= now())
 );
 
+drop policy if exists "Alerts admin full" on alerts;
 create policy "Alerts admin full"
 on alerts for all
 using (is_admin())

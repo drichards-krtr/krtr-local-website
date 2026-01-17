@@ -2,11 +2,6 @@ import Link from "next/link";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
-  { label: "Dysart", href: "/dysart" },
-  { label: "La Porte City", href: "/lpc" },
-  { label: "Union CSD", href: "/ucsd" },
-  { label: "Sports", href: "/sports" },
-  { label: "Community Calendar", href: "/comcal" },
   { label: "Share", href: "https://forms.gle/ANKMcHbbSXwieYKRA" },
 ];
 
