@@ -76,7 +76,10 @@ export default function StoryEditor({ initialStory }: Props) {
     } else {
       setSuccess("Saved.");
       if (!isEdit) {
-        window.location.href = `/cms/stories/${response.data.id}`;
+        const newId = response.data?.id;
+        if (newId) {
+          window.location.href = `/cms/stories/${newId}`;
+        }
       }
     }
     setSaving(false);
