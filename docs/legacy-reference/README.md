@@ -3,9 +3,9 @@
 Source reference: `C:\SITES\krtr_site`
 
 ## Route and template mapping
-- `index.php` router -> Next.js App Router (layout in `app/layout.tsx`, routes in `app/page.tsx`, `app/stories/[id]/page.tsx`)
-- `homePage.php` -> `app/page.tsx`
-- `postPage.php` -> `app/stories/[id]/page.tsx`
+- `index.php` router -> Next.js App Router (public layout in `app/(public)/layout.tsx`, routes in `app/(public)/page.tsx`, `app/(public)/stories/[id]/page.tsx`)
+- `homePage.php` -> `app/(public)/page.tsx`
+- `postPage.php` -> `app/(public)/stories/[id]/page.tsx`
 - `partials/breadcrumbs.php` -> breadcrumbs can be added to story page if needed
 - `assets/mainStyles.css` -> styles mirrored via Tailwind + `app/globals.css`
 
@@ -14,6 +14,9 @@ Source reference: `C:\SITES\krtr_site`
 - `assets/js/homeStories.js` -> recent stories list in `app/page.tsx`
 - `assets/js/supabaseLoader.js` -> Supabase client now in `lib/supabase/public.ts`
 - `assets/js/newsTicker.js`, `sportsWidget.js`, `eventsWidget.js` -> not yet ported; add as future modules if needed
+
+## Routing differences
+- Legacy story routes are slug-based (`/{category}/{subCategory}/{slug}`); Next.js uses UUID routes (`/stories/[id]`).
 
 ## Ads
 - All-site top banner -> `AdSlot` in `app/page.tsx` (placement: `allsite`)

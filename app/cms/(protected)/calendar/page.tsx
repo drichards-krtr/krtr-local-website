@@ -136,7 +136,7 @@ export default async function CalendarPage({
             className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
           >
             <div>{event.title}</div>
-            <div className="text-neutral-500">{event.location || "—"}</div>
+            <div className="text-neutral-500">{event.location || "-"}</div>
             <div className="text-neutral-500">
               {new Date(event.start_at).toLocaleDateString()}
             </div>

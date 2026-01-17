@@ -169,9 +169,7 @@ export default async function AdsPage({
               {ad.start_date} - {ad.end_date}
             </div>
             <div>{ad.active ? "Active" : "Inactive"}</div>
-            <div className="truncate">
-              {ad.image_url || ad.link_url || "—"}
-            </div>
+            <div className="truncate">{ad.image_url || ad.link_url || "-"}</div>
             <div className="flex gap-3">
               <a href={`/cms/ads/${ad.id}`} className="text-sm underline">
                 Edit

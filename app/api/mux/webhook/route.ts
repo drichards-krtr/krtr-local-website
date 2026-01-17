@@ -20,10 +20,8 @@ function verifyMuxSignature(payload: string, signatureHeader: string | null) {
     .update(signedPayload)
     .digest("hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(signature)
-  );
+  if (expected.length !== signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
 export async function POST(request: Request) {

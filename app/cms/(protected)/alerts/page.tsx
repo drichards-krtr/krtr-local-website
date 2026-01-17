@@ -129,8 +129,8 @@ export default async function AlertsPage({
           >
             <div className="truncate">{alert.message}</div>
             <div className="text-neutral-500">
-              {alert.start_at ? new Date(alert.start_at).toLocaleDateString() : "—"}{" "}
-              / {alert.end_at ? new Date(alert.end_at).toLocaleDateString() : "—"}
+              {alert.start_at ? new Date(alert.start_at).toLocaleDateString() : "-"}{" "}
+              / {alert.end_at ? new Date(alert.end_at).toLocaleDateString() : "-"}
             </div>
             <div>{alert.active ? "Active" : "Inactive"}</div>
             <div className="flex gap-3">

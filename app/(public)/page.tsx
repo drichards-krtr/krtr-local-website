@@ -3,6 +3,8 @@ import AdSlot from "@/components/public/AdSlot";
 import StoryRow from "@/components/public/StoryRow";
 import { pickWeightedAd, pickWeightedAds, type Ad } from "@/lib/ads";
 
+export const dynamic = "force-dynamic";
+
 type Story = {
   id: string;
   title: string;

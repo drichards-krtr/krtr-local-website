@@ -36,8 +36,8 @@ export default async function UsersPage() {
             key={user.id}
             className="grid grid-cols-[2fr_2fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
           >
-            <div>{user.email || "—"}</div>
-            <div>{user.display_name || "—"}</div>
+            <div>{user.email || "-"}</div>
+            <div>{user.display_name || "-"}</div>
             <div>{user.is_admin ? "Yes" : "No"}</div>
             <form action={toggleAdmin}>
               <input type="hidden" name="id" value={user.id} />

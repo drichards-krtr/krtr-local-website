@@ -13,10 +13,7 @@ export default function Footer() {
           <a href="/termsprivacy">Terms of Use</a> |{" "}
           <a href="/advertise">Advertise with KRTR Local</a>
         </p>
-        <p>
-          KRTR Local, LLC · 502 Main Street, La Porte City, IA 50651 ·
-          319-486-1525
-        </p>
+        <p>KRTR Local, LLC - 502 Main Street, La Porte City, IA 50651 - 319-486-1525</p>
       </div>
     </footer>
   );

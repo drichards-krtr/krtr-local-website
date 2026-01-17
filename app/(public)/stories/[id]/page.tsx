@@ -4,6 +4,8 @@ import Markdown from "@/components/public/Markdown";
 import AdSlot from "@/components/public/AdSlot";
 import { pickWeightedAd, type Ad } from "@/lib/ads";
 
+export const dynamic = "force-dynamic";
+
 export default async function StoryPage({ params }: { params: { id: string } }) {
   const supabase = createPublicClient();
   const { data: story } = await supabase

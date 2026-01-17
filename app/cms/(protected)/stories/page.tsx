@@ -83,7 +83,7 @@ export default async function StoriesPage({
             <div className="text-neutral-500">
               {story.published_at
                 ? new Date(story.published_at).toLocaleDateString()
-                : "—"}
+                : "-"}
             </div>
             <div className="flex gap-3 text-sm">
               <Link
