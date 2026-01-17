@@ -35,14 +35,26 @@ export async function POST(request: Request) {
   const event = JSON.parse(payload);
   const eventType = event?.type;
   const data = event?.data;
-  const passthrough = data?.passthrough;
-  const storyId = passthrough || null;
+  const passthrough =
+    data?.passthrough ?? data?.new_asset_settings?.passthrough ?? null;
+  const storyId = extractStoryId(passthrough);
 
   if (!storyId) {
+    console.warn("Mux webhook missing storyId", { eventType, passthrough });
     return NextResponse.json({ ok: true });
   }
 
   const supabase = createServiceClient();
+
+  if (eventType === "video.upload.asset_created") {
+    await supabase
+      .from("stories")
+      .update({
+        mux_asset_id: data?.asset_id || null,
+        mux_status: "processing",
+      })
+      .eq("id", storyId);
+  }
 
   if (eventType === "video.asset.ready") {
     const playbackId = data?.playback_ids?.[0]?.id || null;
@@ -64,4 +76,26 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+function extractStoryId(passthrough: unknown) {
+  if (!passthrough) return null;
+  if (typeof passthrough === "string") {
+    const trimmed = passthrough.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return typeof parsed?.storyId === "string" ? parsed.storyId : null;
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+  if (typeof passthrough === "object") {
+    const obj = passthrough as { storyId?: string };
+    return typeof obj.storyId === "string" ? obj.storyId : null;
+  }
+  return null;
 }
