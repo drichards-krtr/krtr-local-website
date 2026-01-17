@@ -8,15 +8,20 @@ export function createServerSupabase() {
     throw new Error("Missing Supabase env vars.");
   }
 
+  type CookieOptions = Omit<
+    Parameters<ReturnType<typeof cookies>["set"]>[0],
+    "name" | "value"
+  >;
+
   return createServerClient(url, anon, {
     cookies: {
       get(name: string) {
         return cookies().get(name)?.value;
       },
-      set(name: string, value: string, options: Parameters<typeof cookies>[0]) {
+      set(name: string, value: string, options: CookieOptions) {
         cookies().set({ name, value, ...options });
       },
-      remove(name: string, options: Parameters<typeof cookies>[0]) {
+      remove(name: string, options: CookieOptions) {
         cookies().set({ name, value: "", ...options });
       },
     },
