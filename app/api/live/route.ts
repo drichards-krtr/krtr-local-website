@@ -92,7 +92,7 @@ function getNextStartTimeUTC(now = new Date()) {
 }
 
 export async function GET() {
-  const { data, error } = await getSupabaseServer
+  const { data, error } = await getSupabaseServer()
     .from("stream_config")
     .select("is_live, stream_id, hls_url, updated_at")
     .order("updated_at", { ascending: false })

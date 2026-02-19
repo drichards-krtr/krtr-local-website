@@ -8,7 +8,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "missing_fields" }, { status: 400 });
   }
 
-  const { error } = await getSupabaseServer.from("analytics_sessions").insert({
+  const supabase = getSupabaseServer();
+
+  const { error } = await supabase.from("analytics_sessions").insert({
     session_id: String(body.sessionId),
     device_id: String(body.deviceId),
     stream_id: body.streamId ? String(body.streamId) : null,
