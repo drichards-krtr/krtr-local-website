@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: "Stories", href: "/cms/stories" },
   { label: "Ads", href: "/cms/ads" },
   { label: "Calendar", href: "/cms/calendar" },
+  { label: "Stream Config", href: "/cms/stream-config" },
   { label: "Alerts", href: "/cms/alerts" },
   { label: "Users", href: "/cms/users" },
   { label: "Settings", href: "/cms/settings" },
