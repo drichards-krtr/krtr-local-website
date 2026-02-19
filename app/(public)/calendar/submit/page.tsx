@@ -2,12 +2,21 @@ import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/admin";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 
-async function sendSubmissionNotificationEmail() {
+async function sendSubmissionNotificationEmail(submitterEmail: string) {
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) return;
+  if (!resendApiKey) {
+    console.warn("[CalendarSubmission] RESEND_API_KEY missing; skipping email notification.");
+    return;
+  }
 
   const from = process.env.EVENT_SUBMISSION_EMAIL_FROM || "onboarding@resend.dev";
-  await fetch("https://api.resend.com/emails", {
+  const notifyTo = process.env.EVENT_SUBMISSION_NOTIFY_TO || "hello@krtrlocal.tv";
+  const to = notifyTo
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${resendApiKey}`,
@@ -15,11 +24,28 @@ async function sendSubmissionNotificationEmail() {
     },
     body: JSON.stringify({
       from,
-      to: ["hello@krtrlocal.tv"],
+      to,
+      reply_to: submitterEmail,
       subject: "New Community Calendar submission",
       text: "There is a new submission to review for the Community Calendar.",
     }),
-  }).catch(() => {});
+  }).catch((error) => {
+    console.error("[CalendarSubmission] Resend request failed", error);
+    return null;
+  });
+
+  if (!response) return;
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("[CalendarSubmission] Resend rejected email", {
+      status: response.status,
+      detail,
+      from,
+      to,
+    });
+    return;
+  }
+  console.info("[CalendarSubmission] notification email sent", { to });
 }
 
 export default function SubmitCalendarEventPage() {
@@ -45,7 +71,9 @@ export default function SubmitCalendarEventPage() {
       throw new Error(`Unable to save submitter contact: ${submitterError.message}`);
     }
 
-    const { error: eventError } = await service.from("events").insert({
+    const { data: event, error: eventError } = await service
+      .from("events")
+      .insert({
       title: String(formData.get("title") || "").trim(),
       description: String(formData.get("description") || "").trim() || null,
       location: String(formData.get("location") || "").trim() || null,
@@ -54,13 +82,23 @@ export default function SubmitCalendarEventPage() {
       image_url: String(formData.get("image_url") || "").trim() || null,
       status: "draft",
       submitter_id: submitter.id,
-    });
+      })
+      .select("id")
+      .single();
 
     if (eventError) {
       throw new Error(`Unable to save event submission: ${eventError.message}`);
     }
 
-    await sendSubmissionNotificationEmail();
+    const { error: linkError } = await service
+      .from("event_submitters")
+      .update({ submitted_event_id: event.id })
+      .eq("id", submitter.id);
+    if (linkError) {
+      throw new Error(`Unable to link submitter to event: ${linkError.message}`);
+    }
+
+    await sendSubmissionNotificationEmail(submitterEmail);
     redirect("/calendar/submit/thanks");
   }
 
