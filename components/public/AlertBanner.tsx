@@ -41,7 +41,7 @@ export default async function AlertBanner() {
 
   return (
     <div className="bg-krtrRed text-white">
-      <div className="mx-auto max-w-site px-4 py-2 text-sm">
+      <div className="mx-auto max-w-site px-4 py-2 text-center text-sm">
         {alert.link_url ? (
           <a href={alert.link_url} className="font-semibold underline">
             {alert.message}
