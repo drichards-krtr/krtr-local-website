@@ -10,6 +10,7 @@ type EventItem = {
   start_at: string;
   end_at: string | null;
   image_url: string | null;
+  recurrence_group_id: string | null;
 };
 
 function formatEventWindow(startAt: string, endAt: string | null) {
@@ -28,6 +29,21 @@ function includeOnCalendar(event: EventItem, now: Date, startOfToday: Date) {
   return new Date(event.start_at) >= startOfToday;
 }
 
+function dedupeRecurringEvents(events: EventItem[]) {
+  const seenGroups = new Set<string>();
+  const deduped: EventItem[] = [];
+  for (const event of events) {
+    if (!event.recurrence_group_id) {
+      deduped.push(event);
+      continue;
+    }
+    if (seenGroups.has(event.recurrence_group_id)) continue;
+    seenGroups.add(event.recurrence_group_id);
+    deduped.push(event);
+  }
+  return deduped;
+}
+
 export default async function CommunityCalendarPage() {
   const supabase = createPublicClient();
   const now = new Date();
@@ -36,7 +52,7 @@ export default async function CommunityCalendarPage() {
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, title, description, location, start_at, end_at, image_url")
+    .select("id, title, description, location, start_at, end_at, image_url, recurrence_group_id")
     .eq("status", "published")
     .order("start_at", { ascending: true });
 
@@ -45,8 +61,10 @@ export default async function CommunityCalendarPage() {
     throw new Error(`[CommunityCalendarPage] ${error.message}`);
   }
 
-  const events = ((data || []) as EventItem[]).filter((event) =>
-    includeOnCalendar(event, now, startOfToday)
+  const events = dedupeRecurringEvents(
+    ((data || []) as EventItem[]).filter((event) =>
+      includeOnCalendar(event, now, startOfToday)
+    )
   );
 
   return (

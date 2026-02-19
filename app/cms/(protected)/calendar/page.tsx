@@ -2,6 +2,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import ImageUploadField from "@/components/shared/ImageUploadField";
+import { randomUUID } from "crypto";
 
 const WEEKDAYS = [
   { value: 0, label: "Sun" },
@@ -72,6 +73,7 @@ export default async function CalendarPage({
         status: statusValue,
       });
     } else {
+      const recurrenceGroupId = randomUUID();
       const startDate = startAt.slice(0, 10);
       const startTime = startAt.slice(11, 16);
       const endTime = endAt ? endAt.slice(11, 16) : null;
@@ -91,6 +93,7 @@ export default async function CalendarPage({
         end_at: string | null;
         image_url: string | null;
         status: string;
+        recurrence_group_id: string;
       }> = [];
 
       for (
@@ -108,6 +111,7 @@ export default async function CalendarPage({
           end_at: endTime ? `${dayText}T${endTime}` : null,
           image_url: imageUrl,
           status: statusValue,
+          recurrence_group_id: recurrenceGroupId,
         });
       }
 
