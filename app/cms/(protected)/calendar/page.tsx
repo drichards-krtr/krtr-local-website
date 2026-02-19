@@ -210,7 +210,7 @@ export default async function CalendarPage({
           />
           <div className="md:col-span-2">
             <p className="mb-2 text-xs text-neutral-500">
-              Recurrence days (used when "Repeats weekly" is selected)
+              Recurrence days (used when "Repeats weekly" is selected, bro.)
             </p>
             <div className="flex flex-wrap gap-3">
               {WEEKDAYS.map((day) => (
