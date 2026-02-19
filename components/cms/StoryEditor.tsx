@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { TAG_TREE, type TagSlug } from "@/lib/tags";
 
 type Story = {
   id?: string;
@@ -17,6 +18,8 @@ type Story = {
   cloudinary_height: number | null;
   mux_playback_id: string | null;
   mux_status: string | null;
+  tags: TagSlug[];
+  slot: "hero" | "top1" | "top2" | "top3" | "top4" | null;
 };
 
 type Props = {
@@ -36,7 +39,12 @@ export default function StoryEditor({ initialStory }: Props) {
     cloudinary_height: initialStory?.cloudinary_height || null,
     mux_playback_id: initialStory?.mux_playback_id || null,
     mux_status: initialStory?.mux_status || "none",
+    tags: initialStory?.tags || [],
+    slot: initialStory?.slot || null,
   });
+  const [slot, setSlot] = useState<"" | "hero" | "top1" | "top2" | "top3" | "top4">(
+    initialStory?.slot || ""
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -65,6 +73,7 @@ export default function StoryEditor({ initialStory }: Props) {
       cloudinary_height: form.cloudinary_height,
       mux_playback_id: form.mux_playback_id,
       mux_status: form.mux_status,
+      tags: form.tags,
     };
 
     const response = isEdit
@@ -74,9 +83,37 @@ export default function StoryEditor({ initialStory }: Props) {
     if (response.error) {
       setError(response.error.message);
     } else {
+      const storyId = isEdit ? initialStory?.id : response.data?.id;
+      if (!storyId) {
+        setError("Saved story but unable to resolve story id.");
+        setSaving(false);
+        return;
+      }
+
+      const { error: clearSlotError } = await supabase
+        .from("story_slots")
+        .update({ story_id: null })
+        .eq("story_id", storyId);
+      if (clearSlotError) {
+        setError(clearSlotError.message);
+        setSaving(false);
+        return;
+      }
+
+      if (slot) {
+        const { error: slotError } = await supabase
+          .from("story_slots")
+          .upsert({ slot, story_id: storyId }, { onConflict: "slot" });
+        if (slotError) {
+          setError(slotError.message);
+          setSaving(false);
+          return;
+        }
+      }
+
       setSuccess("Saved.");
       if (!isEdit) {
-        const newId = response.data?.id;
+        const newId = storyId;
         if (newId) {
           window.location.href = `/cms/stories/${newId}`;
         }
@@ -199,6 +236,73 @@ export default function StoryEditor({ initialStory }: Props) {
             className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
             rows={3}
           />
+        </div>
+        <div className="mt-4">
+          <label className="text-sm font-medium">Homepage Slot</label>
+          <select
+            value={slot}
+            onChange={(event) =>
+              setSlot(event.target.value as "" | "hero" | "top1" | "top2" | "top3" | "top4")
+            }
+            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+          >
+            <option value="">None</option>
+            <option value="hero">Hero</option>
+            <option value="top1">Top 1</option>
+            <option value="top2">Top 2</option>
+            <option value="top3">Top 3</option>
+            <option value="top4">Top 4</option>
+          </select>
+          <p className="mt-1 text-xs text-neutral-500">
+            Assigning a slot here updates the global homepage slot mapping.
+          </p>
+        </div>
+        <div className="mt-4">
+          <label className="text-sm font-medium">Tags</label>
+          <div className="mt-2 grid gap-3 rounded border border-neutral-200 p-3">
+            {TAG_TREE.map((tag) => (
+              <div key={tag.slug} className="grid gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={form.tags.includes(tag.slug)}
+                    onChange={(event) => {
+                      const nextTags = new Set(form.tags);
+                      if (event.target.checked) nextTags.add(tag.slug);
+                      else nextTags.delete(tag.slug);
+                      setForm((prev) => ({ ...prev, tags: Array.from(nextTags) as TagSlug[] }));
+                    }}
+                  />
+                  {tag.label}
+                </label>
+                {tag.children && (
+                  <div className="ml-6 grid gap-1">
+                    {tag.children.map((child) => (
+                      <label
+                        key={child.slug}
+                        className="flex items-center gap-2 text-sm text-neutral-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={form.tags.includes(child.slug)}
+                          onChange={(event) => {
+                            const nextTags = new Set(form.tags);
+                            if (event.target.checked) nextTags.add(child.slug);
+                            else nextTags.delete(child.slug);
+                            setForm((prev) => ({
+                              ...prev,
+                              tags: Array.from(nextTags) as TagSlug[],
+                            }));
+                          }}
+                        />
+                        {child.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

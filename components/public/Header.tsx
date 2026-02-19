@@ -1,7 +1,12 @@
 ﻿import Link from "next/link";
+import { getTopLevelTags } from "@/lib/tags";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
+  ...getTopLevelTags().map((tag) => ({
+    label: tag.label,
+    href: `/tags/${tag.slug}`,
+  })),
   { label: "Share", href: "https://forms.gle/ANKMcHbbSXwieYKRA" },
 ];
 
@@ -61,5 +66,3 @@ export default function Header() {
     </header>
   );
 }
-
-
