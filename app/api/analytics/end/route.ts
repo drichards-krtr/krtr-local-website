@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { getSupabaseServer } from "@/lib/supabaseServer";
+
+export const dynamic = "force-dynamic"; // helps prevent build-time evaluation edge cases
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -9,6 +11,9 @@ export async function POST(req: Request) {
   }
 
   const endedAtISO = new Date(body.endedAt).toISOString();
+
+  // Create the client lazily (runtime), not at import/build time
+  const supabaseServer = getSupabaseServer();
 
   // Fetch started_at so we can compute duration server-side
   const { data: existing, error: readErr } = await supabaseServer

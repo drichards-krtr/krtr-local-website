@@ -1,12 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = process.env.SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Lazy, runtime-only init (prevents `next build` from crashing)
+export function getSupabaseServer() {
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!url || !serviceKey) {
-  throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false },
+  });
 }
-
-export const supabaseServer = createClient(url, serviceKey, {
-  auth: { persistSession: false },
-});
