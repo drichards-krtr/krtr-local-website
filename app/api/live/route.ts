@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { getSupabaseServer } from "@/lib/supabaseServer";
 
 function getNextStartTimeUTC(now = new Date()) {
   // America/Chicago schedule:
@@ -92,7 +92,7 @@ function getNextStartTimeUTC(now = new Date()) {
 }
 
 export async function GET() {
-  const { data, error } = await supabaseServer
+  const { data, error } = await getSupabaseServer
     .from("stream_config")
     .select("is_live, stream_id, hls_url, updated_at")
     .order("updated_at", { ascending: false })

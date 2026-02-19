@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { getSupabaseServer } from "@/lib/supabaseServer";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "missing_fields" }, { status: 400 });
   }
 
-  const { error } = await supabaseServer.from("analytics_sessions").insert({
+  const { error } = await getSupabaseServer.from("analytics_sessions").insert({
     session_id: String(body.sessionId),
     device_id: String(body.deviceId),
     stream_id: body.streamId ? String(body.streamId) : null,
