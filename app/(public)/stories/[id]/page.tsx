@@ -13,7 +13,7 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
     .select(
       "id, title, tease, body_markdown, published_at, image_url, mux_playback_id"
     )
-    .eq("id", params.id)
+    .or(`slug.eq.${params.id},id.eq.${params.id}`)
     .eq("status", "published")
     .maybeSingle();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   name: string;
@@ -15,9 +15,26 @@ export default function ImageUploadField({
   initialUrl = null,
   folder = "krtr",
 }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string>(initialUrl || "");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const form = rootRef.current?.closest("form");
+    if (!form) return;
+    const submitButtons = Array.from(
+      form.querySelectorAll<HTMLButtonElement>("button[type='submit']")
+    );
+    submitButtons.forEach((button) => {
+      button.disabled = uploading;
+    });
+    return () => {
+      submitButtons.forEach((button) => {
+        button.disabled = false;
+      });
+    };
+  }, [uploading]);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -63,7 +80,7 @@ export default function ImageUploadField({
   }
 
   return (
-    <div className="grid gap-2">
+    <div ref={rootRef} className="grid gap-2">
       <label className="text-sm font-medium">{label}</label>
       <input
         type="hidden"
@@ -81,6 +98,9 @@ export default function ImageUploadField({
         }}
       />
       {uploading && <p className="text-xs text-neutral-500">Uploading image...</p>}
+      {!uploading && imageUrl && (
+        <p className="text-xs text-green-700">Image upload complete.</p>
+      )}
       {error && <p className="text-xs text-red-600">{error}</p>}
       {imageUrl && (
         <div className="grid gap-2">

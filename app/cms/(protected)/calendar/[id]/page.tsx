@@ -12,7 +12,7 @@ export default async function EditEventPage({
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, title, description, location, start_at, end_at, status, image_url, submitter:event_submitters(name, phone, email)"
+      "id, title, description, location, start_at, end_at, status, image_url, submitter_id"
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -20,7 +20,16 @@ export default async function EditEventPage({
   if (!event) {
     return <p>Event not found.</p>;
   }
-  const submitter = Array.isArray(event.submitter) ? event.submitter[0] : event.submitter;
+
+  let submitter: { name: string; phone: string; email: string } | null = null;
+  if (event.submitter_id) {
+    const { data: submitterRow } = await supabase
+      .from("event_submitters")
+      .select("name, phone, email")
+      .eq("id", event.submitter_id)
+      .maybeSingle();
+    submitter = submitterRow || null;
+  }
 
   async function updateEvent(formData: FormData) {
     "use server";

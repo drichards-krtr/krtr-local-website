@@ -2,11 +2,13 @@
 import AdSlot from "@/components/public/AdSlot";
 import StoryRow from "@/components/public/StoryRow";
 import { pickWeightedAd, pickWeightedAds, type Ad } from "@/lib/ads";
+import { storyHref } from "@/lib/stories";
 
 export const dynamic = "force-dynamic";
 
 type Story = {
   id: string;
+  slug?: string | null;
   title: string;
   tease: string | null;
   image_url: string | null;
@@ -50,7 +52,7 @@ async function getSlotStories() {
 
   const { data: stories, error: storiesError } = await supabase
     .from("stories")
-    .select("id, title, tease, image_url, published_at")
+    .select("id, slug, title, tease, image_url, published_at")
     .eq("status", "published")
     .in("id", slotIds);
 
@@ -68,7 +70,7 @@ async function getRecentStories(skipIds: string[]) {
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("stories")
-    .select("id, title, tease, image_url, published_at")
+    .select("id, slug, title, tease, image_url, published_at")
     .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(16);
@@ -84,7 +86,7 @@ async function getRecentStories(skipIds: string[]) {
   if (!stories.length) {
     const { data: fallbackData, error: fallbackError } = await supabase
       .from("stories")
-      .select("id, title, tease, image_url, published_at")
+      .select("id, slug, title, tease, image_url, published_at")
       .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(16);
@@ -143,6 +145,7 @@ export default async function HomePage({
     skippedIds: skipIds,
     recentStoryCount: recentStories.length,
     recentStoryIds: recentStories.map((story) => story.id),
+    recentStorySlugs: recentStories.map((story) => story.slug || null),
   };
   console.info("[HomePage] story debug", debugInfo);
 
@@ -165,7 +168,7 @@ export default async function HomePage({
 
       {heroStory && (
         <section className="mb-8 rounded-lg bg-white p-4">
-          <a href={`/stories/${heroStory.id}`} className="block">
+          <a href={storyHref(heroStory)} className="block">
             {heroStory.image_url && (
               <img
                 src={heroStory.image_url}

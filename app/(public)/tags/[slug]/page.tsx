@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 type Story = {
   id: string;
+  slug?: string | null;
   title: string;
   tease: string | null;
   image_url: string | null;
@@ -30,7 +31,7 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
 
   const { data, error } = await supabase
     .from("stories")
-    .select("id, title, tease, image_url, published_at")
+    .select("id, slug, title, tease, image_url, published_at")
     .eq("status", "published")
     .overlaps("tags", tagFilters)
     .order("published_at", { ascending: false })

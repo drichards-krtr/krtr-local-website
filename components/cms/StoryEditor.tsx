@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
 import { TAG_TREE, type TagSlug } from "@/lib/tags";
+import { buildStorySlug } from "@/lib/stories";
 
 type Story = {
   id?: string;
@@ -20,6 +21,7 @@ type Story = {
   mux_status: string | null;
   tags: TagSlug[];
   slot: "hero" | "top1" | "top2" | "top3" | "top4" | null;
+  slug?: string | null;
 };
 
 type Props = {
@@ -41,6 +43,7 @@ export default function StoryEditor({ initialStory }: Props) {
     mux_status: initialStory?.mux_status || "none",
     tags: initialStory?.tags || [],
     slot: initialStory?.slot || null,
+    slug: initialStory?.slug || null,
   });
   const [slot, setSlot] = useState<"" | "hero" | "top1" | "top2" | "top3" | "top4">(
     initialStory?.slot || ""
@@ -57,6 +60,33 @@ export default function StoryEditor({ initialStory }: Props) {
     setError(null);
     setSuccess(null);
     const supabase = createBrowserSupabase();
+    const effectivePublishedAt =
+      form.status === "published"
+        ? form.published_at || new Date().toISOString()
+        : form.published_at;
+
+    const baseSlug = buildStorySlug(form.title, effectivePublishedAt);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (true) {
+      let query = supabase
+        .from("stories")
+        .select("id")
+        .eq("slug", slug)
+        .limit(1);
+      if (isEdit && initialStory?.id) {
+        query = query.neq("id", initialStory.id);
+      }
+      const { data: existing, error: slugCheckError } = await query;
+      if (slugCheckError) {
+        setError(slugCheckError.message);
+        setSaving(false);
+        return;
+      }
+      if (!existing || existing.length === 0) break;
+      slug = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
 
     const payload = {
       title: form.title,
@@ -74,6 +104,7 @@ export default function StoryEditor({ initialStory }: Props) {
       mux_playback_id: form.mux_playback_id,
       mux_status: form.mux_status,
       tags: form.tags,
+      slug,
     };
 
     const response = isEdit

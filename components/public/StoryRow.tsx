@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { storyHref } from "@/lib/stories";
 
 type Story = {
   id: string;
+  slug?: string | null;
   title: string;
   tease: string | null;
   image_url: string | null;
@@ -13,7 +15,7 @@ export default function StoryRow({ story }: { story: Story }) {
     <article className="grid gap-4 rounded-lg border border-black/5 bg-white p-4 md:grid-cols-[180px_1fr]">
       {story.image_url ? (
         <Link
-          href={`/stories/${story.id}`}
+          href={storyHref(story)}
           className="block aspect-video overflow-hidden rounded"
         >
           <img
@@ -27,7 +29,7 @@ export default function StoryRow({ story }: { story: Story }) {
       )}
       <div className="grid content-start gap-2">
         <h3 className="text-lg font-semibold">
-          <Link href={`/stories/${story.id}`} className="hover:underline">
+          <Link href={storyHref(story)} className="hover:underline">
             {story.title || "(Untitled)"}
           </Link>
         </h3>
@@ -41,7 +43,7 @@ export default function StoryRow({ story }: { story: Story }) {
         )}
         {story.tease && <p className="text-sm text-neutral-700">{story.tease}</p>}
         <Link
-          href={`/stories/${story.id}`}
+          href={storyHref(story)}
           className="text-sm font-semibold text-krtrRed hover:underline"
         >
           Read more

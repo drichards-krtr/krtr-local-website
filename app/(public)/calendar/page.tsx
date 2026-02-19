@@ -19,18 +19,25 @@ function formatEventWindow(startAt: string, endAt: string | null) {
   return `${start.toLocaleString()} - ${end.toLocaleString()}`;
 }
 
+function includeOnCalendar(event: EventItem, now: Date, startOfToday: Date) {
+  if (event.end_at) {
+    // Keep event visible until it has actually ended.
+    return new Date(event.end_at) >= now;
+  }
+  // No end time: keep event through the day it starts.
+  return new Date(event.start_at) >= startOfToday;
+}
+
 export default async function CommunityCalendarPage() {
   const supabase = createPublicClient();
-  const nowIso = new Date().toISOString();
+  const now = new Date();
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const todayIso = startOfToday.toISOString();
 
   const { data, error } = await supabase
     .from("events")
     .select("id, title, description, location, start_at, end_at, image_url")
     .eq("status", "published")
-    .or(`and(end_at.not.is.null,end_at.gte.${nowIso}),and(end_at.is.null,start_at.gte.${todayIso})`)
     .order("start_at", { ascending: true });
 
   if (error) {
@@ -38,7 +45,9 @@ export default async function CommunityCalendarPage() {
     throw new Error(`[CommunityCalendarPage] ${error.message}`);
   }
 
-  const events = (data || []) as EventItem[];
+  const events = ((data || []) as EventItem[]).filter((event) =>
+    includeOnCalendar(event, now, startOfToday)
+  );
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
