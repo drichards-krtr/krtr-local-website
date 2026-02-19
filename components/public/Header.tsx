@@ -19,7 +19,7 @@ export default function Header() {
           <a
             href="https://www.youtube.com/@KRTR-Local/live"
             aria-label="Watch live"
-            className="text-red-600 [text-shadow:-1px_0_0_#fff,1px_0_0_#fff,0_-1px_0_#fff,0_1px_0_#fff]"
+            className="text-sm font-bold text-red-600 [text-shadow:-1px_0_0_#fff,1px_0_0_#fff,0_-1px_0_#fff,0_1px_0_#fff]"
           >
             LIVE
           </a>
@@ -61,4 +61,5 @@ export default function Header() {
     </header>
   );
 }
+
 
