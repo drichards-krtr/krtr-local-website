@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -16,7 +16,11 @@ export default function Header() {
           <a href="https://www.instagram.com/krtr_local/" aria-label="Instagram">
             IG
           </a>
-          <a href="https://www.youtube.com/@KRTR-Local/live" aria-label="Watch live">
+          <a
+            href="https://www.youtube.com/@KRTR-Local/live"
+            aria-label="Watch live"
+            className="text-red-600 [text-shadow:-1px_0_0_#fff,1px_0_0_#fff,0_-1px_0_#fff,0_1px_0_#fff]"
+          >
             LIVE
           </a>
           <a href="https://x.com/KRTR_Local" aria-label="X">
@@ -57,3 +61,4 @@ export default function Header() {
     </header>
   );
 }
+
