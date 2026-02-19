@@ -22,6 +22,20 @@ export default async function AlertsPage({
   }
 
   const { data: alerts } = await query;
+  const nowChicago = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Chicago" })
+  );
+
+  function isActiveNow(alert: {
+    active: boolean;
+    start_at: string | null;
+    end_at: string | null;
+  }) {
+    if (!alert.active) return false;
+    const startOk = !alert.start_at || new Date(alert.start_at) <= nowChicago;
+    const endOk = !alert.end_at || new Date(alert.end_at) >= nowChicago;
+    return startOk && endOk;
+  }
 
   async function addAlert(formData: FormData) {
     "use server";
@@ -116,23 +130,25 @@ export default async function AlertsPage({
       </section>
 
       <section className="rounded border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Message</div>
           <div>Window</div>
           <div>Status</div>
+          <div>Active Now</div>
           <div>Actions</div>
         </div>
         {(alerts || []).map((alert) => (
           <div
             key={alert.id}
-            className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
+            className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
           >
             <div className="truncate">{alert.message}</div>
             <div className="text-neutral-500">
-              {alert.start_at ? new Date(alert.start_at).toLocaleDateString() : "-"}{" "}
-              / {alert.end_at ? new Date(alert.end_at).toLocaleDateString() : "-"}
+              {alert.start_at ? new Date(alert.start_at).toLocaleString() : "-"}{" "}
+              / {alert.end_at ? new Date(alert.end_at).toLocaleString() : "-"}
             </div>
             <div>{alert.active ? "Active" : "Inactive"}</div>
+            <div>{isActiveNow(alert) ? "Yes" : "No"}</div>
             <div className="flex gap-3">
               <a href={`/cms/alerts/${alert.id}`} className="text-sm underline">
                 Edit
