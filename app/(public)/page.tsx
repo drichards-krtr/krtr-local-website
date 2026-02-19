@@ -78,7 +78,31 @@ async function getRecentStories(skipIds: string[]) {
     throw new Error(`[HomePage:getRecentStories] ${error.message}`);
   }
 
-  return (data || []).filter((story) => !skipIds.includes(story.id)) as Story[];
+  let stories = (data || []) as Story[];
+
+  // Fallback for environments where published_at ordering returns no rows unexpectedly.
+  if (!stories.length) {
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from("stories")
+      .select("id, title, tease, image_url, published_at")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(16);
+
+    if (fallbackError) {
+      console.error(
+        "[HomePage:getRecentStories] fallback created_at query failed",
+        fallbackError
+      );
+      throw new Error(
+        `[HomePage:getRecentStories:fallback] ${fallbackError.message}`
+      );
+    }
+
+    stories = (fallbackData || []) as Story[];
+  }
+
+  return stories.filter((story) => !skipIds.includes(story.id));
 }
 
 export default async function HomePage({
@@ -107,7 +131,11 @@ export default async function HomePage({
     ...topStories.map((story) => story.id),
   ];
   const recentStories = await getRecentStories(skipIds);
+  const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+    : "missing";
   const debugInfo = {
+    supabaseHost,
     slots: slots.length,
     slotStoryCount: storiesById.size,
     heroStoryId: heroStory?.id || null,
