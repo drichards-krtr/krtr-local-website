@@ -1,4 +1,4 @@
-import { createPublicClient } from "@/lib/supabase/public";
+﻿import { createPublicClient } from "@/lib/supabase/public";
 import AdSlot from "@/components/public/AdSlot";
 import StoryRow from "@/components/public/StoryRow";
 import { pickWeightedAd, pickWeightedAds, type Ad } from "@/lib/ads";
@@ -16,32 +16,48 @@ type Story = {
 async function getAds() {
   const supabase = createPublicClient();
   const today = new Date().toISOString().slice(0, 10);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("ads")
     .select("id, placement, image_url, link_url, html, weight")
     .eq("active", true)
     .lte("start_date", today)
     .gte("end_date", today);
 
+  if (error) {
+    console.error("[HomePage:getAds] Supabase query failed", error);
+    throw new Error(`[HomePage:getAds] ${error.message}`);
+  }
+
   return (data || []) as Ad[];
 }
 
 async function getSlotStories() {
   const supabase = createPublicClient();
-  const { data: slots } = await supabase
+  const { data: slots, error: slotsError } = await supabase
     .from("story_slots")
     .select("slot, story_id");
+
+  if (slotsError) {
+    console.error("[HomePage:getSlotStories] story_slots query failed", slotsError);
+    throw new Error(`[HomePage:getSlotStories:story_slots] ${slotsError.message}`);
+  }
+
   const slotIds = (slots || [])
     .map((slot) => slot.story_id)
     .filter(Boolean) as string[];
 
   if (!slotIds.length) return { storiesById: new Map(), slots: [] };
 
-  const { data: stories } = await supabase
+  const { data: stories, error: storiesError } = await supabase
     .from("stories")
     .select("id, title, tease, image_url, published_at")
     .eq("status", "published")
     .in("id", slotIds);
+
+  if (storiesError) {
+    console.error("[HomePage:getSlotStories] stories query failed", storiesError);
+    throw new Error(`[HomePage:getSlotStories:stories] ${storiesError.message}`);
+  }
 
   const storiesById = new Map<string, Story>();
   (stories || []).forEach((story) => storiesById.set(story.id, story as Story));
@@ -50,12 +66,17 @@ async function getSlotStories() {
 
 async function getRecentStories(skipIds: string[]) {
   const supabase = createPublicClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("stories")
     .select("id, title, tease, image_url, published_at")
     .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(16);
+
+  if (error) {
+    console.error("[HomePage:getRecentStories] Supabase query failed", error);
+    throw new Error(`[HomePage:getRecentStories] ${error.message}`);
+  }
 
   return (data || []).filter((story) => !skipIds.includes(story.id)) as Story[];
 }
