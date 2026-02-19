@@ -8,7 +8,7 @@ const NAV_ITEMS = [
     href: `/tags/${tag.slug}`,
   })),
   { label: "Community Calendar", href: "/calendar" },
-  { label: "Share", href: "https://forms.gle/ANKMcHbbSXwieYKRA" },
+  { label: "Share", href: "/submit-story" },
 ];
 
 export default function Header() {
