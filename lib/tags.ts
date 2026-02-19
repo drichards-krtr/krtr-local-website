@@ -6,8 +6,7 @@ export type TagSlug =
   | "dg-elementary"
   | "ums"
   | "uhs"
-  | "sports"
-  | "events";
+  | "sports";
 
 export type TagNode = {
   slug: TagSlug;
@@ -29,7 +28,6 @@ export const TAG_TREE: TagNode[] = [
     ],
   },
   { slug: "sports", label: "Sports" },
-  { slug: "events", label: "Events" },
 ];
 
 export const ALL_TAG_SLUGS: TagSlug[] = TAG_TREE.flatMap((tag) => [

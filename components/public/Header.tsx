@@ -7,6 +7,7 @@ const NAV_ITEMS = [
     label: tag.label,
     href: `/tags/${tag.slug}`,
   })),
+  { label: "Community Calendar", href: "/calendar" },
   { label: "Share", href: "https://forms.gle/ANKMcHbbSXwieYKRA" },
 ];
 

@@ -1,9 +1,6 @@
-alter table stories
-add column if not exists tags text[] not null default '{}';
-
 update stories
-set tags = '{}'
-where tags is null;
+set tags = array_remove(tags, 'events')
+where tags @> array['events']::text[];
 
 alter table stories
 drop constraint if exists stories_tags_allowed;
@@ -22,5 +19,3 @@ check (
     'sports'
   ]::text[]
 );
-
-create index if not exists stories_tags_gin on stories using gin (tags);
