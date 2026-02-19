@@ -19,10 +19,18 @@ export function createServerSupabase() {
         return cookies().get(name)?.value;
       },
       set(name: string, value: string, options: CookieOptions) {
-        cookies().set({ name, value, ...options });
+        try {
+          cookies().set({ name, value, ...options });
+        } catch {
+          // Server Components can't mutate cookies; ignore and continue.
+        }
       },
       remove(name: string, options: CookieOptions) {
-        cookies().set({ name, value: "", ...options });
+        try {
+          cookies().set({ name, value: "", ...options });
+        } catch {
+          // Server Components can't mutate cookies; ignore and continue.
+        }
       },
     },
   });
