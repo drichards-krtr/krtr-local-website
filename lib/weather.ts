@@ -2,6 +2,7 @@ export type CurrentWeather = {
   location: string;
   temperatureText: string;
   condition: string;
+  alerts: string[];
 };
 
 type NwsPointsResponse = {
@@ -24,6 +25,15 @@ type NwsHourlyResponse = {
       shortForecast?: string;
     }>;
   };
+};
+
+type NwsAlertsResponse = {
+  features?: Array<{
+    properties?: {
+      event?: string;
+      severity?: string;
+    };
+  }>;
 };
 
 const WATERLOO_LAT = "42.4928";
@@ -59,6 +69,32 @@ export async function getCurrentWeather(): Promise<CurrentWeather | null> {
   const period = hourlyData?.properties?.periods?.[0];
   if (!period) return null;
 
+  const alertsRes = await fetch(
+    `https://api.weather.gov/alerts/active?point=${WATERLOO_LAT},${WATERLOO_LON}`,
+    {
+      headers: {
+        "User-Agent": userAgent,
+        Accept: "application/geo+json",
+      },
+      next: { revalidate: 300 },
+    }
+  );
+  const alertsData = alertsRes.ok
+    ? ((await alertsRes.json()) as NwsAlertsResponse)
+    : null;
+  const alerts = Array.from(
+    new Set(
+      (alertsData?.features || [])
+        .map((feature) => {
+          const event = feature?.properties?.event?.trim();
+          const severity = feature?.properties?.severity?.trim();
+          if (!event) return null;
+          return severity ? `${event} (${severity})` : event;
+        })
+        .filter((value): value is string => !!value)
+    )
+  );
+
   const city = pointsData?.properties?.relativeLocation?.properties?.city || "Local";
   const state = pointsData?.properties?.relativeLocation?.properties?.state || "";
   const location = state ? `${city}, ${state}` : city;
@@ -68,5 +104,5 @@ export async function getCurrentWeather(): Promise<CurrentWeather | null> {
       : "N/A";
   const condition = period.shortForecast || "Current conditions unavailable";
 
-  return { location, temperatureText, condition };
+  return { location, temperatureText, condition, alerts };
 }
