@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="mx-auto max-w-site px-4 py-6 text-sm">
         <p className="mb-3">
           <a
-            href="https://docs.google.com/forms/d/e/1FAIpQLSdyI_i3MAYtS8NHlHbTwzF2cDYUKkMjWKWUIHVHiZ2vux8Ujw/viewform"
+            href="/submit-story"
             className="underline"
           >
             Share pictures, videos, tips, events, birthdays, and anniversaries
