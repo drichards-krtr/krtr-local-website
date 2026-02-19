@@ -3,6 +3,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 
+const WEEKDAYS = [
+  { value: 0, label: "Sun" },
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+];
+
+function formatDateOnly(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export default async function CalendarPage({
   searchParams,
 }: {
@@ -29,15 +46,75 @@ export default async function CalendarPage({
   async function addEvent(formData: FormData) {
     "use server";
     const supabase = createServerSupabase();
-    await supabase.from("events").insert({
-      title: String(formData.get("title")),
-      description: String(formData.get("description") || ""),
-      location: String(formData.get("location") || ""),
-      start_at: String(formData.get("start_at")),
-      end_at: String(formData.get("end_at") || ""),
-      image_url: String(formData.get("image_url") || "") || null,
-      status: String(formData.get("status") || "published"),
-    });
+    const title = String(formData.get("title") || "");
+    const description = String(formData.get("description") || "");
+    const location = String(formData.get("location") || "");
+    const startAt = String(formData.get("start_at") || "");
+    const endAt = String(formData.get("end_at") || "");
+    const imageUrl = String(formData.get("image_url") || "") || null;
+    const statusValue = String(formData.get("status") || "published");
+
+    const recurrence = String(formData.get("recurrence") || "none");
+    const recurrenceEndDate = String(formData.get("recurrence_end_date") || "");
+    const recurrenceDays = formData
+      .getAll("recurrence_days")
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6);
+
+    if (recurrence !== "weekly") {
+      await supabase.from("events").insert({
+        title,
+        description,
+        location,
+        start_at: startAt,
+        end_at: endAt || "",
+        image_url: imageUrl,
+        status: statusValue,
+      });
+    } else {
+      const startDate = startAt.slice(0, 10);
+      const startTime = startAt.slice(11, 16);
+      const endTime = endAt ? endAt.slice(11, 16) : null;
+
+      const startDateObj = new Date(`${startDate}T00:00:00`);
+      const endDateObj = new Date(
+        `${(recurrenceEndDate || startDate).slice(0, 10)}T00:00:00`
+      );
+      const defaultDay = new Date(`${startDate}T00:00:00`).getDay();
+      const selectedDays = recurrenceDays.length ? recurrenceDays : [defaultDay];
+
+      const rows: Array<{
+        title: string;
+        description: string;
+        location: string;
+        start_at: string;
+        end_at: string | null;
+        image_url: string | null;
+        status: string;
+      }> = [];
+
+      for (
+        let cursor = new Date(startDateObj);
+        cursor <= endDateObj;
+        cursor.setDate(cursor.getDate() + 1)
+      ) {
+        if (!selectedDays.includes(cursor.getDay())) continue;
+        const dayText = formatDateOnly(cursor);
+        rows.push({
+          title,
+          description,
+          location,
+          start_at: `${dayText}T${startTime}`,
+          end_at: endTime ? `${dayText}T${endTime}` : null,
+          image_url: imageUrl,
+          status: statusValue,
+        });
+      }
+
+      if (rows.length > 0) {
+        await supabase.from("events").insert(rows);
+      }
+    }
     revalidatePath("/cms/calendar");
     revalidatePath("/calendar");
     redirect("/cms/calendar");
@@ -118,6 +195,32 @@ export default async function CalendarPage({
             <option value="draft">Draft</option>
             <option value="archived">Archived</option>
           </select>
+          <select
+            name="recurrence"
+            defaultValue="none"
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          >
+            <option value="none">Does not repeat</option>
+            <option value="weekly">Repeats weekly</option>
+          </select>
+          <input
+            name="recurrence_end_date"
+            type="date"
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <div className="md:col-span-2">
+            <p className="mb-2 text-xs text-neutral-500">
+              Recurrence days (used when "Repeats weekly" is selected)
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {WEEKDAYS.map((day) => (
+                <label key={day.value} className="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="recurrence_days" value={day.value} />
+                  {day.label}
+                </label>
+              ))}
+            </div>
+          </div>
           <textarea
             name="description"
             placeholder="Description"
