@@ -17,11 +17,6 @@ export default async function WeatherBar() {
         <Link href="/weather" className="font-semibold underline">
           get full forecast
         </Link>
-        {weather && weather.alerts.length > 0 && (
-          <span className="font-semibold text-red-300">
-            Active Alert{weather.alerts.length > 1 ? "s" : ""}: {weather.alerts.join(" | ")}
-          </span>
-        )}
       </div>
     </div>
   );

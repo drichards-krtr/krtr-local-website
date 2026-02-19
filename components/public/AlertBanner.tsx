@@ -1,5 +1,6 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { unstable_noStore as noStore } from "next/cache";
+import { getCurrentWeather } from "@/lib/weather";
 
 type AlertRow = {
   id: string;
@@ -22,6 +23,19 @@ function isActiveNowInChicago(alert: AlertRow) {
 
 export default async function AlertBanner() {
   noStore();
+  const weather = await getCurrentWeather().catch(() => null);
+  if (weather && weather.alerts.length > 0) {
+    return (
+      <div className="bg-krtrRed text-white">
+        <div className="mx-auto max-w-site px-4 py-2 text-center text-sm">
+          <a href="/weather" className="font-semibold underline">
+            Weather Alert{weather.alerts.length > 1 ? "s" : ""}: {weather.alerts.join(" | ")}
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("alerts")
