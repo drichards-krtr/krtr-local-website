@@ -9,6 +9,7 @@ type EventItem = {
   location: string | null;
   start_at: string;
   end_at: string | null;
+  image_url: string | null;
 };
 
 function formatEventWindow(startAt: string, endAt: string | null) {
@@ -20,15 +21,16 @@ function formatEventWindow(startAt: string, endAt: string | null) {
 
 export default async function CommunityCalendarPage() {
   const supabase = createPublicClient();
+  const nowIso = new Date().toISOString();
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const todayIso = startOfToday.toISOString();
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, title, description, location, start_at, end_at")
+    .select("id, title, description, location, start_at, end_at, image_url")
     .eq("status", "published")
-    .or(`end_at.gte.${todayIso},and(end_at.is.null,start_at.gte.${todayIso})`)
+    .or(`and(end_at.not.is.null,end_at.gte.${nowIso}),and(end_at.is.null,start_at.gte.${todayIso})`)
     .order("start_at", { ascending: true });
 
   if (error) {
@@ -46,6 +48,13 @@ export default async function CommunityCalendarPage() {
           <p className="text-sm text-neutral-600">
             Upcoming community events, sorted by soonest start time.
           </p>
+          <p className="mt-2 text-sm text-neutral-700">
+            These are just the events we know about.{" "}
+            <a href="/calendar/submit" className="font-semibold underline">
+              Click Here
+            </a>{" "}
+            to submit an event!
+          </p>
         </header>
 
         {events.length > 0 ? (
@@ -56,6 +65,20 @@ export default async function CommunityCalendarPage() {
                 <p className="mt-1 text-sm text-neutral-600">
                   {formatEventWindow(event.start_at, event.end_at)}
                 </p>
+                {event.image_url && (
+                  <a
+                    href={event.image_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-block"
+                  >
+                    <img
+                      src={event.image_url}
+                      alt=""
+                      className="max-h-[250px] max-w-[300px] rounded border border-neutral-200 object-contain"
+                    />
+                  </a>
+                )}
                 {event.location && (
                   <p className="mt-1 text-sm text-neutral-700">{event.location}</p>
                 )}

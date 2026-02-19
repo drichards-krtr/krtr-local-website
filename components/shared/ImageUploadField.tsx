@@ -1,0 +1,103 @@
+"use client";
+
+import { useState } from "react";
+
+type Props = {
+  name: string;
+  label: string;
+  initialUrl?: string | null;
+  folder?: string;
+};
+
+export default function ImageUploadField({
+  name,
+  label,
+  initialUrl = null,
+  folder = "krtr",
+}: Props) {
+  const [imageUrl, setImageUrl] = useState<string>(initialUrl || "");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload(file: File) {
+    setUploading(true);
+    setError(null);
+    try {
+      const signatureRes = await fetch("/api/cloudinary/signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder }),
+      });
+      if (!signatureRes.ok) {
+        throw new Error("Unable to sign image upload.");
+      }
+
+      const { signature, timestamp, apiKey, cloudName } =
+        await signatureRes.json();
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", apiKey);
+      formData.append("timestamp", timestamp);
+      formData.append("signature", signature);
+      formData.append("folder", folder);
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      if (!uploadRes.ok) {
+        throw new Error("Image upload failed.");
+      }
+
+      const payload = await uploadRes.json();
+      setImageUrl(payload.secure_url || "");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-2">
+      <label className="text-sm font-medium">{label}</label>
+      <input
+        type="hidden"
+        name={name}
+        value={imageUrl}
+        onChange={() => {}}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) handleUpload(file);
+        }}
+      />
+      {uploading && <p className="text-xs text-neutral-500">Uploading image...</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      {imageUrl && (
+        <div className="grid gap-2">
+          <img
+            src={imageUrl}
+            alt=""
+            className="max-h-[250px] max-w-[300px] rounded border border-neutral-200 object-contain"
+          />
+          <button
+            type="button"
+            className="w-fit text-xs text-neutral-600 underline"
+            onClick={() => setImageUrl("")}
+          >
+            Remove image
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

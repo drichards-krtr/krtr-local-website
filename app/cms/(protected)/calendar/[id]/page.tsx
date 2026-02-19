@@ -1,4 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import ImageUploadField from "@/components/shared/ImageUploadField";
 
 export default async function EditEventPage({
   params,
@@ -8,13 +11,16 @@ export default async function EditEventPage({
   const supabase = createServerSupabase();
   const { data: event } = await supabase
     .from("events")
-    .select("id, title, description, location, start_at, end_at, status")
+    .select(
+      "id, title, description, location, start_at, end_at, status, image_url, submitter:event_submitters(name, phone, email)"
+    )
     .eq("id", params.id)
     .maybeSingle();
 
   if (!event) {
     return <p>Event not found.</p>;
   }
+  const submitter = Array.isArray(event.submitter) ? event.submitter[0] : event.submitter;
 
   async function updateEvent(formData: FormData) {
     "use server";
@@ -27,9 +33,13 @@ export default async function EditEventPage({
         location: String(formData.get("location") || ""),
         start_at: String(formData.get("start_at")),
         end_at: String(formData.get("end_at") || ""),
+        image_url: String(formData.get("image_url") || "") || null,
         status: String(formData.get("status") || "published"),
       })
       .eq("id", params.id);
+    revalidatePath("/cms/calendar");
+    revalidatePath("/calendar");
+    redirect(`/cms/calendar/${params.id}`);
   }
 
   return (
@@ -38,6 +48,16 @@ export default async function EditEventPage({
         <h1 className="text-2xl font-semibold">Edit Event</h1>
         <p className="text-sm text-neutral-500">Update calendar details.</p>
       </header>
+      {submitter && (
+        <section className="rounded border border-neutral-200 bg-white p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
+            Submitter Contact
+          </h2>
+          <p className="mt-2 text-sm text-neutral-700">Name: {submitter.name}</p>
+          <p className="text-sm text-neutral-700">Phone: {submitter.phone}</p>
+          <p className="text-sm text-neutral-700">Email: {submitter.email}</p>
+        </section>
+      )}
       <form action={updateEvent} className="grid gap-3 rounded border border-neutral-200 bg-white p-6 md:grid-cols-2">
         <input
           name="title"
@@ -75,6 +95,14 @@ export default async function EditEventPage({
           defaultValue={event.description || ""}
           className="min-h-[100px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
         />
+        <div className="md:col-span-2">
+          <ImageUploadField
+            name="image_url"
+            label="Event Image"
+            folder="krtr/events"
+            initialUrl={event.image_url || ""}
+          />
+        </div>
         <button
           type="submit"
           className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white md:col-span-2"

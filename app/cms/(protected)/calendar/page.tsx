@@ -1,4 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import ImageUploadField from "@/components/shared/ImageUploadField";
 
 export default async function CalendarPage({
   searchParams,
@@ -11,7 +14,7 @@ export default async function CalendarPage({
 
   let query = supabase
     .from("events")
-    .select("id, title, location, start_at, status")
+    .select("id, title, location, start_at, status, image_url")
     .order("start_at", { ascending: false });
 
   if (status !== "all") {
@@ -32,8 +35,12 @@ export default async function CalendarPage({
       location: String(formData.get("location") || ""),
       start_at: String(formData.get("start_at")),
       end_at: String(formData.get("end_at") || ""),
+      image_url: String(formData.get("image_url") || "") || null,
       status: String(formData.get("status") || "published"),
     });
+    revalidatePath("/cms/calendar");
+    revalidatePath("/calendar");
+    redirect("/cms/calendar");
   }
 
   async function unpublishEvent(formData: FormData) {
@@ -41,6 +48,9 @@ export default async function CalendarPage({
     const supabase = createServerSupabase();
     const id = String(formData.get("id"));
     await supabase.from("events").update({ status: "archived" }).eq("id", id);
+    revalidatePath("/cms/calendar");
+    revalidatePath("/calendar");
+    redirect("/cms/calendar");
   }
 
   return (
@@ -113,6 +123,9 @@ export default async function CalendarPage({
             placeholder="Description"
             className="min-h-[80px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
           />
+          <div className="md:col-span-2">
+            <ImageUploadField name="image_url" label="Event Image" folder="krtr/events" />
+          </div>
           <button
             type="submit"
             className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white md:col-span-2"
