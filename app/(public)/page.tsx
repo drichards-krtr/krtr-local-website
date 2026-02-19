@@ -81,7 +81,11 @@ async function getRecentStories(skipIds: string[]) {
   return (data || []).filter((story) => !skipIds.includes(story.id)) as Story[];
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: { debug?: string };
+}) {
   const [{ storiesById, slots }, ads] = await Promise.all([
     getSlotStories(),
     getAds(),
@@ -103,6 +107,16 @@ export default async function HomePage() {
     ...topStories.map((story) => story.id),
   ];
   const recentStories = await getRecentStories(skipIds);
+  const debugInfo = {
+    slots: slots.length,
+    slotStoryCount: storiesById.size,
+    heroStoryId: heroStory?.id || null,
+    topStoryIds: topStories.map((story) => story.id),
+    skippedIds: skipIds,
+    recentStoryCount: recentStories.length,
+    recentStoryIds: recentStories.map((story) => story.id),
+  };
+  console.info("[HomePage] story debug", debugInfo);
 
   const allsiteAd = pickWeightedAd(ads.filter((ad) => ad.placement === "allsite"));
   const homepageAds = pickWeightedAds(
@@ -112,6 +126,11 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
+      {searchParams?.debug === "1" && (
+        <pre className="mb-6 overflow-auto rounded bg-neutral-900 p-3 text-xs text-white">
+          {JSON.stringify(debugInfo, null, 2)}
+        </pre>
+      )}
       <div className="mb-6">
         <AdSlot ad={allsiteAd} className="mx-auto max-w-[900px]" />
       </div>
@@ -158,6 +177,11 @@ export default async function HomePage() {
           {recentStories.map((story) => (
             <StoryRow key={story.id} story={story} />
           ))}
+          {recentStories.length === 0 && (
+            <p className="rounded bg-white p-4 text-sm text-neutral-600">
+              No recent stories were returned by the homepage query.
+            </p>
+          )}
         </div>
       </section>
 
