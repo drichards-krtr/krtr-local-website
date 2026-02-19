@@ -261,7 +261,7 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
     .filter((alert) => !!alert.headline);
 
   const forecast: ForecastPeriod[] = (bundle.forecast?.properties?.periods || [])
-    .slice(0, 7)
+    .slice(0, 10)
     .map((p) => ({
       name: p.name || "Forecast",
       iconUrl: p.icon || null,

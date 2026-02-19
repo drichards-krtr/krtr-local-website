@@ -98,7 +98,7 @@ export default async function WeatherPage() {
       </section>
 
       <section className="mb-6 rounded-lg bg-white p-6">
-        <h2 className="mb-3 text-xl font-semibold">7 Day Forecast</h2>
+        <h2 className="mb-3 text-xl font-semibold">5 Day Forecast</h2>
         {weather.forecast.length > 0 ? (
           <div className="grid gap-3">
             {weather.forecast.map((period) => (
