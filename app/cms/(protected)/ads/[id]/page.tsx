@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import ImageUploadField from "@/components/shared/ImageUploadField";
 
 export default async function EditAdPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabase();
@@ -67,12 +68,14 @@ export default async function EditAdPage({ params }: { params: { id: string } })
           defaultValue={ad.end_date}
           className="rounded border border-neutral-300 px-3 py-2 text-sm"
         />
-        <input
-          name="image_url"
-          placeholder="Image URL"
-          defaultValue={ad.image_url || ""}
-          className="rounded border border-neutral-300 px-3 py-2 text-sm"
-        />
+        <div className="md:col-span-2">
+          <ImageUploadField
+            name="image_url"
+            label="Ad Image"
+            folder="krtr/ads"
+            initialUrl={ad.image_url || ""}
+          />
+        </div>
         <input
           name="link_url"
           placeholder="Link URL"

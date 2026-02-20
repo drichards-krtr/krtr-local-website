@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import ImageUploadField from "@/components/shared/ImageUploadField";
 
 export default async function AdsPage({
   searchParams,
@@ -56,6 +57,9 @@ export default async function AdsPage({
         <h1 className="text-2xl font-semibold">Ads</h1>
         <p className="text-sm text-neutral-500">
           Manage ad placements and schedules.
+        </p>
+        <p className="mt-2 text-sm text-neutral-600">
+          Recommended sizes: Allsite and Story: 900w x 250h. Homepage: 360w x 203h.
         </p>
       </header>
 
@@ -123,11 +127,9 @@ export default async function AdsPage({
             required
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
-          <input
-            name="image_url"
-            placeholder="Image URL"
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
-          />
+          <div className="md:col-span-2">
+            <ImageUploadField name="image_url" label="Ad Image" folder="krtr/ads" />
+          </div>
           <input
             name="link_url"
             placeholder="Link URL"
