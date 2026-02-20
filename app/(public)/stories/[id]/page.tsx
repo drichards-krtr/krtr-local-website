@@ -6,16 +6,40 @@ import { pickWeightedAd, type Ad } from "@/lib/ads";
 
 export const dynamic = "force-dynamic";
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export default async function StoryPage({ params }: { params: { id: string } }) {
   const supabase = createPublicClient();
-  const { data: story } = await supabase
+  const storySelect =
+    "id, title, tease, body_markdown, published_at, image_url, mux_playback_id";
+
+  const { data: storyBySlug, error: storyBySlugError } = await supabase
     .from("stories")
-    .select(
-      "id, title, tease, body_markdown, published_at, image_url, mux_playback_id"
-    )
-    .or(`slug.eq.${params.id},id.eq.${params.id}`)
+    .select(storySelect)
+    .eq("slug", params.id)
     .eq("status", "published")
     .maybeSingle();
+
+  if (storyBySlugError) {
+    throw new Error(`[StoryPage:slugLookup] ${storyBySlugError.message}`);
+  }
+
+  let story = storyBySlug;
+  if (!story && UUID_PATTERN.test(params.id)) {
+    const { data: storyById, error: storyByIdError } = await supabase
+      .from("stories")
+      .select(storySelect)
+      .eq("id", params.id)
+      .eq("status", "published")
+      .maybeSingle();
+
+    if (storyByIdError) {
+      throw new Error(`[StoryPage:idLookup] ${storyByIdError.message}`);
+    }
+
+    story = storyById;
+  }
 
   if (!story) {
     return (
