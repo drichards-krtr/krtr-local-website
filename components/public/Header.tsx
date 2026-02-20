@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { getTopLevelTags } from "@/lib/tags";
 
 const NAV_ITEMS = [
@@ -25,7 +25,7 @@ export default function Header() {
           <a
             href="https://www.youtube.com/@KRTR-Local/live"
             aria-label="Watch live"
-            className="text-sm font-bold text-red-600 [text-shadow:-1px_0_0_#fff,1px_0_0_#fff,0_-1px_0_#fff,0_1px_0_#fff]"
+            className="text-sm font-bold text-red-600 [text-shadow:-0.5px_0_0_#fff,0.5px_0_0_#fff,0_-0.5px_0_#fff,0_0.5px_0_#fff]"
           >
             LIVE
           </a>
