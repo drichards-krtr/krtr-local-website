@@ -41,7 +41,7 @@ export default async function SettingsPage() {
   return (
     <div className="grid gap-6">
       <header>
-        <h1 className="text-2xl font-semibold">Settings</h1>
+        <h1 className="text-2xl font-semibold">Advertise, Terms/Privacy, About</h1>
         <p className="text-sm text-neutral-500">
           Edit About, Terms/Privacy, and Advertise pages.
         </p>

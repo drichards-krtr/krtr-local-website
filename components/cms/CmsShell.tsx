@@ -5,11 +5,12 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/cms" },
   { label: "Stories", href: "/cms/stories" },
   { label: "Ads", href: "/cms/ads" },
+  { label: "Logos", href: "/cms/logos" },
   { label: "Calendar", href: "/cms/calendar" },
   { label: "Stream Config", href: "/cms/stream-config" },
   { label: "Alerts", href: "/cms/alerts" },
   { label: "Users", href: "/cms/users" },
-  { label: "Settings", href: "/cms/settings" },
+  { label: "Advertise, Terms/Privacy, About", href: "/cms/settings" },
 ];
 
 export default function CmsShell({ children }: { children: ReactNode }) {
