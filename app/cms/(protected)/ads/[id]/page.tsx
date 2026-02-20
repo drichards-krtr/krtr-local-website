@@ -6,7 +6,7 @@ export default async function EditAdPage({ params }: { params: { id: string } })
   const { data: ad } = await supabase
     .from("ads")
     .select(
-      "id, placement, start_date, end_date, active, image_url, link_url, html, weight"
+      "id, placement, description, start_date, end_date, active, image_url, link_url, html, weight"
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -22,6 +22,7 @@ export default async function EditAdPage({ params }: { params: { id: string } })
       .from("ads")
       .update({
         placement: String(formData.get("placement")),
+        description: String(formData.get("description") || ""),
         start_date: String(formData.get("start_date")),
         end_date: String(formData.get("end_date")),
         active: formData.get("active") === "on",
@@ -40,6 +41,12 @@ export default async function EditAdPage({ params }: { params: { id: string } })
         <p className="text-sm text-neutral-500">Update ad content and dates.</p>
       </header>
       <form action={updateAd} className="grid gap-3 rounded border border-neutral-200 bg-white p-6 md:grid-cols-2">
+        <input
+          name="description"
+          placeholder="Description (internal only)"
+          defaultValue={ad.description || ""}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
+        />
         <select
           name="placement"
           defaultValue={ad.placement}
