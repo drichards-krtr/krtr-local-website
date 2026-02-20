@@ -50,7 +50,7 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
       {childTags.length > 0 && (
         <section className="mb-6 rounded-lg bg-white p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
-            {tag.label} Sections
+            {params.slug === "ucsd" ? "Dive into YOUR school..." : `${tag.label} Sections`}
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {childTags.map((child) => (
