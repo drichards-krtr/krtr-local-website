@@ -23,6 +23,9 @@ type Story = {
 export default async function TagPage({ params }: { params: { slug: string } }) {
   const tag = getTagBySlug(params.slug);
   if (!tag) notFound();
+  const isUcsdChildTag = ["lpc-elementary", "dg-elementary", "ums", "uhs"].includes(
+    params.slug,
+  );
 
   const supabase = createPublicClient();
   const tagFilters = isTopLevelTag(params.slug)
@@ -43,14 +46,22 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
   }
 
   const stories = (data || []) as Story[];
-  const childTags = isTopLevelTag(params.slug) ? getChildTags(params.slug) : [];
+  const childTags = isTopLevelTag(params.slug)
+    ? getChildTags(params.slug)
+    : isUcsdChildTag
+      ? getChildTags("ucsd")
+      : [];
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
       {childTags.length > 0 && (
         <section className="mb-6 rounded-lg bg-white p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
-            {params.slug === "ucsd" ? "Dive into YOUR school..." : `${tag.label} Sections`}
+            {params.slug === "ucsd"
+              ? "Dive into YOUR school..."
+              : isUcsdChildTag
+                ? "Switch Schools..."
+                : `${tag.label} Sections`}
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {childTags.map((child) => (
