@@ -54,6 +54,10 @@ export default async function CalendarPage({
     const endAt = String(formData.get("end_at") || "");
     const imageUrl = String(formData.get("image_url") || "") || null;
     const statusValue = String(formData.get("status") || "published");
+    const link1Url = String(formData.get("link_1_url") || "").trim() || null;
+    const link1Text = String(formData.get("link_1_text") || "").trim() || null;
+    const link2Url = String(formData.get("link_2_url") || "").trim() || null;
+    const link2Text = String(formData.get("link_2_text") || "").trim() || null;
 
     const recurrence = String(formData.get("recurrence") || "none");
     const recurrenceEndDate = String(formData.get("recurrence_end_date") || "");
@@ -71,6 +75,10 @@ export default async function CalendarPage({
         end_at: endAt || "",
         image_url: imageUrl,
         status: statusValue,
+        link_1_url: link1Url,
+        link_1_text: link1Text,
+        link_2_url: link2Url,
+        link_2_text: link2Text,
       });
     } else {
       const recurrenceGroupId = randomUUID();
@@ -94,6 +102,10 @@ export default async function CalendarPage({
         image_url: string | null;
         status: string;
         recurrence_group_id: string;
+        link_1_url: string | null;
+        link_1_text: string | null;
+        link_2_url: string | null;
+        link_2_text: string | null;
       }> = [];
 
       for (
@@ -112,6 +124,10 @@ export default async function CalendarPage({
           image_url: imageUrl,
           status: statusValue,
           recurrence_group_id: recurrenceGroupId,
+          link_1_url: link1Url,
+          link_1_text: link1Text,
+          link_2_url: link2Url,
+          link_2_text: link2Text,
         });
       }
 
@@ -229,6 +245,26 @@ export default async function CalendarPage({
             name="description"
             placeholder="Description"
             className="min-h-[80px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
+          />
+          <input
+            name="link_1_url"
+            placeholder="Link 1"
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="link_1_text"
+            placeholder="Text 1"
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="link_2_url"
+            placeholder="Link 2"
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="link_2_text"
+            placeholder="Text 2"
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <div className="md:col-span-2">
             <ImageUploadField name="image_url" label="Event Image" folder="krtr/events" />

@@ -12,7 +12,7 @@ export default async function EditEventPage({
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, title, description, location, start_at, end_at, status, image_url, submitter_id"
+      "id, title, description, location, start_at, end_at, status, image_url, submitter_id, link_1_url, link_1_text, link_2_url, link_2_text"
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -44,6 +44,10 @@ export default async function EditEventPage({
         end_at: String(formData.get("end_at") || ""),
         image_url: String(formData.get("image_url") || "") || null,
         status: String(formData.get("status") || "published"),
+        link_1_url: String(formData.get("link_1_url") || "").trim() || null,
+        link_1_text: String(formData.get("link_1_text") || "").trim() || null,
+        link_2_url: String(formData.get("link_2_url") || "").trim() || null,
+        link_2_text: String(formData.get("link_2_text") || "").trim() || null,
       })
       .eq("id", params.id);
     revalidatePath("/cms/calendar");
@@ -103,6 +107,30 @@ export default async function EditEventPage({
           name="description"
           defaultValue={event.description || ""}
           className="min-h-[100px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
+        />
+        <input
+          name="link_1_url"
+          defaultValue={event.link_1_url || ""}
+          placeholder="Link 1"
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        />
+        <input
+          name="link_1_text"
+          defaultValue={event.link_1_text || ""}
+          placeholder="Text 1"
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        />
+        <input
+          name="link_2_url"
+          defaultValue={event.link_2_url || ""}
+          placeholder="Link 2"
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        />
+        <input
+          name="link_2_text"
+          defaultValue={event.link_2_text || ""}
+          placeholder="Text 2"
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
         />
         <div className="md:col-span-2">
           <ImageUploadField

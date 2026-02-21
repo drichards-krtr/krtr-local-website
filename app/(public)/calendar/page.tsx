@@ -11,6 +11,10 @@ type EventItem = {
   end_at: string | null;
   image_url: string | null;
   recurrence_group_id: string | null;
+  link_1_url: string | null;
+  link_1_text: string | null;
+  link_2_url: string | null;
+  link_2_text: string | null;
 };
 
 function formatEventWindow(startAt: string, endAt: string | null) {
@@ -52,7 +56,9 @@ export default async function CommunityCalendarPage() {
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, title, description, location, start_at, end_at, image_url, recurrence_group_id")
+    .select(
+      "id, title, description, location, start_at, end_at, image_url, recurrence_group_id, link_1_url, link_1_text, link_2_url, link_2_text"
+    )
     .eq("status", "published")
     .order("start_at", { ascending: true });
 
@@ -86,8 +92,14 @@ export default async function CommunityCalendarPage() {
 
         {events.length > 0 ? (
           <div className="grid gap-4">
-            {events.map((event) => (
-              <article key={event.id} className="rounded border border-neutral-200 p-4">
+            {events.map((event) => {
+              const links = [
+                { url: event.link_1_url?.trim(), text: event.link_1_text?.trim() },
+                { url: event.link_2_url?.trim(), text: event.link_2_text?.trim() },
+              ].filter((link) => Boolean(link.url));
+
+              return (
+                <article key={event.id} className="rounded border border-neutral-200 p-4">
                 <h2 className="text-lg font-semibold">{event.title}</h2>
                 <p className="mt-1 text-sm text-neutral-600">
                   {formatEventWindow(event.start_at, event.end_at)}
@@ -112,8 +124,24 @@ export default async function CommunityCalendarPage() {
                 {event.description && (
                   <p className="mt-2 text-sm text-neutral-700">{event.description}</p>
                 )}
-              </article>
-            ))}
+                {links.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                    {links.map((link, index) => (
+                      <a
+                        key={`${event.id}-link-${index}`}
+                        href={link.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold underline"
+                      >
+                        {link.text || link.url}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                </article>
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-neutral-600">
