@@ -1,8 +1,9 @@
 import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/admin";
 import MuxPlayer from "@/components/public/MuxPlayer";
 import Markdown from "@/components/public/Markdown";
 import AdSlot from "@/components/public/AdSlot";
-import { pickWeightedAd, type Ad } from "@/lib/ads";
+import { pickAndTrackAdsForPlacement, type Ad } from "@/lib/ads";
 
 export const dynamic = "force-dynamic";
 
@@ -49,15 +50,18 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: ads } = await supabase
-    .from("ads")
-    .select("id, placement, image_url, link_url, html, weight")
-    .eq("placement", "story")
-    .eq("active", true)
-    .lte("start_date", today)
-    .gte("end_date", today);
-  const storyAd = pickWeightedAd((ads || []) as Ad[]);
+  let storyAd: Ad | null = null;
+  try {
+    const service = createServiceClient();
+    const picked = await pickAndTrackAdsForPlacement({
+      supabase: service,
+      placement: "story",
+      count: 1,
+    });
+    storyAd = picked[0] || null;
+  } catch (error) {
+    console.error("[StoryPage] Failed to load tracked ad", error);
+  }
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">

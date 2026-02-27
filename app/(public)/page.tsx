@@ -1,7 +1,8 @@
 ﻿import { createPublicClient } from "@/lib/supabase/public";
 import AdSlot from "@/components/public/AdSlot";
+import { createServiceClient } from "@/lib/supabase/admin";
 import StoryRow from "@/components/public/StoryRow";
-import { pickWeightedAds, type Ad } from "@/lib/ads";
+import { pickAndTrackAdsForPlacement } from "@/lib/ads";
 import { storyHref } from "@/lib/stories";
 
 export const dynamic = "force-dynamic";
@@ -15,22 +16,18 @@ type Story = {
   published_at: string | null;
 };
 
-async function getAds() {
-  const supabase = createPublicClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("ads")
-    .select("id, placement, image_url, link_url, html, weight")
-    .eq("active", true)
-    .lte("start_date", today)
-    .gte("end_date", today);
-
-  if (error) {
-    console.error("[HomePage:getAds] Supabase query failed", error);
-    throw new Error(`[HomePage:getAds] ${error.message}`);
+async function getHomepageAds() {
+  try {
+    const supabase = createServiceClient();
+    return await pickAndTrackAdsForPlacement({
+      supabase,
+      placement: "homepage",
+      count: 3,
+    });
+  } catch (error) {
+    console.error("[HomePage:getHomepageAds] Failed to load tracked ads", error);
+    return [];
   }
-
-  return (data || []) as Ad[];
 }
 
 async function getSlotStories() {
@@ -112,9 +109,9 @@ export default async function HomePage({
 }: {
   searchParams?: { debug?: string };
 }) {
-  const [{ storiesById, slots }, ads] = await Promise.all([
+  const [{ storiesById, slots }, homepageAds] = await Promise.all([
     getSlotStories(),
-    getAds(),
+    getHomepageAds(),
   ]);
 
   const slotMap = new Map(slots.map((slot) => [slot.slot, slot.story_id]));
@@ -148,11 +145,6 @@ export default async function HomePage({
     recentStorySlugs: recentStories.map((story) => story.slug || null),
   };
   console.info("[HomePage] story debug", debugInfo);
-
-  const homepageAds = pickWeightedAds(
-    ads.filter((ad) => ad.placement === "homepage"),
-    3
-  );
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
