@@ -80,7 +80,7 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
           <img
             src={story.image_url}
             alt=""
-            className="mb-4 h-auto max-h-[300px] w-full rounded-lg object-cover"
+            className="mb-4 mx-auto block h-auto max-h-[300px] w-auto max-w-[calc(100%-2px)] rounded-lg"
           />
         )}
         {story.mux_playback_id && (

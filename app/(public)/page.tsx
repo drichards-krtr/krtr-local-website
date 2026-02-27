@@ -1,7 +1,7 @@
 ﻿import { createPublicClient } from "@/lib/supabase/public";
 import AdSlot from "@/components/public/AdSlot";
 import StoryRow from "@/components/public/StoryRow";
-import { pickWeightedAd, pickWeightedAds, type Ad } from "@/lib/ads";
+import { pickWeightedAds, type Ad } from "@/lib/ads";
 import { storyHref } from "@/lib/stories";
 
 export const dynamic = "force-dynamic";
@@ -149,7 +149,6 @@ export default async function HomePage({
   };
   console.info("[HomePage] story debug", debugInfo);
 
-  const allsiteAd = pickWeightedAd(ads.filter((ad) => ad.placement === "allsite"));
   const homepageAds = pickWeightedAds(
     ads.filter((ad) => ad.placement === "homepage"),
     3
@@ -162,10 +161,6 @@ export default async function HomePage({
           {JSON.stringify(debugInfo, null, 2)}
         </pre>
       )}
-      <div className="mb-6">
-        <AdSlot ad={allsiteAd} className="mx-auto max-w-[900px]" />
-      </div>
-
       {heroStory && (
         <section className="mb-8 rounded-lg bg-white p-4">
           <a href={storyHref(heroStory)} className="block">
