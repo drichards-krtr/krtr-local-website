@@ -45,7 +45,7 @@ export default async function FestivalOfTrailsPage() {
     <main className="mx-auto max-w-site px-4 py-6">
       <section className="rounded-lg bg-white p-6">
         <header className="mb-4">
-          <h1 className="text-2xl font-semibold">Festival of Trails</h1>
+          <h1 className="text-2xl font-semibold">Festival of Trails - La Porte City</h1>
         </header>
 
         {content.body_markdown && <Markdown content={content.body_markdown} />}
