@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export default async function StoriesPage({
   searchParams,
@@ -106,6 +108,9 @@ async function UnpublishButton({ storyId }: { storyId: string }) {
     "use server";
     const supabase = createServerSupabase();
     await supabase.from("stories").update({ status: "archived" }).eq("id", storyId);
+    revalidatePath("/");
+    revalidatePath("/cms/stories");
+    redirect("/cms/stories");
   }
 
   return (

@@ -1,5 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import ImageUploadField from "@/components/shared/ImageUploadField";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export default async function AdsPage({
   searchParams,
@@ -44,6 +46,9 @@ export default async function AdsPage({
       html: String(formData.get("html") || ""),
       weight: Number(formData.get("weight") || 1),
     });
+    revalidatePath("/", "layout");
+    revalidatePath("/cms/ads");
+    redirect("/cms/ads");
   }
 
   async function toggleAd(formData: FormData) {
@@ -52,6 +57,9 @@ export default async function AdsPage({
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";
     await supabase.from("ads").update({ active: next }).eq("id", id);
+    revalidatePath("/", "layout");
+    revalidatePath("/cms/ads");
+    redirect("/cms/ads");
   }
 
   return (

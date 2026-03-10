@@ -1,4 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export default async function EditAlertPage({
   params,
@@ -29,6 +31,9 @@ export default async function EditAlertPage({
         active: formData.get("active") === "on",
       })
       .eq("id", params.id);
+    revalidatePath("/", "layout");
+    revalidatePath("/cms/alerts");
+    redirect("/cms/alerts");
   }
 
   return (

@@ -14,6 +14,16 @@ const WEEKDAYS = [
   { value: 6, label: "Sat" },
 ];
 
+type EventRow = {
+  id: string;
+  title: string;
+  location: string | null;
+  start_at: string;
+  end_at: string | null;
+  status: string;
+  image_url: string | null;
+};
+
 function formatDateOnly(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -24,15 +34,16 @@ function formatDateOnly(date: Date) {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string };
+  searchParams: { search?: string; status?: string; range?: string };
 }) {
   const supabase = createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
+  const range = searchParams.range || "upcoming";
 
   let query = supabase
     .from("events")
-    .select("id, title, location, start_at, status, image_url")
+    .select("id, title, location, start_at, end_at, status, image_url")
     .order("start_at", { ascending: false });
 
   if (status !== "all") {
@@ -43,6 +54,27 @@ export default async function CalendarPage({
   }
 
   const { data: events } = await query;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  function isInRange(event: { start_at: string; end_at: string | null }) {
+    const startAt = new Date(event.start_at);
+    const endAt = event.end_at ? new Date(event.end_at) : null;
+    const effectiveEnd = endAt || startAt;
+
+    if (range === "upcoming") {
+      return effectiveEnd >= todayStart;
+    }
+
+    const daysBack = range === "past_7" ? 7 : range === "past_30" ? 30 : range === "past_90" ? 90 : 0;
+    if (!daysBack) return effectiveEnd >= todayStart;
+
+    const rangeStart = new Date(todayStart);
+    rangeStart.setDate(rangeStart.getDate() - daysBack);
+    return effectiveEnd < todayStart && effectiveEnd >= rangeStart;
+  }
+
+  const filteredEvents = ((events || []) as EventRow[]).filter((event) => isInRange(event));
 
   async function addEvent(formData: FormData) {
     "use server";
@@ -174,6 +206,16 @@ export default async function CalendarPage({
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        <select
+          name="range"
+          defaultValue={range}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          <option value="upcoming">Upcoming + Active</option>
+          <option value="past_7">Past 7 Days</option>
+          <option value="past_30">Past 30 Days</option>
+          <option value="past_90">Past 90 Days</option>
+        </select>
         <button
           type="submit"
           className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
@@ -286,7 +328,7 @@ export default async function CalendarPage({
           <div>Status</div>
           <div>Actions</div>
         </div>
-        {(events || []).map((event) => (
+        {filteredEvents.map((event) => (
           <div
             key={event.id}
             className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"

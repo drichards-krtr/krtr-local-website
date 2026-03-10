@@ -1,4 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export default async function UsersPage() {
   const supabase = createServerSupabase();
@@ -13,6 +15,8 @@ export default async function UsersPage() {
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";
     await supabase.from("profiles").update({ is_admin: next }).eq("id", id);
+    revalidatePath("/cms/users");
+    redirect("/cms/users");
   }
 
   return (

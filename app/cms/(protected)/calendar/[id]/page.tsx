@@ -52,7 +52,7 @@ export default async function EditEventPage({
       .eq("id", params.id);
     revalidatePath("/cms/calendar");
     revalidatePath("/calendar");
-    redirect(`/cms/calendar/${params.id}`);
+    redirect("/cms/calendar");
   }
 
   return (

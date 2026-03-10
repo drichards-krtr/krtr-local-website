@@ -1,5 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import ImageUploadField from "@/components/shared/ImageUploadField";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export default async function EditAdPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabase();
@@ -32,6 +34,9 @@ export default async function EditAdPage({ params }: { params: { id: string } })
         weight: Number(formData.get("weight") || 1),
       })
       .eq("id", params.id);
+    revalidatePath("/", "layout");
+    revalidatePath("/cms/ads");
+    redirect("/cms/ads");
   }
 
   return (

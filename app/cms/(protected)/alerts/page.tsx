@@ -1,4 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export default async function AlertsPage({
   searchParams,
@@ -47,6 +49,9 @@ export default async function AlertsPage({
       end_at: String(formData.get("end_at") || ""),
       active: formData.get("active") === "on",
     });
+    revalidatePath("/", "layout");
+    revalidatePath("/cms/alerts");
+    redirect("/cms/alerts");
   }
 
   async function toggleAlert(formData: FormData) {
@@ -55,6 +60,9 @@ export default async function AlertsPage({
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";
     await supabase.from("alerts").update({ active: next }).eq("id", id);
+    revalidatePath("/", "layout");
+    revalidatePath("/cms/alerts");
+    redirect("/cms/alerts");
   }
 
   return (

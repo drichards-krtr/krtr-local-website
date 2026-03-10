@@ -10,6 +10,8 @@ const NAV_ITEMS = [
   { label: "Calendar", href: "/cms/calendar" },
   { label: "Stream Config", href: "/cms/stream-config" },
   { label: "Alerts", href: "/cms/alerts" },
+  { label: "Nominations", href: "/cms/nominations" },
+  { label: "Seasonal Pages", href: "/cms/seasonal-pages" },
   { label: "Users", href: "/cms/users" },
   { label: "Advertise, Terms/Privacy, About", href: "/cms/settings" },
 ];
