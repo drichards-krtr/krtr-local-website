@@ -1,46 +1,41 @@
-import { createPublicClient } from "@/lib/supabase/public";
+import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase/admin";
 import MuxPlayer from "@/components/public/MuxPlayer";
 import Markdown from "@/components/public/Markdown";
 import AdSlot from "@/components/public/AdSlot";
 import { pickAndTrackAdsForPlacement, type Ad } from "@/lib/ads";
+import { buildPageMetadata, markdownToDescription } from "@/lib/metadata";
+import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
 
 export const dynamic = "force-dynamic";
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string };
+}): Promise<Metadata> {
+  const story = await getPublishedStoryByIdOrSlug(params.id);
+
+  if (!story) {
+    return buildPageMetadata({
+      title: "Story not found",
+      path: `/stories/${params.id}`,
+    });
+  }
+
+  const storyPath = `/stories/${story.slug || story.id}`;
+
+  return buildPageMetadata({
+    title: story.title,
+    description: story.tease || markdownToDescription(story.body_markdown),
+    path: storyPath,
+    image: story.image_url,
+    type: "article",
+  });
+}
 
 export default async function StoryPage({ params }: { params: { id: string } }) {
-  const supabase = createPublicClient();
-  const storySelect =
-    "id, title, tease, body_markdown, published_at, image_url, mux_playback_id";
-
-  const { data: storyBySlug, error: storyBySlugError } = await supabase
-    .from("stories")
-    .select(storySelect)
-    .eq("slug", params.id)
-    .eq("status", "published")
-    .maybeSingle();
-
-  if (storyBySlugError) {
-    throw new Error(`[StoryPage:slugLookup] ${storyBySlugError.message}`);
-  }
-
-  let story = storyBySlug;
-  if (!story && UUID_PATTERN.test(params.id)) {
-    const { data: storyById, error: storyByIdError } = await supabase
-      .from("stories")
-      .select(storySelect)
-      .eq("id", params.id)
-      .eq("status", "published")
-      .maybeSingle();
-
-    if (storyByIdError) {
-      throw new Error(`[StoryPage:idLookup] ${storyByIdError.message}`);
-    }
-
-    story = storyById;
-  }
+  const story = await getPublishedStoryByIdOrSlug(params.id);
 
   if (!story) {
     return (

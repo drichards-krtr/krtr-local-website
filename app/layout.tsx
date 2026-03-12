@@ -1,14 +1,14 @@
 import "./globals.css";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Montserrat } from "next/font/google";
+import { buildPageMetadata } from "@/lib/metadata";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
 
-export const metadata = {
-  title: "KRTR Local",
-  description:
-    "Local news, sports, and community stories from Dysart, La Porte City and Union CSD.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata();
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

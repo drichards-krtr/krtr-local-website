@@ -1,17 +1,8 @@
 import Markdown from "@/components/public/Markdown";
-import { createPublicClient } from "@/lib/supabase/public";
+import { getSitePage, type SitePageSlug } from "@/lib/site-pages";
 
-export default async function SitePageContent({ slug }: { slug: "about" | "termsprivacy" | "advertise" }) {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("site_pages")
-    .select("title, body_markdown")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`[SitePageContent:${slug}] ${error.message}`);
-  }
+export default async function SitePageContent({ slug }: { slug: SitePageSlug }) {
+  const data = await getSitePage(slug);
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
