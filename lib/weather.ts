@@ -111,6 +111,7 @@ type NwsAlertsResponse = {
 
 const WATERLOO_LAT = "42.4928";
 const WATERLOO_LON = "-92.3426";
+const LOCAL_ALERT_COUNTIES = new Set(["black hawk", "benton", "buchanan", "tama"]);
 
 function cToF(valueC: number) {
   return Math.round((valueC * 9) / 5 + 32);
@@ -121,6 +122,28 @@ function firstParagraph(text: string | null | undefined) {
   const trimmed = text.trim();
   if (!trimmed) return null;
   return trimmed.split(/\n\s*\n/)[0] || trimmed;
+}
+
+function normalizeAreaName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\b(county|counties)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function filterLocalAlertArea(areaDesc: string | null | undefined) {
+  if (!areaDesc) return null;
+
+  const parts = areaDesc
+    .split(/[;,]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!parts.length) return areaDesc.trim() || null;
+
+  const localParts = parts.filter((part) => LOCAL_ALERT_COUNTIES.has(normalizeAreaName(part)));
+  return localParts.length > 0 ? localParts.join(", ") : areaDesc.trim();
 }
 
 async function getNwsJson<T>(url: string, userAgent: string, revalidate = 300) {
@@ -252,7 +275,7 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
       return {
         headline: event,
         severity: p?.severity?.trim() || null,
-        area: p?.areaDesc?.trim() || null,
+        area: filterLocalAlertArea(p?.areaDesc),
         effective: p?.effective || null,
         expires: p?.expires || null,
         impacts: firstParagraph(p?.description),
