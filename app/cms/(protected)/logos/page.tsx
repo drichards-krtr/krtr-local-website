@@ -3,22 +3,41 @@ import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 
+function normalizeLogoDates(formData: FormData) {
+  const isDefault = formData.get("is_default") === "on";
+  const startDate = String(formData.get("start_date") || "");
+  const endDate = String(formData.get("end_date") || "");
+
+  return {
+    isDefault,
+    startDate: startDate || (isDefault ? "1900-01-01" : ""),
+    endDate: endDate || (isDefault ? "2999-12-31" : ""),
+  };
+}
+
 export default async function LogosPage() {
   const supabase = createServerSupabase();
   const { data: logos } = await supabase
     .from("logos")
-    .select("id, description, image_url, active, start_date, end_date")
-    .order("created_at", { ascending: false });
+    .select("id, description, image_url, active, is_default, start_date, end_date")
+    .order("is_default", { ascending: false })
+    .order("start_date", { ascending: true })
+    .order("end_date", { ascending: true });
 
   async function addLogo(formData: FormData) {
     "use server";
     const service = createServerSupabase();
+    const { isDefault, startDate, endDate } = normalizeLogoDates(formData);
+    if (isDefault) {
+      await service.from("logos").update({ is_default: false }).eq("is_default", true);
+    }
     await service.from("logos").insert({
       description: String(formData.get("description") || ""),
       image_url: String(formData.get("image_url") || ""),
-      start_date: String(formData.get("start_date")),
-      end_date: String(formData.get("end_date")),
+      start_date: startDate,
+      end_date: endDate,
       active: formData.get("active") === "on",
+      is_default: isDefault,
     });
     revalidatePath("/", "layout");
     revalidatePath("/cms/logos");
@@ -46,6 +65,9 @@ export default async function LogosPage() {
         <p className="mt-2 text-sm text-neutral-600">
           Recommended logo size: 480w x 120h (or larger at the same 4:1 ratio).
         </p>
+        <p className="mt-1 text-sm text-neutral-600">
+          Mark one logo as the default fallback to show whenever no dated logo is active.
+        </p>
       </header>
 
       <section className="rounded border border-neutral-200 bg-white p-4">
@@ -62,15 +84,21 @@ export default async function LogosPage() {
           <input
             name="start_date"
             type="date"
-            required
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <input
             name="end_date"
             type="date"
-            required
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
+          <p className="text-xs text-neutral-500 md:col-span-2">
+            Dates are for scheduled logos. Leave them blank only when marking a logo as the default
+            fallback.
+          </p>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input type="checkbox" name="is_default" />
+            Use as default fallback logo
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="active" defaultChecked />
             Active
@@ -97,9 +125,12 @@ export default async function LogosPage() {
             key={logo.id}
             className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
           >
-            <div className="truncate">{logo.description || "-"}</div>
+            <div className="truncate">
+              {logo.description || "-"}
+              {logo.is_default ? " (Default)" : ""}
+            </div>
             <div>
-              {logo.start_date} - {logo.end_date}
+              {logo.is_default ? "Fallback" : `${logo.start_date} - ${logo.end_date}`}
             </div>
             <div>{logo.active ? "Active" : "Inactive"}</div>
             <div className="truncate">{logo.image_url || "-"}</div>

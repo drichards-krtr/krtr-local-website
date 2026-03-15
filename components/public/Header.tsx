@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTopLevelTags } from "@/lib/tags";
 import { createPublicClient } from "@/lib/supabase/public";
 import HeaderNav from "@/components/public/HeaderNav";
+import { getPreferredLogo } from "@/lib/logos";
 
 const BASE_NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -17,29 +18,6 @@ type ActiveLogo = {
   image_url: string;
   description: string | null;
 };
-
-async function getActiveLogo(): Promise<ActiveLogo | null> {
-  const supabase = createPublicClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("logos")
-    .select("image_url, description")
-    .eq("active", true)
-    .lte("start_date", today)
-    .gte("end_date", today)
-    .order("start_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[Header:getActiveLogo] Supabase query failed", error);
-    return null;
-  }
-
-  if (!data?.image_url) return null;
-
-  return data as ActiveLogo;
-}
 
 type SeasonalNavItem = {
   slug: "vote" | "festival-of-trails";
@@ -70,7 +48,7 @@ async function getSeasonalNavItems(): Promise<Array<{ label: string; href: strin
 
 export default async function Header() {
   const [activeLogo, seasonalNavItems] = await Promise.all([
-    getActiveLogo(),
+    getPreferredLogo(),
     getSeasonalNavItems(),
   ]);
   const navItems = [...BASE_NAV_ITEMS, ...seasonalNavItems];

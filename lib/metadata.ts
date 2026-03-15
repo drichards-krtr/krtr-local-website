@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import { createPublicClient } from "@/lib/supabase/public";
+import { getPreferredLogo } from "@/lib/logos";
 
 const SITE_NAME = "KRTR Local";
 const DEFAULT_DESCRIPTION =
@@ -12,10 +12,6 @@ type PageMetadataInput = {
   path?: string;
   image?: string | null;
   type?: "website" | "article";
-};
-
-type ActiveLogo = {
-  image_url: string | null;
 };
 
 export function getSiteUrl() {
@@ -49,24 +45,8 @@ export function absoluteUrl(path = "/") {
 }
 
 const getActiveLogoImage = cache(async function getActiveLogoImage() {
-  const supabase = createPublicClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("logos")
-    .select("image_url")
-    .eq("active", true)
-    .lte("start_date", today)
-    .gte("end_date", today)
-    .order("start_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[metadata:getActiveLogoImage] Supabase query failed", error);
-    return null;
-  }
-
-  return (data as ActiveLogo | null)?.image_url || null;
+  const logo = await getPreferredLogo();
+  return logo?.image_url || null;
 });
 
 export function markdownToDescription(markdown: string | null | undefined, maxLength = 180) {

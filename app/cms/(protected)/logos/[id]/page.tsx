@@ -3,11 +3,23 @@ import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 
+function normalizeLogoDates(formData: FormData) {
+  const isDefault = formData.get("is_default") === "on";
+  const startDate = String(formData.get("start_date") || "");
+  const endDate = String(formData.get("end_date") || "");
+
+  return {
+    isDefault,
+    startDate: startDate || (isDefault ? "1900-01-01" : ""),
+    endDate: endDate || (isDefault ? "2999-12-31" : ""),
+  };
+}
+
 export default async function EditLogoPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabase();
   const { data: logo } = await supabase
     .from("logos")
-    .select("id, description, image_url, active, start_date, end_date")
+    .select("id, description, image_url, active, is_default, start_date, end_date")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -18,14 +30,23 @@ export default async function EditLogoPage({ params }: { params: { id: string } 
   async function updateLogo(formData: FormData) {
     "use server";
     const service = createServerSupabase();
+    const { isDefault, startDate, endDate } = normalizeLogoDates(formData);
+    if (isDefault) {
+      await service
+        .from("logos")
+        .update({ is_default: false })
+        .eq("is_default", true)
+        .neq("id", params.id);
+    }
     await service
       .from("logos")
       .update({
         description: String(formData.get("description") || ""),
         image_url: String(formData.get("image_url") || ""),
-        start_date: String(formData.get("start_date")),
-        end_date: String(formData.get("end_date")),
+        start_date: startDate,
+        end_date: endDate,
         active: formData.get("active") === "on",
+        is_default: isDefault,
       })
       .eq("id", params.id);
     revalidatePath("/", "layout");
@@ -61,15 +82,23 @@ export default async function EditLogoPage({ params }: { params: { id: string } 
         <input
           name="start_date"
           type="date"
-          defaultValue={logo.start_date}
+          defaultValue={logo.is_default ? "" : logo.start_date}
           className="rounded border border-neutral-300 px-3 py-2 text-sm"
         />
         <input
           name="end_date"
           type="date"
-          defaultValue={logo.end_date}
+          defaultValue={logo.is_default ? "" : logo.end_date}
           className="rounded border border-neutral-300 px-3 py-2 text-sm"
         />
+        <p className="text-xs text-neutral-500 md:col-span-2">
+          Dates are for scheduled logos. Leave them blank only when marking a logo as the default
+          fallback.
+        </p>
+        <label className="flex items-center gap-2 text-sm md:col-span-2">
+          <input type="checkbox" name="is_default" defaultChecked={logo.is_default} />
+          Use as default fallback logo
+        </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="active" defaultChecked={logo.active} />
           Active
