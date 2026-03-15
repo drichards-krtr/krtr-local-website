@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/admin";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 
+const fieldClassName =
+  "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm";
+
 async function sendSubmissionNotificationEmail(submitterEmail: string) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
@@ -104,7 +107,7 @@ export default function SubmitCalendarEventPage() {
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
-      <section className="rounded-lg bg-white p-6">
+      <section className="overflow-hidden rounded-lg bg-white p-4 sm:p-6">
         <header className="mb-4">
           <h1 className="text-2xl font-semibold">Submit Community Calendar Event</h1>
           <p className="text-sm text-neutral-600">
@@ -112,58 +115,64 @@ export default function SubmitCalendarEventPage() {
           </p>
         </header>
 
-        <form action={submitEvent} className="grid gap-3 md:grid-cols-2">
+        <form action={submitEvent} className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
           <input
             name="title"
             placeholder="Event title"
             required
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            className={fieldClassName}
           />
           <input
             name="location"
             placeholder="Location"
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            className={fieldClassName}
           />
-          <input
-            name="start_at"
-            type="datetime-local"
-            required
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
-          />
-          <input
-            name="end_at"
-            type="datetime-local"
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
-          />
+          <label className="grid gap-1 text-sm font-medium text-neutral-700">
+            <span>Start date/time</span>
+            <input
+              name="start_at"
+              type="datetime-local"
+              required
+              className={fieldClassName}
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium text-neutral-700">
+            <span>End date/time</span>
+            <input
+              name="end_at"
+              type="datetime-local"
+              className={fieldClassName}
+            />
+          </label>
           <textarea
             name="description"
             placeholder="Description"
-            className="min-h-[100px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
+            className={`min-h-[100px] ${fieldClassName} md:col-span-2`}
           />
-          <div className="rounded border border-neutral-200 bg-neutral-50 p-3 md:col-span-2">
+          <div className="min-w-0 rounded border border-neutral-200 bg-neutral-50 p-3 md:col-span-2">
             <h2 className="text-sm font-semibold">Contact Information</h2>
             <p className="mb-3 text-xs text-neutral-600">
               This is used if we need questions answered before publishing.
             </p>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
               <input
                 name="submitter_name"
                 placeholder="Your name"
                 required
-                className="rounded border border-neutral-300 px-3 py-2 text-sm"
+                className={fieldClassName}
               />
               <input
                 name="submitter_phone"
                 placeholder="Phone"
                 required
-                className="rounded border border-neutral-300 px-3 py-2 text-sm"
+                className={fieldClassName}
               />
               <input
                 name="submitter_email"
                 type="email"
                 placeholder="Email"
                 required
-                className="rounded border border-neutral-300 px-3 py-2 text-sm"
+                className={fieldClassName}
               />
             </div>
           </div>

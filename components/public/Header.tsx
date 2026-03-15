@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTopLevelTags } from "@/lib/tags";
 import { createPublicClient } from "@/lib/supabase/public";
+import HeaderNav from "@/components/public/HeaderNav";
 
 const BASE_NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -119,20 +120,7 @@ export default async function Header() {
             Advertise With KRTR Local
           </Link>
         </div>
-        <nav className="border-t border-white/10 bg-krtrNavy">
-          <ul className="mx-auto flex max-w-site flex-wrap justify-center gap-4 px-4 py-3 text-sm font-semibold">
-            {navItems.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="text-white transition hover:text-krtrRed"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <HeaderNav navItems={navItems} />
       </div>
     </header>
   );

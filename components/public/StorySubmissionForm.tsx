@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const fieldClassName =
+  "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm";
+
+const fileFieldClassName =
+  "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm file:font-medium";
+
 export default function StorySubmissionForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -118,47 +124,47 @@ export default function StorySubmissionForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-3 md:grid-cols-2">
+    <form onSubmit={handleSubmit} className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
       <input
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         placeholder="Story title"
         required
-        className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        className={fieldClassName}
       />
       <input
         value={tease}
         onChange={(event) => setTease(event.target.value)}
         placeholder="Short summary (optional)"
-        className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        className={fieldClassName}
       />
       <textarea
         value={bodyMarkdown}
         onChange={(event) => setBodyMarkdown(event.target.value)}
         placeholder="Story details"
         required
-        className="min-h-[140px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
+        className={`min-h-[140px] ${fieldClassName} md:col-span-2`}
       />
 
-      <div className="md:col-span-2 rounded border border-neutral-200 bg-neutral-50 p-3">
+      <div className="min-w-0 rounded border border-neutral-200 bg-neutral-50 p-3 md:col-span-2">
         <h2 className="text-sm font-semibold">Contact Information</h2>
         <p className="mb-3 text-xs text-neutral-600">
           Our team may contact you with questions before publishing.
         </p>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
           <input
             value={submitterName}
             onChange={(event) => setSubmitterName(event.target.value)}
             placeholder="Your name"
             required
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            className={fieldClassName}
           />
           <input
             value={submitterPhone}
             onChange={(event) => setSubmitterPhone(event.target.value)}
             placeholder="Phone"
             required
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            className={fieldClassName}
           />
           <input
             value={submitterEmail}
@@ -166,17 +172,17 @@ export default function StorySubmissionForm() {
             type="email"
             placeholder="Email"
             required
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            className={fieldClassName}
           />
         </div>
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid min-w-0 gap-2">
         <label className="text-sm font-medium">Image (optional)</label>
         <input
           type="file"
           accept="image/*"
-          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          className={fileFieldClassName}
           disabled={submitting}
           onChange={async (event) => {
             const file = event.target.files?.[0];
@@ -195,17 +201,17 @@ export default function StorySubmissionForm() {
           <img
             src={imageUrl}
             alt=""
-            className="max-h-[250px] max-w-[300px] rounded border border-neutral-200 object-contain"
+            className="max-h-[250px] w-full max-w-[300px] rounded border border-neutral-200 object-contain"
           />
         )}
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid min-w-0 gap-2">
         <label className="text-sm font-medium">Video (optional)</label>
         <input
           type="file"
           accept="video/*"
-          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          className={fileFieldClassName}
           disabled={submitting}
           onChange={(event) => setVideoFile(event.target.files?.[0] || null)}
         />

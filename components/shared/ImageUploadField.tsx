@@ -80,7 +80,7 @@ export default function ImageUploadField({
   }
 
   return (
-    <div ref={rootRef} className="grid gap-2">
+    <div ref={rootRef} className="grid min-w-0 gap-2">
       <label className="text-sm font-medium">{label}</label>
       <input
         type="hidden"
@@ -91,7 +91,7 @@ export default function ImageUploadField({
       <input
         type="file"
         accept="image/*"
-        className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        className="min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (file) handleUpload(file);
@@ -107,7 +107,7 @@ export default function ImageUploadField({
           <img
             src={imageUrl}
             alt=""
-            className="max-h-[250px] max-w-[300px] rounded border border-neutral-200 object-contain"
+            className="max-h-[250px] w-full max-w-[300px] rounded border border-neutral-200 object-contain"
           />
           <button
             type="button"
