@@ -16,6 +16,20 @@ export const NOMINATION_CATEGORY_LABELS: Record<NominationCategory, string> = {
   workforce: "Workforce Star of the Month",
 };
 
+export function getNominationBannerText(category: NominationCategory) {
+  const label = NOMINATION_CATEGORY_LABELS[category];
+
+  if (category === "teachers") {
+    return `Nominate Your Teacher for ${label}`;
+  }
+
+  if (category === "athletes") {
+    return `Nominate Your Athlete for ${label}`;
+  }
+
+  return `Nominate Someone You Know for ${label}`;
+}
+
 export function isNominationCategory(value: string): value is NominationCategory {
   return NOMINATION_CATEGORIES.includes(value as NominationCategory);
 }

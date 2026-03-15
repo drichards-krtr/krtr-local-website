@@ -1,8 +1,11 @@
 ﻿import { createPublicClient } from "@/lib/supabase/public";
+import Link from "next/link";
 import AdSlot from "@/components/public/AdSlot";
 import { createServiceClient } from "@/lib/supabase/admin";
 import StoryRow from "@/components/public/StoryRow";
 import { pickAndTrackAdsForPlacement } from "@/lib/ads";
+import { getNominationBannerText } from "@/lib/nominations";
+import { getCurrentOpenNomination } from "@/lib/nominationsServer";
 import { storyHref } from "@/lib/stories";
 
 export const dynamic = "force-dynamic";
@@ -109,9 +112,10 @@ export default async function HomePage({
 }: {
   searchParams?: { debug?: string };
 }) {
-  const [{ storiesById, slots }, homepageAds] = await Promise.all([
+  const [{ storiesById, slots }, homepageAds, activeNomination] = await Promise.all([
     getSlotStories(),
     getHomepageAds(),
+    getCurrentOpenNomination(),
   ]);
 
   const slotMap = new Map(slots.map((slot) => [slot.slot, slot.story_id]));
@@ -175,6 +179,23 @@ export default async function HomePage({
               )}
             </div>
           </a>
+        </section>
+      )}
+
+      {activeNomination && (
+        <section className="mb-8">
+          <Link
+            href="/nominations"
+            className="block rounded-lg border border-neutral-200 bg-gradient-to-r from-amber-100 via-orange-50 to-white p-5 transition hover:border-neutral-300 hover:shadow-sm"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-600">
+              Nominations Open
+            </p>
+            <p className="mt-2 text-xl font-semibold text-neutral-900">
+              {getNominationBannerText(activeNomination.category)}
+            </p>
+            <p className="mt-2 text-sm text-neutral-700">Tap here to submit a nomination.</p>
+          </Link>
         </section>
       )}
 
