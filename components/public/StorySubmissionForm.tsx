@@ -67,7 +67,8 @@ export default function StorySubmissionForm() {
       body: JSON.stringify({ storyId }),
     });
     if (!response.ok) {
-      throw new Error("Unable to create Mux upload.");
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload?.error || "Unable to create Mux upload.");
     }
 
     const { uploadUrl } = await response.json();

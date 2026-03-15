@@ -193,6 +193,7 @@ export default function StoryEditor({ initialStory }: Props) {
       setError("Save the story before uploading video.");
       return;
     }
+    setError(null);
     setForm((prev) => ({ ...prev, mux_status: "uploading" }));
     const response = await fetch("/api/mux/create-upload", {
       method: "POST",
@@ -200,7 +201,9 @@ export default function StoryEditor({ initialStory }: Props) {
       body: JSON.stringify({ storyId: initialStory.id }),
     });
     if (!response.ok) {
-      setError("Unable to create Mux upload.");
+      const payload = await response.json().catch(() => ({}));
+      setForm((prev) => ({ ...prev, mux_status: initialStory.mux_status || "none" }));
+      setError(payload?.error || "Unable to create Mux upload.");
       return;
     }
     const { uploadUrl } = await response.json();
@@ -209,6 +212,7 @@ export default function StoryEditor({ initialStory }: Props) {
       body: file,
     });
     if (!uploadRes.ok) {
+      setForm((prev) => ({ ...prev, mux_status: "errored" }));
       setError("Video upload failed.");
       return;
     }
