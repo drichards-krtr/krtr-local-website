@@ -8,6 +8,14 @@ export default async function AlertsPage({
   searchParams: { active?: string; search?: string };
 }) {
   const supabase = createServerSupabase();
+  // Cleanup: remove alerts that expired more than 7 days ago
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from("alerts").delete().lt("end_at", sevenDaysAgo);
+  } catch (error) {
+    // Keep page render working even if cleanup fails
+    console.error("[Alerts cleanup] failed", error);
+  }
   const active = searchParams.active || "all";
   const search = searchParams.search?.trim() || "";
 
