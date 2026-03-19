@@ -1,3 +1,4 @@
+import LiveVideoPlayer from "@/components/public/LiveVideoPlayer";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isLiveBySchedule, type StreamScheduleRow } from "@/lib/streamSchedule";
 
@@ -107,15 +108,7 @@ export default async function WatchLivePage() {
               <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-red-600">
                 Live Now
               </p>
-              <video
-                controls
-                autoPlay
-                playsInline
-                src={streamUrl}
-                className="aspect-video w-full rounded bg-black"
-              >
-                Your browser does not support the live stream player.
-              </video>
+              <LiveVideoPlayer streamUrl={streamUrl} streamId={config.stream_id || null} />
             </div>
           </div>
         ) : (
