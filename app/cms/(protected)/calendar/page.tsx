@@ -24,6 +24,15 @@ type EventRow = {
   image_url: string | null;
 };
 
+function formatSavedAt(timestamp: string) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function formatDateOnly(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -34,12 +43,13 @@ function formatDateOnly(date: Date) {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string; range?: string };
+  searchParams: { search?: string; status?: string; range?: string; savedAt?: string };
 }) {
   const supabase = createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
   const range = searchParams.range || "upcoming";
+  const savedAtLabel = searchParams.savedAt ? formatSavedAt(searchParams.savedAt) : null;
 
   let query = supabase
     .from("events")
@@ -169,7 +179,7 @@ export default async function CalendarPage({
     }
     revalidatePath("/cms/calendar");
     revalidatePath("/calendar");
-    redirect("/cms/calendar");
+    redirect(`/cms/calendar?savedAt=${encodeURIComponent(new Date().toISOString())}`);
   }
 
   async function unpublishEvent(formData: FormData) {
@@ -317,6 +327,11 @@ export default async function CalendarPage({
           >
             Save Event
           </button>
+          {savedAtLabel && (
+            <p className="text-sm text-neutral-500 md:col-span-2">
+              Saved: {savedAtLabel}
+            </p>
+          )}
         </form>
       </section>
 

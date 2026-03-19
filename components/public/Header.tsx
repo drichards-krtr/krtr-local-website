@@ -64,11 +64,11 @@ export default async function Header() {
             IG
           </a>
           <a
-            href="https://www.youtube.com/@KRTR-Local/live"
+            href="/watch-live"
             aria-label="Watch live"
             className="text-sm font-bold text-red-600 [text-shadow:-0.5px_0_0_#fff,0.5px_0_0_#fff,0_-0.5px_0_#fff,0_0.5px_0_#fff]"
           >
-            LIVE
+            WATCH LIVE BROADCAST
           </a>
           <a href="https://x.com/KRTR_Local" aria-label="X">
             X
