@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { TAG_TREE, type TagSlug } from "@/lib/tags";
 import { buildStorySlug } from "@/lib/stories";
 
@@ -149,43 +150,25 @@ export default function StoryEditor({ initialStory }: Props) {
   };
 
   const handleImageUpload = async (file: File) => {
-    const signatureRes = await fetch("/api/cloudinary/signature", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folder: "krtr" }),
-    });
-    if (!signatureRes.ok) {
-      setError("Unable to sign Cloudinary upload.");
-      return;
-    }
-    const { signature, timestamp, apiKey, cloudName } =
-      await signatureRes.json();
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("api_key", apiKey);
-    formData.append("timestamp", timestamp);
-    formData.append("signature", signature);
-    formData.append("folder", "krtr");
+    setError(null);
+    try {
+      const payload = await uploadToCloudinary({
+        file,
+        folder: "krtr/stories",
+        resourceType: "image",
+      });
 
-    const uploadRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-    if (!uploadRes.ok) {
-      setError("Image upload failed.");
+      setForm((prev) => ({
+        ...prev,
+        image_url: payload.secure_url || null,
+        cloudinary_public_id: payload.public_id || null,
+        cloudinary_width: payload.width || null,
+        cloudinary_height: payload.height || null,
+      }));
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Image upload failed.");
       return;
     }
-    const payload = await uploadRes.json();
-    setForm((prev) => ({
-      ...prev,
-      image_url: payload.secure_url,
-      cloudinary_public_id: payload.public_id,
-      cloudinary_width: payload.width,
-      cloudinary_height: payload.height,
-    }));
   };
 
   const handleVideoUpload = async (file: File) => {

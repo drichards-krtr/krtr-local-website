@@ -4,7 +4,7 @@ import crypto from "crypto";
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const folder = body.folder || "krtr";
+  const folder = String(body.folder || "krtr").trim() || "krtr";
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
@@ -14,7 +14,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Cloudinary env missing." }, { status: 500 });
   }
 
-  const signatureBase = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+  const params = {
+    asset_folder: folder,
+    folder,
+  };
+
+  const signatureBase =
+    Object.entries({ ...params, timestamp })
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => `${key}=${value}`)
+      .join("&") + apiSecret;
+
   const signature = crypto.createHash("sha1").update(signatureBase).digest("hex");
 
   return NextResponse.json({
@@ -22,5 +32,6 @@ export async function POST(request: Request) {
     signature,
     apiKey,
     cloudName,
+    params,
   });
 }

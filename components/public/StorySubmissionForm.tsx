@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 
 const fieldClassName =
   "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm";
@@ -27,34 +28,11 @@ export default function StorySubmissionForm() {
     setStatus("Uploading image...");
     setError(null);
 
-    const signatureRes = await fetch("/api/cloudinary/signature", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folder: "krtr/stories" }),
+    const payload = await uploadToCloudinary({
+      file,
+      folder: "krtr/stories",
+      resourceType: "image",
     });
-    if (!signatureRes.ok) {
-      throw new Error("Unable to sign Cloudinary upload.");
-    }
-
-    const { signature, timestamp, apiKey, cloudName } = await signatureRes.json();
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("api_key", apiKey);
-    formData.append("timestamp", timestamp);
-    formData.append("signature", signature);
-    formData.append("folder", "krtr/stories");
-
-    const uploadRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-    if (!uploadRes.ok) {
-      throw new Error("Image upload failed.");
-    }
-    const payload = await uploadRes.json();
     setImageUrl(payload.secure_url || "");
     setStatus("Image upload complete.");
   }
