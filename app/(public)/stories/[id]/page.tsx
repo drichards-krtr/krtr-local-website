@@ -4,6 +4,7 @@ import MuxPlayer from "@/components/public/MuxPlayer";
 import Markdown from "@/components/public/Markdown";
 import AdSlot from "@/components/public/AdSlot";
 import { pickAndTrackAdsForPlacement, type Ad } from "@/lib/ads";
+import { formatDateInTimeZone } from "@/lib/dates";
 import { buildPageMetadata, markdownToDescription } from "@/lib/metadata";
 import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
 
@@ -68,7 +69,7 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
               className="text-sm text-muted"
               dateTime={story.published_at}
             >
-              {new Date(story.published_at).toLocaleDateString()}
+              {formatDateInTimeZone(story.published_at)}
             </time>
           )}
           {story.tease && (

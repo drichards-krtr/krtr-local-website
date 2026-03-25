@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDateInTimeZone } from "@/lib/dates";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -107,9 +108,7 @@ export default async function StoriesPage({
             <div className="font-medium">{story.title || "(Untitled)"}</div>
             <div className="capitalize text-neutral-500">{story.status}</div>
             <div className="text-neutral-500">
-              {story.published_at
-                ? new Date(story.published_at).toLocaleDateString()
-                : "-"}
+              {story.published_at ? formatDateInTimeZone(story.published_at) : "-"}
             </div>
             <div className="flex gap-3 text-sm">
               <Link
@@ -178,7 +177,7 @@ function renderSlotSelector(
         <option value="">None</option>
         {options.map((opt) => (
           <option key={opt.id} value={opt.id}>
-            {opt.title} {opt.published_at ? ` — ${new Date(opt.published_at).toLocaleDateString()}` : ""}
+            {opt.title} {opt.published_at ? ` — ${formatDateInTimeZone(opt.published_at)}` : ""}
           </option>
         ))}
       </select>

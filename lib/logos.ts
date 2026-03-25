@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { getDateTextInTimeZone } from "@/lib/dates";
 import { createPublicClient } from "@/lib/supabase/public";
 
 type LogoRow = {
@@ -10,7 +11,7 @@ type LogoRow = {
 
 export const getPreferredLogo = cache(async function getPreferredLogo() {
   const supabase = createPublicClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getDateTextInTimeZone();
   const { data, error } = await supabase
     .from("logos")
     .select("image_url, description, is_default, start_date")

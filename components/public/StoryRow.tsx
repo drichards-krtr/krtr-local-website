@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDateInTimeZone } from "@/lib/dates";
 import { storyHref } from "@/lib/stories";
 
 type Story = {
@@ -38,7 +39,7 @@ export default function StoryRow({ story }: { story: Story }) {
             className="text-sm text-muted"
             dateTime={story.published_at}
           >
-            {new Date(story.published_at).toLocaleDateString()}
+            {formatDateInTimeZone(story.published_at)}
           </time>
         )}
         {story.tease && <p className="text-sm text-neutral-700">{story.tease}</p>}

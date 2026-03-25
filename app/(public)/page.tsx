@@ -4,6 +4,7 @@ import AdSlot from "@/components/public/AdSlot";
 import { createServiceClient } from "@/lib/supabase/admin";
 import StoryRow from "@/components/public/StoryRow";
 import { pickAndTrackAdsForPlacement } from "@/lib/ads";
+import { formatDateInTimeZone } from "@/lib/dates";
 import { getNominationBannerText } from "@/lib/nominations";
 import { getCurrentOpenNomination } from "@/lib/nominationsServer";
 import { storyHref } from "@/lib/stories";
@@ -171,7 +172,7 @@ export default async function HomePage({
               <h1 className="text-2xl font-semibold">{heroStory.title}</h1>
               {heroStory.published_at && (
                 <p className="text-sm text-muted">
-                  {new Date(heroStory.published_at).toLocaleDateString()}
+                  {formatDateInTimeZone(heroStory.published_at)}
                 </p>
               )}
               {heroStory.tease && (
