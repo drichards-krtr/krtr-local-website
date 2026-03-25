@@ -1,6 +1,11 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  formatNaiveDateTime,
+  getDateTimeTextInTimeZone,
+  getNaiveDateTimeText,
+} from "@/lib/dates";
 
 export default async function AlertsPage({
   searchParams,
@@ -32,9 +37,7 @@ export default async function AlertsPage({
   }
 
   const { data: alerts } = await query;
-  const nowChicago = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Chicago" })
-  );
+  const nowChicago = getDateTimeTextInTimeZone();
 
   function isActiveNow(alert: {
     active: boolean;
@@ -42,8 +45,8 @@ export default async function AlertsPage({
     end_at: string | null;
   }) {
     if (!alert.active) return false;
-    const startOk = !alert.start_at || new Date(alert.start_at) <= nowChicago;
-    const endOk = !alert.end_at || new Date(alert.end_at) >= nowChicago;
+    const startOk = !alert.start_at || getNaiveDateTimeText(alert.start_at) <= nowChicago;
+    const endOk = !alert.end_at || getNaiveDateTimeText(alert.end_at) >= nowChicago;
     return startOk && endOk;
   }
 
@@ -160,8 +163,7 @@ export default async function AlertsPage({
           >
             <div className="truncate">{alert.message}</div>
             <div className="text-neutral-500">
-              {alert.start_at ? new Date(alert.start_at).toLocaleString() : "-"}{" "}
-              / {alert.end_at ? new Date(alert.end_at).toLocaleString() : "-"}
+              {formatNaiveDateTime(alert.start_at)} / {formatNaiveDateTime(alert.end_at)}
             </div>
             <div>{alert.active ? "Active" : "Inactive"}</div>
             <div>{isActiveNow(alert) ? "Yes" : "No"}</div>

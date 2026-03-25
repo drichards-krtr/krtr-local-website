@@ -1,5 +1,6 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { unstable_noStore as noStore } from "next/cache";
+import { getDateTimeTextInTimeZone, getNaiveDateTimeText } from "@/lib/dates";
 import { getCurrentWeather } from "@/lib/weather";
 
 type AlertRow = {
@@ -13,11 +14,9 @@ type AlertRow = {
 };
 
 function isActiveNowInChicago(alert: AlertRow) {
-  const nowChicago = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Chicago" })
-  );
-  const startOk = !alert.start_at || new Date(alert.start_at) <= nowChicago;
-  const endOk = !alert.end_at || new Date(alert.end_at) >= nowChicago;
+  const nowChicago = getDateTimeTextInTimeZone();
+  const startOk = !alert.start_at || getNaiveDateTimeText(alert.start_at) <= nowChicago;
+  const endOk = !alert.end_at || getNaiveDateTimeText(alert.end_at) >= nowChicago;
   return alert.active && startOk && endOk;
 }
 

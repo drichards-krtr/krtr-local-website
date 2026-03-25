@@ -1,4 +1,11 @@
 import { createPublicClient } from "@/lib/supabase/public";
+import {
+  formatNaiveDateTime,
+  getDateTextInTimeZone,
+  getDateTimeTextInTimeZone,
+  getNaiveDateText,
+  getNaiveDateTimeText,
+} from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -18,19 +25,17 @@ type EventItem = {
 };
 
 function formatEventWindow(startAt: string, endAt: string | null) {
-  const start = new Date(startAt);
-  if (!endAt) return start.toLocaleString();
-  const end = new Date(endAt);
-  return `${start.toLocaleString()} - ${end.toLocaleString()}`;
+  if (!endAt) return formatNaiveDateTime(startAt);
+  return `${formatNaiveDateTime(startAt)} - ${formatNaiveDateTime(endAt)}`;
 }
 
-function includeOnCalendar(event: EventItem, now: Date, startOfToday: Date) {
+function includeOnCalendar(event: EventItem, nowText: string, todayDate: string) {
   if (event.end_at) {
     // Keep event visible until it has actually ended.
-    return new Date(event.end_at) >= now;
+    return getNaiveDateTimeText(event.end_at) >= nowText;
   }
   // No end time: keep event through the day it starts.
-  return new Date(event.start_at) >= startOfToday;
+  return getNaiveDateText(event.start_at) >= todayDate;
 }
 
 function dedupeRecurringEvents(events: EventItem[]) {
@@ -50,9 +55,8 @@ function dedupeRecurringEvents(events: EventItem[]) {
 
 export default async function CommunityCalendarPage() {
   const supabase = createPublicClient();
-  const now = new Date();
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  const nowText = getDateTimeTextInTimeZone();
+  const todayDate = getDateTextInTimeZone();
 
   const { data, error } = await supabase
     .from("events")
@@ -69,7 +73,7 @@ export default async function CommunityCalendarPage() {
 
   const events = dedupeRecurringEvents(
     ((data || []) as EventItem[]).filter((event) =>
-      includeOnCalendar(event, now, startOfToday)
+      includeOnCalendar(event, nowText, todayDate)
     )
   );
 

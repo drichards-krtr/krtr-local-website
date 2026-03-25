@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getDateTextInTimeZone, getDayRangeInTimeZone } from "@/lib/dates";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   NOMINATION_CATEGORY_LABELS,
@@ -65,10 +66,10 @@ export async function GET(request: Request) {
     query = query.eq("category", category);
   }
   if (from) {
-    query = query.gte("submitted_at", `${from}T00:00:00`);
+    query = query.gte("submitted_at", getDayRangeInTimeZone(from).startIso);
   }
   if (to) {
-    query = query.lte("submitted_at", `${to}T23:59:59`);
+    query = query.lt("submitted_at", getDayRangeInTimeZone(to).endIso);
   }
 
   const { data, error } = await query;
@@ -108,7 +109,7 @@ export async function GET(request: Request) {
   ];
 
   const body = lines.join("\n");
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = getDateTextInTimeZone();
   return new NextResponse(body, {
     status: 200,
     headers: {

@@ -3,6 +3,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
+  formatDateInTimeZone,
+  getDayRangeInTimeZone,
+} from "@/lib/dates";
+import {
   NOMINATION_CATEGORIES,
   NOMINATION_CATEGORY_LABELS,
   type NominationCategory,
@@ -49,10 +53,10 @@ export default async function NominationSubmissionsPage({
     query = query.eq("category", categoryFilter);
   }
   if (from) {
-    query = query.gte("submitted_at", `${from}T00:00:00`);
+    query = query.gte("submitted_at", getDayRangeInTimeZone(from).startIso);
   }
   if (to) {
-    query = query.lte("submitted_at", `${to}T23:59:59`);
+    query = query.lt("submitted_at", getDayRangeInTimeZone(to).endIso);
   }
 
   const { data, error } = await query;
@@ -171,7 +175,7 @@ export default async function NominationSubmissionsPage({
             <div>{NOMINATION_CATEGORY_LABELS[row.category]}</div>
             <div>{getNomineeName(row)}</div>
             <div>{row.submitter_name}</div>
-            <div className="text-neutral-600">{new Date(row.submitted_at).toLocaleDateString()}</div>
+            <div className="text-neutral-600">{formatDateInTimeZone(row.submitted_at)}</div>
             <div className="text-xs text-neutral-600">
               <div>{row.submitter_email}</div>
               <div>{row.submitter_phone}</div>

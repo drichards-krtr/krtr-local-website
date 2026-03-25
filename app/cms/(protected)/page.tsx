@@ -1,12 +1,15 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  getDateTextInTimeZone,
+  getDateTimeTextInTimeZone,
+  getDayRangeInTimeZone,
+  getNaiveDateTimeText,
+} from "@/lib/dates";
 
 export default async function CmsDashboard() {
   const supabase = createServerSupabase();
-  const todayDate = new Date().toISOString().slice(0, 10);
-  const todayStartIso = `${todayDate}T00:00:00.000Z`;
-  const tomorrowStartIso = new Date(
-    Date.parse(`${todayDate}T00:00:00.000Z`) + 86400000
-  ).toISOString();
+  const todayDate = getDateTextInTimeZone();
+  const { startIso: todayStartIso, endIso: tomorrowStartIso } = getDayRangeInTimeZone(todayDate);
 
   const [
     storiesTotal,
@@ -83,13 +86,11 @@ export default async function CmsDashboard() {
       .is("ended_at", null),
   ]);
 
-  const nowChicago = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Chicago" })
-  );
+  const nowChicago = getDateTimeTextInTimeZone();
   const activeNowAlerts =
     (alertsActiveRows.data || []).filter((alert) => {
-      const startOk = !alert.start_at || new Date(alert.start_at) <= nowChicago;
-      const endOk = !alert.end_at || new Date(alert.end_at) >= nowChicago;
+      const startOk = !alert.start_at || getNaiveDateTimeText(alert.start_at) <= nowChicago;
+      const endOk = !alert.end_at || getNaiveDateTimeText(alert.end_at) >= nowChicago;
       return startOk && endOk;
     }).length || 0;
 
@@ -138,7 +139,7 @@ export default async function CmsDashboard() {
             ],
           },
           {
-            label: "Analytics (Today UTC)",
+            label: "Analytics (Today Chicago)",
             rows: [
               ["Total Sessions", analyticsTodayTotal.count || 0],
               ["Active Sessions", analyticsTodayActive.count || 0],

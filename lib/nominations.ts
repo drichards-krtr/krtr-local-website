@@ -1,3 +1,5 @@
+import { getDateTextInTimeZone } from "@/lib/dates";
+
 export const NOMINATION_TIMEZONE = "America/Chicago";
 
 export const NOMINATION_CATEGORIES = [
@@ -35,17 +37,7 @@ export function isNominationCategory(value: string): value is NominationCategory
 }
 
 export function getCentralDateText(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: NOMINATION_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-
-  const year = parts.find((part) => part.type === "year")?.value || "0000";
-  const month = parts.find((part) => part.type === "month")?.value || "01";
-  const day = parts.find((part) => part.type === "day")?.value || "01";
-  return `${year}-${month}-${day}`;
+  return getDateTextInTimeZone(date, NOMINATION_TIMEZONE);
 }
 
 export function nominationIsOpenInCentralTime(nomination: {

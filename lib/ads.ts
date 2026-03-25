@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getDateTextInTimeZone } from "@/lib/dates";
 
 export type Ad = {
   id: string;
@@ -77,7 +78,7 @@ export async function pickAndTrackAdsForPlacement({
   count = 1,
   onDate,
 }: PickAndTrackAdsForPlacementOptions) {
-  const day = onDate ?? new Date().toISOString().slice(0, 10);
+  const day = onDate ?? getDateTextInTimeZone();
 
   const { data: adRows, error: adError } = await supabase
     .from("ads")

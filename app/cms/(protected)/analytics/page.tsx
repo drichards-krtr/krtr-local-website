@@ -1,4 +1,9 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  formatDateTimeInTimeZone,
+  getDateTextInTimeZone,
+  getDayRangeInTimeZone,
+} from "@/lib/dates";
 
 type AnalyticsSession = {
   session_id: string;
@@ -24,17 +29,7 @@ function formatDateTime(value: string | null) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString();
-}
-
-function toDateStartIso(dateText: string) {
-  return `${dateText}T00:00:00.000Z`;
-}
-
-function toNextDateStartIso(dateText: string) {
-  const date = new Date(`${dateText}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + 1);
-  return date.toISOString();
+  return formatDateTimeInTimeZone(date);
 }
 
 function isDateInput(value: string) {
@@ -58,15 +53,17 @@ export default async function AnalyticsPage({
       .limit(1);
 
     selectedDay = latestRows?.[0]?.started_at
-      ? latestRows[0].started_at.slice(0, 10)
-      : new Date().toISOString().slice(0, 10);
+      ? getDateTextInTimeZone(new Date(latestRows[0].started_at))
+      : getDateTextInTimeZone();
   }
+
+  const { startIso, endIso } = getDayRangeInTimeZone(selectedDay);
 
   const { data, error } = await supabase
     .from("analytics_sessions")
     .select("session_id, device_id, stream_id, started_at, ended_at, duration_seconds")
-    .gte("started_at", toDateStartIso(selectedDay))
-    .lt("started_at", toNextDateStartIso(selectedDay))
+    .gte("started_at", startIso)
+    .lt("started_at", endIso)
     .order("started_at", { ascending: false });
 
   const sessions: AnalyticsSession[] = data || [];
@@ -87,7 +84,7 @@ export default async function AnalyticsPage({
       <header>
         <h1 className="text-2xl font-semibold">Analytics Sessions</h1>
         <p className="text-sm text-neutral-500">
-          Displaying one calendar day at a time (UTC).
+          Displaying one Chicago calendar day at a time.
         </p>
       </header>
 

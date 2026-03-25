@@ -2,6 +2,14 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import ImageUploadField from "@/components/shared/ImageUploadField";
+import {
+  formatDateTimeInTimeZone,
+  formatNaiveDate,
+  getDateTextInTimeZone,
+  getDateTimeTextInTimeZone,
+  getNaiveDateText,
+  getNaiveDateTimeText,
+} from "@/lib/dates";
 import { randomUUID } from "crypto";
 
 const WEEKDAYS = [
@@ -27,10 +35,7 @@ type EventRow = {
 function formatSavedAt(timestamp: string) {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return formatDateTimeInTimeZone(date, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function formatDateOnly(date: Date) {
@@ -64,24 +69,22 @@ export default async function CalendarPage({
   }
 
   const { data: events } = await query;
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const nowText = getDateTimeTextInTimeZone();
+  const todayDate = getDateTextInTimeZone();
 
   function isInRange(event: { start_at: string; end_at: string | null }) {
-    const startAt = new Date(event.start_at);
-    const endAt = event.end_at ? new Date(event.end_at) : null;
-    const effectiveEnd = endAt || startAt;
+    const effectiveEndDateTime = getNaiveDateTimeText(event.end_at || event.start_at);
+    const effectiveEndDate = getNaiveDateText(event.end_at || event.start_at);
 
     if (range === "upcoming") {
-      return effectiveEnd >= todayStart;
+      return effectiveEndDateTime >= nowText;
     }
 
     const daysBack = range === "past_7" ? 7 : range === "past_30" ? 30 : range === "past_90" ? 90 : 0;
-    if (!daysBack) return effectiveEnd >= todayStart;
+    if (!daysBack) return effectiveEndDateTime >= nowText;
 
-    const rangeStart = new Date(todayStart);
-    rangeStart.setDate(rangeStart.getDate() - daysBack);
-    return effectiveEnd < todayStart && effectiveEnd >= rangeStart;
+    const rangeStart = getDateTextInTimeZone(new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000));
+    return effectiveEndDate < todayDate && effectiveEndDate >= rangeStart;
   }
 
   const filteredEvents = ((events || []) as EventRow[]).filter((event) => isInRange(event));
@@ -351,7 +354,7 @@ export default async function CalendarPage({
             <div>{event.title}</div>
             <div className="text-neutral-500">{event.location || "-"}</div>
             <div className="text-neutral-500">
-              {new Date(event.start_at).toLocaleDateString()}
+              {formatNaiveDate(event.start_at)}
             </div>
             <div className="capitalize">{event.status}</div>
             <div className="flex gap-3">

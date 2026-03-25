@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Markdown from "@/components/public/Markdown";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { formatDateTimeInTimeZone } from "@/lib/dates";
 import { createPublicClient } from "@/lib/supabase/public";
 import { getCurrentOpenNomination } from "@/lib/nominationsServer";
 import {
@@ -214,7 +215,7 @@ export default async function NominationsPublicPage({
         submitterEmail,
         category,
         nominationId: activeNomination.id,
-        submittedAt: new Date().toISOString(),
+        submittedAt: formatDateTimeInTimeZone(new Date(), { timeZoneName: "short" }),
         payload,
       });
       revalidatePath("/nominations");
