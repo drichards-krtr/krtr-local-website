@@ -26,6 +26,14 @@ a {
   margin: 0.75rem 0;
 }
 
+.story-body a,
+.story-body a:visited,
+.story-body a:hover,
+.story-body a:active {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .story-body ul {
   list-style: disc;
   padding-left: 1.5rem;
