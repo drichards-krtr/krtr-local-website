@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getDistrictConfig, DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
 import {
   getDateTextInTimeZone,
   getDateTimeTextInTimeZone,
@@ -6,7 +7,13 @@ import {
   getNaiveDateTimeText,
 } from "@/lib/dates";
 
-export default async function CmsDashboard() {
+export default async function CmsDashboard({
+  searchParams,
+}: {
+  searchParams?: { district?: string };
+}) {
+  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
+  const district = getDistrictConfig(districtKey);
   const supabase = createServerSupabase();
   const todayDate = getDateTextInTimeZone();
   const { startIso: todayStartIso, endIso: tomorrowStartIso } = getDayRangeInTimeZone(todayDate);
@@ -29,49 +36,65 @@ export default async function CmsDashboard() {
     analyticsTodayTotal,
     analyticsTodayActive,
   ] = await Promise.all([
-    supabase.from("stories").select("id", { count: "exact", head: true }),
+    supabase.from("stories").select("id", { count: "exact", head: true }).eq("district_key", districtKey),
     supabase
       .from("stories")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("status", "published"),
     supabase
       .from("stories")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("status", "draft"),
     supabase
       .from("stories")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("status", "archived"),
-    supabase.from("ads").select("id", { count: "exact", head: true }),
+    supabase.from("ads").select("id", { count: "exact", head: true }).eq("district_key", districtKey),
     supabase
       .from("ads")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("placement", "allsite")
       .eq("active", true),
     supabase
       .from("ads")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("placement", "homepage")
       .eq("active", true),
     supabase
       .from("ads")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("placement", "story")
       .eq("active", true),
-    supabase.from("events").select("id", { count: "exact", head: true }),
+    supabase.from("events").select("id", { count: "exact", head: true }).eq("district_key", districtKey),
     supabase
       .from("events")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .gte("start_at", todayStartIso),
     supabase
       .from("alerts")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("active", true),
-    supabase.from("alerts").select("start_at, end_at").eq("active", true),
-    supabase.from("stream_schedule").select("id", { count: "exact", head: true }),
+    supabase
+      .from("alerts")
+      .select("start_at, end_at")
+      .eq("district_key", districtKey)
+      .eq("active", true),
     supabase
       .from("stream_schedule")
       .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey),
+    supabase
+      .from("stream_schedule")
+      .select("id", { count: "exact", head: true })
+      .eq("district_key", districtKey)
       .eq("is_active", true),
     supabase
       .from("analytics_sessions")
@@ -96,7 +119,30 @@ export default async function CmsDashboard() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Dashboard</h1>
+      <h1 className="mb-2 text-2xl font-semibold">Dashboard</h1>
+      <p className="mb-4 text-sm text-neutral-600">Viewing district-specific content metrics for {district.name}.</p>
+
+      <form className="mb-6 rounded border border-neutral-200 bg-white p-4">
+        <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="ml-3 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Switch
+        </button>
+      </form>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
           {
@@ -139,7 +185,7 @@ export default async function CmsDashboard() {
             ],
           },
           {
-            label: "Analytics (Today Chicago)",
+            label: "Analytics (Global Today Chicago)",
             rows: [
               ["Total Sessions", analyticsTodayTotal.count || 0],
               ["Active Sessions", analyticsTodayActive.count || 0],

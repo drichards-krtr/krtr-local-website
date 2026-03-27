@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 
 const WEEKDAYS = [
   { value: 0, label: "Sunday" },
@@ -29,18 +30,33 @@ type StreamSchedule = {
   is_active: boolean;
 };
 
-export default async function StreamConfigPage() {
+function revalidateStreamPaths(districtKey: DistrictKey) {
+  revalidatePath("/cms/stream-config");
+  revalidatePath(`/cms/stream-config?district=${districtKey}`);
+  revalidatePath("/api/live");
+  revalidatePath("/watch-live");
+}
+
+export default async function StreamConfigPage({
+  searchParams,
+}: {
+  searchParams?: { district?: string };
+}) {
+  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
+  const district = getDistrictConfig(districtKey);
   const supabase = createServiceClient();
   const [{ data: configData }, { data: scheduleData }] = await Promise.all([
     supabase
       .from("stream_config")
       .select("is_live, stream_id, hls_url, mode, timezone, updated_at")
+      .eq("district_key", districtKey)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
     supabase
       .from("stream_schedule")
       .select("id, day_of_week, start_time, end_time, is_active")
+      .eq("district_key", districtKey)
       .order("day_of_week", { ascending: true })
       .order("start_time", { ascending: true }),
   ]);
@@ -51,41 +67,43 @@ export default async function StreamConfigPage() {
   async function saveConfig(formData: FormData) {
     "use server";
     const service = createServiceClient();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const mode = String(formData.get("mode") || "manual");
     await service.from("stream_config").insert({
+      district_key: nextDistrictKey,
       mode: mode === "auto" ? "auto" : "manual",
       is_live: mode === "auto" ? false : formData.get("is_live") === "on",
       stream_id: String(formData.get("stream_id") || "").trim() || null,
       hls_url: String(formData.get("hls_url") || "").trim() || null,
       timezone: String(formData.get("timezone") || "America/Chicago").trim(),
     });
-    revalidatePath("/cms/stream-config");
-    revalidatePath("/api/live");
-    redirect("/cms/stream-config");
+    revalidateStreamPaths(nextDistrictKey);
+    redirect(`/cms/stream-config?district=${nextDistrictKey}`);
   }
 
   async function addSchedule(formData: FormData) {
     "use server";
     const service = createServiceClient();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     await service.from("stream_schedule").insert({
+      district_key: nextDistrictKey,
       day_of_week: Number(formData.get("day_of_week")),
       start_time: String(formData.get("start_time") || ""),
       end_time: String(formData.get("end_time") || ""),
       is_active: formData.get("is_active") === "on",
     });
-    revalidatePath("/cms/stream-config");
-    revalidatePath("/api/live");
-    redirect("/cms/stream-config");
+    revalidateStreamPaths(nextDistrictKey);
+    redirect(`/cms/stream-config?district=${nextDistrictKey}`);
   }
 
   async function deleteSchedule(formData: FormData) {
     "use server";
     const service = createServiceClient();
     const id = String(formData.get("id") || "");
-    await service.from("stream_schedule").delete().eq("id", id);
-    revalidatePath("/cms/stream-config");
-    revalidatePath("/api/live");
-    redirect("/cms/stream-config");
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
+    await service.from("stream_schedule").delete().eq("id", id).eq("district_key", districtKey);
+    revalidateStreamPaths(nextDistrictKey);
+    redirect(`/cms/stream-config?district=${nextDistrictKey}`);
   }
 
   async function toggleSchedule(formData: FormData) {
@@ -93,10 +111,14 @@ export default async function StreamConfigPage() {
     const service = createServiceClient();
     const id = String(formData.get("id") || "");
     const next = formData.get("next") === "true";
-    await service.from("stream_schedule").update({ is_active: next }).eq("id", id);
-    revalidatePath("/cms/stream-config");
-    revalidatePath("/api/live");
-    redirect("/cms/stream-config");
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
+    await service
+      .from("stream_schedule")
+      .update({ is_active: next })
+      .eq("id", id)
+      .eq("district_key", districtKey);
+    revalidateStreamPaths(nextDistrictKey);
+    redirect(`/cms/stream-config?district=${nextDistrictKey}`);
   }
 
   return (
@@ -106,11 +128,34 @@ export default async function StreamConfigPage() {
         <p className="text-sm text-neutral-500">
           Configure manual stream state or enable automatic schedule-driven live status.
         </p>
+        <p className="mt-1 text-sm text-neutral-600">Editing {district.name}.</p>
       </header>
+
+      <form className="rounded border border-neutral-200 bg-white p-4">
+        <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="ml-3 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Switch
+        </button>
+      </form>
 
       <section className="rounded border border-neutral-200 bg-white p-4">
         <h2 className="mb-3 text-lg font-semibold">Current Config</h2>
         <form action={saveConfig} className="grid gap-3 md:grid-cols-2">
+          <input type="hidden" name="district_key" value={districtKey} />
           <div>
             <label className="text-sm font-medium">Mode</label>
             <select
@@ -132,11 +177,7 @@ export default async function StreamConfigPage() {
           </div>
           <div className="md:col-span-2">
             <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="is_live"
-                defaultChecked={!!config.is_live}
-              />
+              <input type="checkbox" name="is_live" defaultChecked={!!config.is_live} />
               Set live now (used when mode is Manual)
             </label>
           </div>
@@ -164,15 +205,14 @@ export default async function StreamConfigPage() {
           </button>
         </form>
         {config.updated_at && (
-          <p className="mt-2 text-xs text-neutral-500">
-            Last updated: {new Date(config.updated_at).toLocaleString()}
-          </p>
+          <p className="mt-2 text-xs text-neutral-500">Last updated: {new Date(config.updated_at).toLocaleString()}</p>
         )}
       </section>
 
       <section className="rounded border border-neutral-200 bg-white p-4">
         <h2 className="mb-3 text-lg font-semibold">Weekly Schedule</h2>
         <form action={addSchedule} className="grid gap-3 md:grid-cols-5">
+          <input type="hidden" name="district_key" value={districtKey} />
           <select
             name="day_of_week"
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
@@ -228,17 +268,15 @@ export default async function StreamConfigPage() {
               <div className="flex gap-2">
                 <form action={toggleSchedule}>
                   <input type="hidden" name="id" value={row.id} />
-                  <input
-                    type="hidden"
-                    name="next"
-                    value={row.is_active ? "false" : "true"}
-                  />
+                  <input type="hidden" name="district_key" value={districtKey} />
+                  <input type="hidden" name="next" value={row.is_active ? "false" : "true"} />
                   <button type="submit" className="text-sm underline">
                     {row.is_active ? "Disable" : "Enable"}
                   </button>
                 </form>
                 <form action={deleteSchedule}>
                   <input type="hidden" name="id" value={row.id} />
+                  <input type="hidden" name="district_key" value={districtKey} />
                   <button type="submit" className="text-sm text-red-600 underline">
                     Delete
                   </button>

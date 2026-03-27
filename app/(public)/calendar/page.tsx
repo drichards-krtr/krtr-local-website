@@ -6,6 +6,7 @@ import {
   getNaiveDateText,
   getNaiveDateTimeText,
 } from "@/lib/dates";
+import { getCurrentDistrictKey } from "@/lib/districtServer";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,7 @@ function dedupeRecurringEvents(events: EventItem[]) {
 
 export default async function CommunityCalendarPage() {
   const supabase = createPublicClient();
+  const districtKey = getCurrentDistrictKey();
   const nowText = getDateTimeTextInTimeZone();
   const todayDate = getDateTextInTimeZone();
 
@@ -63,6 +65,7 @@ export default async function CommunityCalendarPage() {
     .select(
       "id, title, description, location, start_at, end_at, image_url, recurrence_group_id, link_1_url, link_1_text, link_2_url, link_2_text"
     )
+    .eq("district_key", districtKey)
     .eq("status", "published")
     .order("start_at", { ascending: true });
 

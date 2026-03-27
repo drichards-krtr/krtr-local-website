@@ -5,6 +5,7 @@ import {
   NOMINATION_CATEGORY_LABELS,
   type NominationCategory,
 } from "@/lib/nominations";
+import { resolveDistrictFromHost } from "@/lib/districts";
 
 type NominationSubmission = {
   id: string;
@@ -33,6 +34,9 @@ function getNomineeName(row: NominationSubmission) {
 }
 
 export async function GET(request: Request) {
+  const districtKey = resolveDistrictFromHost(
+    request.headers.get("x-forwarded-host") || request.headers.get("host")
+  );
   const supabase = createServerSupabase();
   const {
     data: { user },
@@ -60,6 +64,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("nomination_submissions")
     .select("id, category, submitter_name, submitter_email, submitter_phone, payload, submitted_at")
+    .eq("district_key", districtKey)
     .order("submitted_at", { ascending: false });
 
   if (category !== "all") {

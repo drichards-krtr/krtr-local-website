@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 import VideoUploadField from "@/components/shared/VideoUploadField";
+import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 type SeasonalPage = {
@@ -30,34 +31,41 @@ function toInt(value: FormDataEntryValue | null, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function revalidateFestivalPaths() {
+function revalidateFestivalPaths(districtKey: DistrictKey) {
   revalidatePath("/", "layout");
   revalidatePath("/festival-of-trails");
   revalidatePath("/cms/seasonal-pages");
+  revalidatePath(`/cms/seasonal-pages?district=${districtKey}`);
   revalidatePath("/cms/seasonal-pages/festival-of-trails");
+  revalidatePath(`/cms/seasonal-pages/festival-of-trails?district=${districtKey}`);
 }
 
 export default async function SeasonalFestivalCms({
   searchParams,
 }: {
-  searchParams: { error?: string; success?: string };
+  searchParams?: { district?: string; error?: string; success?: string };
 }) {
+  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
+  const district = getDistrictConfig(districtKey);
   const supabase = createServerSupabase();
   const [{ data: pageData }, { data: contentData }, { data: linksData }] =
     await Promise.all([
       supabase
         .from("seasonal_pages")
         .select("slug, nav_enabled")
+        .eq("district_key", districtKey)
         .eq("slug", "festival-of-trails")
         .maybeSingle(),
       supabase
         .from("festival_of_trails_content")
         .select("body_markdown, photo_url, photo_active, video_url, video_active")
+        .eq("district_key", districtKey)
         .eq("id", 1)
         .maybeSingle(),
       supabase
         .from("festival_of_trails_links")
         .select("id, link_text, link_url, priority")
+        .eq("district_key", districtKey)
         .order("priority", { ascending: true }),
     ]);
 
@@ -81,19 +89,21 @@ export default async function SeasonalFestivalCms({
   async function saveSettings(formData: FormData) {
     "use server";
     const service = createServerSupabase();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
 
     const pageResult = await service.from("seasonal_pages").upsert(
       {
+        district_key: nextDistrictKey,
         slug: "festival-of-trails",
         title: "Festival of Trails",
         nav_label: "Festival of Trails",
         nav_enabled: formData.get("nav_enabled") === "on",
       },
-      { onConflict: "slug" }
+      { onConflict: "district_key,slug" }
     );
     if (pageResult.error) {
       redirect(
-        `/cms/seasonal-pages/festival-of-trails?error=${encodeURIComponent(pageResult.error.message)}`
+        `/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&error=${encodeURIComponent(pageResult.error.message)}`
       );
     }
 
@@ -101,6 +111,7 @@ export default async function SeasonalFestivalCms({
       .from("festival_of_trails_content")
       .upsert(
         {
+          district_key: nextDistrictKey,
           id: 1,
           body_markdown: String(formData.get("body_markdown") || ""),
           photo_url: String(formData.get("photo_url") || "").trim() || null,
@@ -108,92 +119,104 @@ export default async function SeasonalFestivalCms({
           video_url: String(formData.get("video_url") || "").trim() || null,
           video_active: formData.get("video_active") === "on",
         },
-        { onConflict: "id" }
+        { onConflict: "district_key,id" }
       );
     if (contentResult.error) {
       redirect(
-        `/cms/seasonal-pages/festival-of-trails?error=${encodeURIComponent(contentResult.error.message)}`
+        `/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&error=${encodeURIComponent(contentResult.error.message)}`
       );
     }
 
-    revalidateFestivalPaths();
-    redirect("/cms/seasonal-pages/festival-of-trails?success=settings");
+    revalidateFestivalPaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&success=settings`);
   }
 
   async function addLink(formData: FormData) {
     "use server";
     const service = createServerSupabase();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const priority = Math.max(1, toInt(formData.get("priority"), 1));
     const { data: existing } = await service
       .from("festival_of_trails_links")
       .select("id")
+      .eq("district_key", nextDistrictKey)
       .eq("priority", priority)
       .maybeSingle();
     if (existing) {
-      redirect("/cms/seasonal-pages/festival-of-trails?error=Priority already in use.");
+      redirect(`/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&error=Priority already in use.`);
     }
 
     const result = await service.from("festival_of_trails_links").insert({
+      district_key: nextDistrictKey,
       link_text: String(formData.get("link_text") || "").trim(),
       link_url: String(formData.get("link_url") || "").trim(),
       priority,
     });
     if (result.error) {
       redirect(
-        `/cms/seasonal-pages/festival-of-trails?error=${encodeURIComponent(result.error.message)}`
+        `/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&error=${encodeURIComponent(result.error.message)}`
       );
     }
 
-    revalidateFestivalPaths();
-    redirect("/cms/seasonal-pages/festival-of-trails?success=link-added");
+    revalidateFestivalPaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&success=link-added`);
   }
 
   async function updateLink(formData: FormData) {
     "use server";
     const service = createServerSupabase();
     const id = String(formData.get("id") || "");
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const priority = Math.max(1, toInt(formData.get("priority"), 1));
     const { data: existing } = await service
       .from("festival_of_trails_links")
       .select("id")
+      .eq("district_key", nextDistrictKey)
       .eq("priority", priority)
       .neq("id", id)
       .maybeSingle();
     if (existing) {
-      redirect("/cms/seasonal-pages/festival-of-trails?error=Priority already in use.");
+      redirect(`/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&error=Priority already in use.`);
     }
 
     const result = await service
       .from("festival_of_trails_links")
       .update({
+        district_key: nextDistrictKey,
         link_text: String(formData.get("link_text") || "").trim(),
         link_url: String(formData.get("link_url") || "").trim(),
         priority,
       })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("district_key", districtKey);
     if (result.error) {
       redirect(
-        `/cms/seasonal-pages/festival-of-trails?error=${encodeURIComponent(result.error.message)}`
+        `/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&error=${encodeURIComponent(result.error.message)}`
       );
     }
 
-    revalidateFestivalPaths();
-    redirect("/cms/seasonal-pages/festival-of-trails?success=link-updated");
+    revalidateFestivalPaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&success=link-updated`);
   }
 
   async function deleteLink(formData: FormData) {
     "use server";
     const service = createServerSupabase();
     const id = String(formData.get("id") || "");
-    const result = await service.from("festival_of_trails_links").delete().eq("id", id);
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
+    const result = await service
+      .from("festival_of_trails_links")
+      .delete()
+      .eq("id", id)
+      .eq("district_key", districtKey);
     if (result.error) {
       redirect(
-        `/cms/seasonal-pages/festival-of-trails?error=${encodeURIComponent(result.error.message)}`
+        `/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&error=${encodeURIComponent(result.error.message)}`
       );
     }
 
-    revalidateFestivalPaths();
-    redirect("/cms/seasonal-pages/festival-of-trails?success=link-deleted");
+    revalidateFestivalPaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/festival-of-trails?district=${nextDistrictKey}&success=link-deleted`);
   }
 
   return (
@@ -205,25 +228,52 @@ export default async function SeasonalFestivalCms({
             Dedicated CMS editor for the Festival of Trails page.
           </p>
         </div>
-        <Link href="/cms/seasonal-pages" className="text-sm underline">
+        <Link href={`/cms/seasonal-pages?district=${districtKey}`} className="text-sm underline">
           Back to Seasonal Pages
         </Link>
       </header>
 
-      {searchParams.error && (
+      {searchParams?.error && (
         <p className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {searchParams.error}
         </p>
       )}
-      {searchParams.success && (
+      {searchParams?.success && (
         <p className="rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved.
         </p>
       )}
 
+      <form className="rounded border border-neutral-200 bg-white p-4">
+        <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="ml-3 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Switch
+        </button>
+        {!district.features.festivalOfTrails && (
+          <p className="mt-3 text-sm text-amber-700">
+            Festival of Trails is disabled for {district.name}. Content stays isolated, but this district should keep the page hidden in public navigation.
+          </p>
+        )}
+      </form>
+
       <section className="rounded border border-neutral-200 bg-white p-6">
         <h2 className="mb-3 text-lg font-semibold">Page Settings</h2>
         <form action={saveSettings} className="grid gap-3">
+          <input type="hidden" name="district_key" value={districtKey} />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="nav_enabled" defaultChecked={page.nav_enabled} />
             Show Festival of Trails in main nav
@@ -266,6 +316,7 @@ export default async function SeasonalFestivalCms({
       <section className="rounded border border-neutral-200 bg-white p-6">
         <h2 className="mb-3 text-lg font-semibold">Festival Links</h2>
         <form action={addLink} className="mb-6 grid gap-3 md:grid-cols-3">
+          <input type="hidden" name="district_key" value={districtKey} />
           <input
             name="link_text"
             placeholder="Link Text"
@@ -305,6 +356,7 @@ export default async function SeasonalFestivalCms({
               className="grid gap-3 rounded border border-neutral-200 p-4 md:grid-cols-4"
             >
               <input type="hidden" name="id" value={link.id} />
+              <input type="hidden" name="district_key" value={districtKey} />
               <input
                 name="link_text"
                 defaultValue={link.link_text}

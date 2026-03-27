@@ -1,46 +1,25 @@
-export type TagSlug =
-  | "dysart"
-  | "la-porte-city"
-  | "ucsd"
-  | "lpc-elementary"
-  | "dg-elementary"
-  | "ums"
-  | "uhs"
-  | "sports";
+import { getDistrictConfig, type DistrictKey, type DistrictTagNode } from "@/lib/districts";
 
-export type TagNode = {
-  slug: TagSlug;
-  label: string;
-  children?: TagNode[];
-};
+export type TagSlug = string;
+export type TagNode = DistrictTagNode;
 
-export const TAG_TREE: TagNode[] = [
-  { slug: "dysart", label: "Dysart" },
-  { slug: "la-porte-city", label: "La Porte City" },
-  {
-    slug: "ucsd",
-    label: "UCSD",
-    children: [
-      { slug: "lpc-elementary", label: "LPC Elementary" },
-      { slug: "dg-elementary", label: "DG Elementary" },
-      { slug: "ums", label: "UMS" },
-      { slug: "uhs", label: "UHS" },
-    ],
-  },
-  { slug: "sports", label: "Sports" },
-];
-
-export const ALL_TAG_SLUGS: TagSlug[] = TAG_TREE.flatMap((tag) => [
-  tag.slug,
-  ...(tag.children?.map((child) => child.slug) || []),
-]);
-
-export function getTopLevelTags() {
-  return TAG_TREE;
+export function getTagTree(districtKey: DistrictKey) {
+  return getDistrictConfig(districtKey).tags;
 }
 
-export function getTagBySlug(slug: string) {
-  for (const topLevelTag of TAG_TREE) {
+export function getAllTagSlugs(districtKey: DistrictKey): TagSlug[] {
+  return getTagTree(districtKey).flatMap((tag) => [
+    tag.slug,
+    ...(tag.children?.map((child) => child.slug) || []),
+  ]);
+}
+
+export function getTopLevelTags(districtKey: DistrictKey) {
+  return getTagTree(districtKey);
+}
+
+export function getTagBySlug(districtKey: DistrictKey, slug: string) {
+  for (const topLevelTag of getTagTree(districtKey)) {
     if (topLevelTag.slug === slug) return topLevelTag;
     const childMatch = topLevelTag.children?.find((child) => child.slug === slug);
     if (childMatch) return childMatch;
@@ -48,16 +27,16 @@ export function getTagBySlug(slug: string) {
   return null;
 }
 
-export function isTopLevelTag(slug: string) {
-  return TAG_TREE.some((tag) => tag.slug === slug);
+export function isTopLevelTag(districtKey: DistrictKey, slug: string) {
+  return getTagTree(districtKey).some((tag) => tag.slug === slug);
 }
 
-export function getChildTags(parentSlug: string) {
-  return TAG_TREE.find((tag) => tag.slug === parentSlug)?.children || [];
+export function getChildTags(districtKey: DistrictKey, parentSlug: string) {
+  return getTagTree(districtKey).find((tag) => tag.slug === parentSlug)?.children || [];
 }
 
-export function getDescendantSlugs(slug: string): string[] {
-  const topLevel = TAG_TREE.find((tag) => tag.slug === slug);
+export function getDescendantSlugs(districtKey: DistrictKey, slug: string): string[] {
+  const topLevel = getTagTree(districtKey).find((tag) => tag.slug === slug);
   if (topLevel) {
     return [topLevel.slug, ...(topLevel.children?.map((child) => child.slug) || [])];
   }

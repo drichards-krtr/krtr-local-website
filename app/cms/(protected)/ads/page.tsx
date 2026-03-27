@@ -2,20 +2,23 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
 
 export default async function AdsPage({
   searchParams,
 }: {
-  searchParams: { placement?: string; active?: string; search?: string };
+  searchParams: { placement?: string; active?: string; search?: string; district?: string };
 }) {
   const supabase = createServerSupabase();
   const placement = searchParams.placement || "all";
   const active = searchParams.active || "all";
   const search = searchParams.search?.trim() || "";
+  const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
 
   let query = supabase
     .from("ads")
     .select("id, placement, description, start_date, end_date, active, image_url, link_url")
+    .eq("district_key", districtKey)
     .order("created_at", { ascending: false });
 
   if (placement !== "all") {
@@ -36,6 +39,7 @@ export default async function AdsPage({
     "use server";
     const supabase = createServerSupabase();
     await supabase.from("ads").insert({
+      district_key: String(formData.get("district_key") || districtKey),
       placement: String(formData.get("placement") || "allsite"),
       description: String(formData.get("description") || ""),
       start_date: String(formData.get("start_date")),
@@ -48,7 +52,7 @@ export default async function AdsPage({
     });
     revalidatePath("/", "layout");
     revalidatePath("/cms/ads");
-    redirect("/cms/ads");
+    redirect(`/cms/ads?district=${districtKey}`);
   }
 
   async function toggleAd(formData: FormData) {
@@ -59,7 +63,7 @@ export default async function AdsPage({
     await supabase.from("ads").update({ active: next }).eq("id", id);
     revalidatePath("/", "layout");
     revalidatePath("/cms/ads");
-    redirect("/cms/ads");
+    redirect(`/cms/ads?district=${districtKey}`);
   }
 
   return (
@@ -75,6 +79,17 @@ export default async function AdsPage({
       </header>
 
       <form className="flex flex-wrap gap-3 rounded border border-neutral-200 bg-white p-4">
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <input
           name="search"
           placeholder="Search description or URLs"
@@ -111,10 +126,21 @@ export default async function AdsPage({
       <section className="rounded border border-neutral-200 bg-white p-4">
         <h2 className="mb-3 text-lg font-semibold">Create Ad</h2>
         <form action={addAd} className="grid gap-3 md:grid-cols-2">
+          <select
+            name="district_key"
+            defaultValue={districtKey}
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          >
+            {DISTRICT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <input
             name="description"
             placeholder="Description (internal only)"
-            className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <select
             name="placement"
@@ -191,7 +217,7 @@ export default async function AdsPage({
             <div>{ad.active ? "Active" : "Inactive"}</div>
             <div className="truncate">{ad.image_url || ad.link_url || "-"}</div>
             <div className="flex gap-3">
-              <a href={`/cms/ads/${ad.id}`} className="text-sm underline">
+              <a href={`/cms/ads/${ad.id}?district=${districtKey}`} className="text-sm underline">
                 Edit
               </a>
               <form action={toggleAd}>

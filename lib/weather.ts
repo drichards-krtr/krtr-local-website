@@ -1,4 +1,6 @@
-﻿export type CurrentWeather = {
+import { getDistrictConfig, type DistrictKey } from "@/lib/districts";
+
+export type CurrentWeather = {
   location: string;
   temperatureText: string;
   condition: string;
@@ -109,10 +111,6 @@ type NwsAlertsResponse = {
   }>;
 };
 
-const WATERLOO_LAT = "42.4928";
-const WATERLOO_LON = "-92.3426";
-const LOCAL_ALERT_COUNTIES = new Set(["black hawk", "benton", "buchanan", "tama"]);
-
 function cToF(valueC: number) {
   return Math.round((valueC * 9) / 5 + 32);
 }
@@ -132,7 +130,10 @@ function normalizeAreaName(value: string) {
     .trim();
 }
 
-function filterLocalAlertArea(areaDesc: string | null | undefined) {
+function filterLocalAlertArea(
+  areaDesc: string | null | undefined,
+  localAlertCounties: Set<string>
+) {
   if (!areaDesc) return null;
 
   const parts = areaDesc
@@ -142,7 +143,7 @@ function filterLocalAlertArea(areaDesc: string | null | undefined) {
 
   if (!parts.length) return areaDesc.trim() || null;
 
-  const localParts = parts.filter((part) => LOCAL_ALERT_COUNTIES.has(normalizeAreaName(part)));
+  const localParts = parts.filter((part) => localAlertCounties.has(normalizeAreaName(part)));
   return localParts.length > 0 ? localParts.join(", ") : areaDesc.trim();
 }
 
@@ -158,9 +159,10 @@ async function getNwsJson<T>(url: string, userAgent: string, revalidate = 300) {
   return (await res.json()) as T;
 }
 
-async function fetchBaseNwsData(userAgent: string) {
+async function fetchBaseNwsData(districtKey: DistrictKey, userAgent: string) {
+  const district = getDistrictConfig(districtKey);
   const points = await getNwsJson<NwsPointsResponse>(
-    `https://api.weather.gov/points/${WATERLOO_LAT},${WATERLOO_LON}`,
+    `https://api.weather.gov/points/${district.weather.lat},${district.weather.lon}`,
     userAgent
   );
   if (!points?.properties) return null;
@@ -173,7 +175,7 @@ async function fetchBaseNwsData(userAgent: string) {
       ? getNwsJson<NwsForecastResponse>(points.properties.forecast, userAgent)
       : null,
     getNwsJson<NwsAlertsResponse>(
-      `https://api.weather.gov/alerts/active?point=${WATERLOO_LAT},${WATERLOO_LON}`,
+      `https://api.weather.gov/alerts/active?point=${district.weather.lat},${district.weather.lon}`,
       userAgent
     ),
     points.properties.observationStations
@@ -193,10 +195,10 @@ async function fetchBaseNwsData(userAgent: string) {
   return { points, hourly, forecast, alerts, observation };
 }
 
-export async function getCurrentWeather(): Promise<CurrentWeather | null> {
+export async function getCurrentWeather(districtKey: DistrictKey): Promise<CurrentWeather | null> {
   const userAgent =
     process.env.NWS_USER_AGENT || "KRTR Local Weather (hello@krtrlocal.tv)";
-  const bundle = await fetchBaseNwsData(userAgent);
+  const bundle = await fetchBaseNwsData(districtKey, userAgent);
   if (!bundle) return null;
 
   const period = bundle.hourly?.properties?.periods?.[0];
@@ -227,10 +229,10 @@ export async function getCurrentWeather(): Promise<CurrentWeather | null> {
   return { location, temperatureText, condition, alerts };
 }
 
-export async function getWeatherPageData(): Promise<WeatherPageData> {
+export async function getWeatherPageData(districtKey: DistrictKey): Promise<WeatherPageData> {
   const userAgent =
     process.env.NWS_USER_AGENT || "KRTR Local Weather (hello@krtrlocal.tv)";
-  const bundle = await fetchBaseNwsData(userAgent);
+  const bundle = await fetchBaseNwsData(districtKey, userAgent);
   if (!bundle) {
     return { alerts: [], current: null, forecast: [] };
   }
@@ -268,6 +270,7 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
       }
     : null;
 
+  const localAlertCounties = new Set(getDistrictConfig(districtKey).weather.alertCounties);
   const alerts: WeatherAlertDetail[] = (bundle.alerts?.features || [])
     .map((feature) => {
       const p = feature.properties;
@@ -275,7 +278,7 @@ export async function getWeatherPageData(): Promise<WeatherPageData> {
       return {
         headline: event,
         severity: p?.severity?.trim() || null,
-        area: filterLocalAlertArea(p?.areaDesc),
+        area: filterLocalAlertArea(p?.areaDesc, localAlertCounties),
         effective: p?.effective || null,
         expires: p?.expires || null,
         impacts: firstParagraph(p?.description),

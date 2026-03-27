@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { getWeatherPageData } from "@/lib/weather";
+import { getCurrentDistrict } from "@/lib/districtServer";
 
 function formatDateTime(value: string | null) {
   if (!value) return "N/A";
@@ -9,7 +10,8 @@ function formatDateTime(value: string | null) {
 }
 
 export default async function WeatherPage() {
-  const weather = await getWeatherPageData().catch(() => ({
+  const district = getCurrentDistrict();
+  const weather = await getWeatherPageData(district.key).catch(() => ({
     alerts: [],
     current: null,
     forecast: [],
@@ -18,7 +20,7 @@ export default async function WeatherPage() {
   return (
     <main className="mx-auto max-w-site px-4 py-6">
       <section className="mb-6 rounded-lg bg-white p-6">
-        <h1 className="text-2xl font-semibold">Dysart and La Porte City Weather</h1>
+        <h1 className="text-2xl font-semibold">{district.weather.pageTitle}</h1>
       </section>
 
       <section className="mb-6 rounded-lg bg-white p-6">
@@ -138,7 +140,7 @@ export default async function WeatherPage() {
       <section className="rounded-lg bg-white p-6">
         <h2 className="mb-2 text-xl font-semibold">Share Your Weather Photos or Videos</h2>
         <p className="text-sm text-neutral-700">
-          Help us cover local weather events in Dysart and La Porte City.
+          {district.weather.sharePrompt}
         </p>
         <Link href="/submit-story" className="mt-3 inline-block font-semibold underline">
           Submit weather-related photos or videos

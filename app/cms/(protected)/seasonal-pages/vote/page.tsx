@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Markdown from "@/components/public/Markdown";
 import ImageUploadField from "@/components/shared/ImageUploadField";
+import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 type SeasonalPage = {
@@ -22,29 +23,41 @@ type VoteCandidate = {
   link_2_text: string | null;
 };
 
-function revalidateVotePaths() {
+const DEFAULT_JURISDICTION_SLUG: Record<DistrictKey, string> = {
+  dlpc: "union-community-school-district-school-board",
+  vs: "vinton-shellsburg-school-board",
+  bc: "benton-community-school-board",
+};
+
+function revalidateVotePaths(districtKey: DistrictKey) {
   revalidatePath("/", "layout");
   revalidatePath("/vote");
   revalidatePath("/cms/seasonal-pages");
+  revalidatePath(`/cms/seasonal-pages?district=${districtKey}`);
   revalidatePath("/cms/seasonal-pages/vote");
+  revalidatePath(`/cms/seasonal-pages/vote?district=${districtKey}`);
 }
 
 export default async function SeasonalVoteCms({
   searchParams,
 }: {
-  searchParams: { error?: string; success?: string };
+  searchParams?: { district?: string; error?: string; success?: string };
 }) {
+  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
+  const district = getDistrictConfig(districtKey);
   const supabase = createServerSupabase();
   const [{ data: pageData }, { data: copyData }, { data: candidatesData }] =
     await Promise.all([
       supabase
         .from("seasonal_pages")
         .select("slug, nav_enabled")
+        .eq("district_key", districtKey)
         .eq("slug", "vote")
         .maybeSingle(),
       supabase
         .from("vote_page_content")
         .select("body_markdown")
+        .eq("district_key", districtKey)
         .eq("id", 1)
         .maybeSingle(),
       supabase
@@ -52,6 +65,7 @@ export default async function SeasonalVoteCms({
         .select(
           "id, candidate_name, jurisdiction_name, seat_label, photo_url, link_1_url, link_1_text, link_2_url, link_2_text"
         )
+        .eq("district_key", districtKey)
         .order("jurisdiction_name", { ascending: true })
         .order("candidate_name", { ascending: true }),
     ]);
@@ -66,39 +80,44 @@ export default async function SeasonalVoteCms({
   async function saveSettings(formData: FormData) {
     "use server";
     const service = createServerSupabase();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
 
     const pageResult = await service.from("seasonal_pages").upsert(
       {
+        district_key: nextDistrictKey,
         slug: "vote",
         title: "VOTE",
         nav_label: "VOTE",
         nav_enabled: formData.get("nav_enabled") === "on",
       },
-      { onConflict: "slug" }
+      { onConflict: "district_key,slug" }
     );
     if (pageResult.error) {
-      redirect(`/cms/seasonal-pages/vote?error=${encodeURIComponent(pageResult.error.message)}`);
+      redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&error=${encodeURIComponent(pageResult.error.message)}`);
     }
 
     const copyResult = await service.from("vote_page_content").upsert(
       {
+        district_key: nextDistrictKey,
         id: 1,
         body_markdown: String(formData.get("body_markdown") || ""),
       },
-      { onConflict: "id" }
+      { onConflict: "district_key,id" }
     );
     if (copyResult.error) {
-      redirect(`/cms/seasonal-pages/vote?error=${encodeURIComponent(copyResult.error.message)}`);
+      redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&error=${encodeURIComponent(copyResult.error.message)}`);
     }
 
-    revalidateVotePaths();
-    redirect("/cms/seasonal-pages/vote?success=settings");
+    revalidateVotePaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&success=settings`);
   }
 
   async function addCandidate(formData: FormData) {
     "use server";
     const service = createServerSupabase();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const result = await service.from("vote_candidates").insert({
+      district_key: nextDistrictKey,
       jurisdiction_name: String(formData.get("jurisdiction_name") || "").trim(),
       seat_label: String(formData.get("seat_label") || "").trim() || null,
       candidate_name: String(formData.get("candidate_name") || "").trim(),
@@ -107,26 +126,28 @@ export default async function SeasonalVoteCms({
       link_1_text: String(formData.get("link_1_text") || "").trim() || null,
       link_2_url: String(formData.get("link_2_url") || "").trim() || null,
       link_2_text: String(formData.get("link_2_text") || "").trim() || null,
-      jurisdiction_slug: "union-community-school-district-school-board",
+      jurisdiction_slug: DEFAULT_JURISDICTION_SLUG[nextDistrictKey],
       seat_id: null,
       sort_order: 1,
     });
 
     if (result.error) {
-      redirect(`/cms/seasonal-pages/vote?error=${encodeURIComponent(result.error.message)}`);
+      redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&error=${encodeURIComponent(result.error.message)}`);
     }
 
-    revalidateVotePaths();
-    redirect("/cms/seasonal-pages/vote?success=candidate-added");
+    revalidateVotePaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&success=candidate-added`);
   }
 
   async function updateCandidate(formData: FormData) {
     "use server";
     const service = createServerSupabase();
     const id = String(formData.get("id") || "");
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const result = await service
       .from("vote_candidates")
       .update({
+        district_key: nextDistrictKey,
         jurisdiction_name: String(formData.get("jurisdiction_name") || "").trim(),
         seat_label: String(formData.get("seat_label") || "").trim() || null,
         candidate_name: String(formData.get("candidate_name") || "").trim(),
@@ -136,28 +157,34 @@ export default async function SeasonalVoteCms({
         link_2_url: String(formData.get("link_2_url") || "").trim() || null,
         link_2_text: String(formData.get("link_2_text") || "").trim() || null,
       })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("district_key", districtKey);
 
     if (result.error) {
-      redirect(`/cms/seasonal-pages/vote?error=${encodeURIComponent(result.error.message)}`);
+      redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&error=${encodeURIComponent(result.error.message)}`);
     }
 
-    revalidateVotePaths();
-    redirect("/cms/seasonal-pages/vote?success=candidate-updated");
+    revalidateVotePaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&success=candidate-updated`);
   }
 
   async function deleteCandidate(formData: FormData) {
     "use server";
     const service = createServerSupabase();
     const id = String(formData.get("id") || "");
-    const result = await service.from("vote_candidates").delete().eq("id", id);
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
+    const result = await service
+      .from("vote_candidates")
+      .delete()
+      .eq("id", id)
+      .eq("district_key", districtKey);
 
     if (result.error) {
-      redirect(`/cms/seasonal-pages/vote?error=${encodeURIComponent(result.error.message)}`);
+      redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&error=${encodeURIComponent(result.error.message)}`);
     }
 
-    revalidateVotePaths();
-    redirect("/cms/seasonal-pages/vote?success=candidate-deleted");
+    revalidateVotePaths(nextDistrictKey);
+    redirect(`/cms/seasonal-pages/vote?district=${nextDistrictKey}&success=candidate-deleted`);
   }
 
   return (
@@ -167,25 +194,48 @@ export default async function SeasonalVoteCms({
           <h1 className="text-2xl font-semibold">VOTE</h1>
           <p className="text-sm text-neutral-500">Dedicated CMS editor for the VOTE page.</p>
         </div>
-        <Link href="/cms/seasonal-pages" className="text-sm underline">
+        <Link href={`/cms/seasonal-pages?district=${districtKey}`} className="text-sm underline">
           Back to Seasonal Pages
         </Link>
       </header>
 
-      {searchParams.error && (
+      {searchParams?.error && (
         <p className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {searchParams.error}
         </p>
       )}
-      {searchParams.success && (
+      {searchParams?.success && (
         <p className="rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved.
         </p>
       )}
 
+      <form className="rounded border border-neutral-200 bg-white p-4">
+        <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="ml-3 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Switch
+        </button>
+      </form>
+
       <section className="rounded border border-neutral-200 bg-white p-6">
         <h2 className="mb-3 text-lg font-semibold">Page Settings</h2>
+        <p className="mb-4 text-sm text-neutral-500">Editing {district.name}.</p>
         <form action={saveSettings} className="grid gap-3">
+          <input type="hidden" name="district_key" value={districtKey} />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="nav_enabled" defaultChecked={page.nav_enabled} />
             Show VOTE in main nav
@@ -216,6 +266,7 @@ export default async function SeasonalVoteCms({
       <section className="rounded border border-neutral-200 bg-white p-6">
         <h2 className="mb-3 text-lg font-semibold">Vote Candidates</h2>
         <form action={addCandidate} className="mb-6 grid gap-3 rounded border border-neutral-200 p-4 md:grid-cols-2">
+          <input type="hidden" name="district_key" value={districtKey} />
           <input
             name="jurisdiction_name"
             placeholder="Jurisdiction"
@@ -272,6 +323,7 @@ export default async function SeasonalVoteCms({
               className="grid gap-3 rounded border border-neutral-200 p-4 md:grid-cols-2"
             >
               <input type="hidden" name="id" value={candidate.id} />
+              <input type="hidden" name="district_key" value={districtKey} />
               <input
                 name="jurisdiction_name"
                 defaultValue={candidate.jurisdiction_name}

@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
+import type { DistrictKey } from "@/lib/districts";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -19,6 +20,7 @@ const STORY_SELECT =
   "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id";
 
 export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStoryByIdOrSlug(
+  districtKey: DistrictKey,
   idOrSlug: string,
 ) {
   const supabase = createPublicClient();
@@ -26,12 +28,15 @@ export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStor
   const { data: storyBySlug, error: storyBySlugError } = await supabase
     .from("stories")
     .select(STORY_SELECT)
+    .eq("district_key", districtKey)
     .eq("slug", idOrSlug)
     .eq("status", "published")
     .maybeSingle();
 
   if (storyBySlugError) {
-    throw new Error(`[getPublishedStoryByIdOrSlug:slugLookup] ${storyBySlugError.message}`);
+    throw new Error(
+      `[getPublishedStoryByIdOrSlug:${districtKey}:slugLookup] ${storyBySlugError.message}`
+    );
   }
 
   if (storyBySlug) {
@@ -45,12 +50,15 @@ export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStor
   const { data: storyById, error: storyByIdError } = await supabase
     .from("stories")
     .select(STORY_SELECT)
+    .eq("district_key", districtKey)
     .eq("id", idOrSlug)
     .eq("status", "published")
     .maybeSingle();
 
   if (storyByIdError) {
-    throw new Error(`[getPublishedStoryByIdOrSlug:idLookup] ${storyByIdError.message}`);
+    throw new Error(
+      `[getPublishedStoryByIdOrSlug:${districtKey}:idLookup] ${storyByIdError.message}`
+    );
   }
 
   return (storyById || null) as PublishedStory | null;

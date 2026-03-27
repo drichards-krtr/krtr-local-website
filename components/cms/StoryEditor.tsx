@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
-import { TAG_TREE, type TagSlug } from "@/lib/tags";
+import { DISTRICT_OPTIONS, type DistrictKey, type DistrictTagNode } from "@/lib/districts";
 import { buildStorySlug } from "@/lib/stories";
+import type { TagSlug } from "@/lib/tags";
 
 type Story = {
   id?: string;
+  district_key: DistrictKey;
   title: string;
   tease: string | null;
   body_markdown: string;
@@ -27,10 +29,13 @@ type Story = {
 
 type Props = {
   initialStory?: Story;
+  initialDistrictKey: DistrictKey;
+  tagTree: DistrictTagNode[];
 };
 
-export default function StoryEditor({ initialStory }: Props) {
+export default function StoryEditor({ initialStory, initialDistrictKey, tagTree }: Props) {
   const [form, setForm] = useState<Story>({
+    district_key: initialStory?.district_key || initialDistrictKey,
     title: initialStory?.title || "",
     tease: initialStory?.tease || "",
     body_markdown: initialStory?.body_markdown || "",
@@ -73,6 +78,7 @@ export default function StoryEditor({ initialStory }: Props) {
       let query = supabase
         .from("stories")
         .select("id")
+        .eq("district_key", form.district_key)
         .eq("slug", slug)
         .limit(1);
       if (isEdit && initialStory?.id) {
@@ -90,6 +96,7 @@ export default function StoryEditor({ initialStory }: Props) {
     }
 
     const payload = {
+      district_key: form.district_key,
       title: form.title,
       tease: form.tease || null,
       body_markdown: form.body_markdown,
@@ -125,6 +132,7 @@ export default function StoryEditor({ initialStory }: Props) {
       const { error: clearSlotError } = await supabase
         .from("story_slots")
         .update({ story_id: null })
+        .eq("district_key", form.district_key)
         .eq("story_id", storyId);
       if (clearSlotError) {
         setError(clearSlotError.message);
@@ -135,7 +143,10 @@ export default function StoryEditor({ initialStory }: Props) {
       if (slot) {
         const { error: slotError } = await supabase
           .from("story_slots")
-          .upsert({ slot, story_id: storyId }, { onConflict: "slot" });
+          .upsert(
+            { district_key: form.district_key, slot, story_id: storyId },
+            { onConflict: "district_key,slot" }
+          );
         if (slotError) {
           setError(slotError.message);
           setSaving(false);
@@ -144,7 +155,7 @@ export default function StoryEditor({ initialStory }: Props) {
       }
 
       setSuccess("Saved.");
-      window.location.href = "/cms/stories";
+      window.location.href = `/cms/stories?district=${form.district_key}`;
     }
     setSaving(false);
   };
@@ -167,7 +178,6 @@ export default function StoryEditor({ initialStory }: Props) {
       }));
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Image upload failed.");
-      return;
     }
   };
 
@@ -204,14 +214,31 @@ export default function StoryEditor({ initialStory }: Props) {
     await supabase
       .from("stories")
       .update({ mux_status: "processing" })
+      .eq("district_key", form.district_key)
       .eq("id", initialStory.id);
   };
 
   return (
     <div className="grid gap-6">
       <section className="rounded border border-neutral-200 bg-white p-6">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
+            <label className="text-sm font-medium">District</label>
+            <select
+              value={form.district_key}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, district_key: event.target.value as DistrictKey }))
+              }
+              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            >
+              {DISTRICT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
             <label className="text-sm font-medium">Title</label>
             <input
               value={form.title}
@@ -221,6 +248,8 @@ export default function StoryEditor({ initialStory }: Props) {
               className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
             />
           </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <label className="text-sm font-medium">Status</label>
             <select
@@ -238,6 +267,26 @@ export default function StoryEditor({ initialStory }: Props) {
               <option value="archived">Archived</option>
             </select>
           </div>
+          <div>
+            <label className="text-sm font-medium">Homepage Slot</label>
+            <select
+              value={slot}
+              onChange={(event) =>
+                setSlot(event.target.value as "" | "hero" | "top1" | "top2" | "top3" | "top4")
+              }
+              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            >
+              <option value="">None</option>
+              <option value="hero">Hero</option>
+              <option value="top1">Top 1</option>
+              <option value="top2">Top 2</option>
+              <option value="top3">Top 3</option>
+              <option value="top4">Top 4</option>
+            </select>
+            <p className="mt-1 text-xs text-neutral-500">
+              Assigning a slot here updates homepage slots only for the selected district.
+            </p>
+          </div>
         </div>
         <div className="mt-4">
           <label className="text-sm font-medium">Tease</label>
@@ -251,29 +300,9 @@ export default function StoryEditor({ initialStory }: Props) {
           />
         </div>
         <div className="mt-4">
-          <label className="text-sm font-medium">Homepage Slot</label>
-          <select
-            value={slot}
-            onChange={(event) =>
-              setSlot(event.target.value as "" | "hero" | "top1" | "top2" | "top3" | "top4")
-            }
-            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
-          >
-            <option value="">None</option>
-            <option value="hero">Hero</option>
-            <option value="top1">Top 1</option>
-            <option value="top2">Top 2</option>
-            <option value="top3">Top 3</option>
-            <option value="top4">Top 4</option>
-          </select>
-          <p className="mt-1 text-xs text-neutral-500">
-            Assigning a slot here updates the global homepage slot mapping.
-          </p>
-        </div>
-        <div className="mt-4">
           <label className="text-sm font-medium">Tags</label>
           <div className="mt-2 grid gap-3 rounded border border-neutral-200 p-3">
-            {TAG_TREE.map((tag) => (
+            {tagTree.map((tag) => (
               <div key={tag.slug} className="grid gap-2">
                 <label className="flex items-center gap-2 text-sm font-medium">
                   <input
