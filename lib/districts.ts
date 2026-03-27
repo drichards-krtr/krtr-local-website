@@ -205,8 +205,20 @@ export function resolveDistrictFromHost(host: string | null | undefined): Distri
     .replace(/:\d+$/, "");
 
   if (
+    normalizedHost === "dlpc.krtrlocal.tv" ||
+    normalizedHost === "dlpc-test.krtrlocal.tv" ||
+    normalizedHost.startsWith("dlpc.") ||
+    normalizedHost.startsWith("dlpc-test.") ||
+    normalizedHost === "dlpc.localhost"
+  ) {
+    return "dlpc";
+  }
+
+  if (
     normalizedHost === "vs.krtrlocal.tv" ||
+    normalizedHost === "vs-test.krtrlocal.tv" ||
     normalizedHost.startsWith("vs.") ||
+    normalizedHost.startsWith("vs-test.") ||
     normalizedHost === "vs.localhost"
   ) {
     return "vs";
@@ -214,7 +226,9 @@ export function resolveDistrictFromHost(host: string | null | undefined): Distri
 
   if (
     normalizedHost === "bc.krtrlocal.tv" ||
+    normalizedHost === "bc-test.krtrlocal.tv" ||
     normalizedHost.startsWith("bc.") ||
+    normalizedHost.startsWith("bc-test.") ||
     normalizedHost === "bc.localhost"
   ) {
     return "bc";
