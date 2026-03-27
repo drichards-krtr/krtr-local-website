@@ -10,6 +10,12 @@ type SitePage = {
   body_markdown: string;
 };
 
+type FooterSettings = {
+  legal_name: string;
+  address_line: string;
+  phone: string;
+};
+
 const PAGE_ORDER: Array<SitePage["slug"]> = ["about", "termsprivacy", "advertise"];
 
 function revalidateSitePagePaths(districtKey: DistrictKey) {
@@ -28,16 +34,28 @@ export default async function SettingsPage({
   const supabase = createServiceClient();
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const { data } = await supabase
-    .from("site_pages")
-    .select("slug, title, body_markdown")
-    .eq("district_key", districtKey)
-    .in("slug", PAGE_ORDER);
+  const [{ data }, { data: footerData }] = await Promise.all([
+    supabase
+      .from("site_pages")
+      .select("slug, title, body_markdown")
+      .eq("district_key", districtKey)
+      .in("slug", PAGE_ORDER),
+    supabase
+      .from("footer_settings")
+      .select("legal_name, address_line, phone")
+      .eq("district_key", districtKey)
+      .maybeSingle(),
+  ]);
 
   const pages = new Map<string, SitePage>();
   (data || []).forEach((row) => {
     pages.set(row.slug, row as SitePage);
   });
+  const footer = {
+    legal_name: footerData?.legal_name || district.footer.legalName,
+    address_line: footerData?.address_line || district.footer.addressLine,
+    phone: footerData?.phone || district.footer.phone,
+  } as FooterSettings;
 
   async function saveSitePages(formData: FormData) {
     "use server";
@@ -50,7 +68,18 @@ export default async function SettingsPage({
       district_key: nextDistrictKey,
     })) as SitePage[];
     await service.from("site_pages").upsert(payload, { onConflict: "district_key,slug" });
+    await service.from("footer_settings").upsert(
+      {
+        district_key: nextDistrictKey,
+        legal_name: String(formData.get("footer_legal_name") || "").trim() || district.footer.legalName,
+        address_line:
+          String(formData.get("footer_address_line") || "").trim() || district.footer.addressLine,
+        phone: String(formData.get("footer_phone") || "").trim() || district.footer.phone,
+      },
+      { onConflict: "district_key" }
+    );
     revalidateSitePagePaths(nextDistrictKey);
+    revalidatePath("/", "layout");
     redirect(`/cms/settings?district=${nextDistrictKey}`);
   }
 
@@ -85,6 +114,32 @@ export default async function SettingsPage({
 
       <form action={saveSitePages} className="grid gap-6">
         <input type="hidden" name="district_key" value={districtKey} />
+        <section className="rounded border border-neutral-200 bg-white p-6">
+          <h2 className="mb-3 text-lg font-semibold">Footer</h2>
+          <p className="mb-4 text-sm text-neutral-500">
+            This only changes the second footer line. The top link row stays the same.
+          </p>
+          <div className="grid gap-3">
+            <label className="text-sm font-medium">Legal Name</label>
+            <input
+              name="footer_legal_name"
+              defaultValue={footer.legal_name}
+              className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+            <label className="text-sm font-medium">Address / Location Line</label>
+            <input
+              name="footer_address_line"
+              defaultValue={footer.address_line}
+              className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+            <label className="text-sm font-medium">Phone</label>
+            <input
+              name="footer_phone"
+              defaultValue={footer.phone}
+              className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+          </div>
+        </section>
         {PAGE_ORDER.map((slug) => {
           const page = pages.get(slug);
           const fallbackTitle =

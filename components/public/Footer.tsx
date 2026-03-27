@@ -1,7 +1,9 @@
 import { getCurrentDistrict } from "@/lib/districtServer";
+import { getFooterSettings } from "@/lib/footer";
 
-export default function Footer() {
+export default async function Footer() {
   const district = getCurrentDistrict();
+  const footer = await getFooterSettings(district.key);
   return (
     <footer className="mt-10 border-t border-black/10 bg-white">
       <div className="mx-auto max-w-site px-4 py-6 text-sm">
@@ -17,7 +19,7 @@ export default function Footer() {
           <a href="/advertise">Advertise with KRTR Local</a>
         </p>
         <p>
-          {district.footer.legalName} - {district.footer.addressLine} - {district.footer.phone}
+          {footer.legal_name} - {footer.address_line} - {footer.phone}
         </p>
       </div>
     </footer>
