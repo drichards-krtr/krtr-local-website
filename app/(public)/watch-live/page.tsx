@@ -1,5 +1,6 @@
 import LiveVideoPlayer from "@/components/public/LiveVideoPlayer";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { getCurrentDistrictKey } from "@/lib/districtServer";
 import { isLiveBySchedule, type StreamScheduleRow } from "@/lib/streamSchedule";
 
 export const dynamic = "force-dynamic";
@@ -49,18 +50,21 @@ function formatUpdatedAt(value: string | null, timezone: string) {
 }
 
 export default async function WatchLivePage() {
+  const districtKey = getCurrentDistrictKey();
   const supabase = createServiceClient();
   const [{ data: configData, error: configError }, { data: scheduleData, error: scheduleError }] =
     await Promise.all([
       supabase
         .from("stream_config")
         .select("is_live, stream_id, hls_url, mode, timezone, updated_at")
+        .eq("district_key", districtKey)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
       supabase
         .from("stream_schedule")
         .select("id, day_of_week, start_time, end_time, is_active")
+        .eq("district_key", districtKey)
         .order("day_of_week", { ascending: true })
         .order("start_time", { ascending: true }),
     ]);

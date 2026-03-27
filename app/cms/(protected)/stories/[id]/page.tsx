@@ -1,5 +1,6 @@
 import StoryEditor from "@/components/cms/StoryEditor";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getTagTree } from "@/lib/tags";
 
 export default async function EditStoryPage({
   params,
@@ -11,7 +12,7 @@ export default async function EditStoryPage({
     supabase
       .from("stories")
       .select(
-        "id, title, tease, body_markdown, status, published_at, image_url, cloudinary_public_id, cloudinary_width, cloudinary_height, mux_playback_id, mux_status, tags, slug, submitter_id"
+        "id, district_key, title, tease, body_markdown, status, published_at, image_url, cloudinary_public_id, cloudinary_width, cloudinary_height, mux_playback_id, mux_status, tags, slug, submitter_id"
       )
       .eq("id", params.id)
       .maybeSingle(),
@@ -52,7 +53,11 @@ export default async function EditStoryPage({
           <p className="text-sm text-neutral-700">Email: {submitter.email}</p>
         </section>
       )}
-      <StoryEditor initialStory={storyWithSlot} />
+      <StoryEditor
+        initialStory={storyWithSlot}
+        initialDistrictKey={story.district_key}
+        tagTree={getTagTree(story.district_key)}
+      />
     </div>
   );
 }

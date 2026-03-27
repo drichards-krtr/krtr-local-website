@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { resolveDistrictFromHost } from "@/lib/districts";
 
 export async function POST(request: Request) {
+  const districtKey = resolveDistrictFromHost(
+    request.headers.get("x-forwarded-host") || request.headers.get("host")
+  );
   const { storyId } = await request.json().catch(() => ({}));
   if (!storyId) {
     return NextResponse.json({ error: "Missing storyId" }, { status: 400 });
@@ -16,8 +20,12 @@ export async function POST(request: Request) {
     );
   }
 
+  const host =
+    request.headers.get("x-forwarded-host") || request.headers.get("host") || null;
+  const proto =
+    request.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
   const corsOrigin =
-    request.headers.get("origin") || process.env.NEXT_PUBLIC_SITE_URL || "*";
+    request.headers.get("origin") || (host ? `${proto}://${host}` : process.env.NEXT_PUBLIC_SITE_URL || "*");
 
   let res: Response;
   try {
@@ -80,6 +88,7 @@ export async function POST(request: Request) {
   await supabase
     .from("stories")
     .update({ mux_status: "uploading" })
+    .eq("district_key", districtKey)
     .eq("id", storyId);
 
   return NextResponse.json({ uploadUrl, uploadId });

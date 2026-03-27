@@ -7,6 +7,7 @@ import { pickAndTrackAdsForPlacement, type Ad } from "@/lib/ads";
 import { formatDateInTimeZone } from "@/lib/dates";
 import { buildPageMetadata, markdownToDescription } from "@/lib/metadata";
 import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
+import { getCurrentDistrictKey } from "@/lib/districtServer";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,12 @@ export async function generateMetadata({
 }: {
   params: { id: string };
 }): Promise<Metadata> {
-  const story = await getPublishedStoryByIdOrSlug(params.id);
+  const districtKey = getCurrentDistrictKey();
+  const story = await getPublishedStoryByIdOrSlug(districtKey, params.id);
 
   if (!story) {
     return buildPageMetadata({
+      districtKey,
       title: "Story not found",
       path: `/stories/${params.id}`,
     });
@@ -27,6 +30,7 @@ export async function generateMetadata({
   const storyPath = `/stories/${story.slug || story.id}`;
 
   return buildPageMetadata({
+    districtKey,
     title: story.title,
     description: story.tease || markdownToDescription(story.body_markdown),
     path: storyPath,
@@ -36,7 +40,8 @@ export async function generateMetadata({
 }
 
 export default async function StoryPage({ params }: { params: { id: string } }) {
-  const story = await getPublishedStoryByIdOrSlug(params.id);
+  const districtKey = getCurrentDistrictKey();
+  const story = await getPublishedStoryByIdOrSlug(districtKey, params.id);
 
   if (!story) {
     return (
@@ -51,6 +56,7 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
     const service = createServiceClient();
     const picked = await pickAndTrackAdsForPlacement({
       supabase: service,
+      districtKey,
       placement: "story",
       count: 1,
     });

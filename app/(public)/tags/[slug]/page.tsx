@@ -8,6 +8,7 @@ import {
   getChildTags,
   getDescendantSlugs,
 } from "@/lib/tags";
+import { getCurrentDistrictKey } from "@/lib/districtServer";
 
 export const dynamic = "force-dynamic";
 
@@ -21,20 +22,33 @@ type Story = {
 };
 
 export default async function TagPage({ params }: { params: { slug: string } }) {
-  const tag = getTagBySlug(params.slug);
+  const districtKey = getCurrentDistrictKey();
+  const districtUcsdTag = districtKey === "dlpc" ? "ucsd" : districtKey === "vs" ? "vscsd" : "bcsd";
+  const districtSchoolChildren =
+    districtKey === "dlpc"
+      ? ["lpc-elementary", "dg-elementary", "ums", "uhs"]
+      : districtKey === "vs"
+        ? ["tilford-elementary", "shellsburg-elementary", "vs-middle-school", "vs-high-school"]
+        : [
+            "atkins-elementary",
+            "keystone-elementary",
+            "norway-intermediate",
+            "bc-middle-school",
+            "bc-high-school",
+          ];
+  const tag = getTagBySlug(districtKey, params.slug);
   if (!tag) notFound();
-  const isUcsdChildTag = ["lpc-elementary", "dg-elementary", "ums", "uhs"].includes(
-    params.slug,
-  );
+  const isDistrictSchoolChildTag = districtSchoolChildren.includes(params.slug);
 
   const supabase = createPublicClient();
-  const tagFilters = isTopLevelTag(params.slug)
-    ? getDescendantSlugs(params.slug)
+  const tagFilters = isTopLevelTag(districtKey, params.slug)
+    ? getDescendantSlugs(districtKey, params.slug)
     : [params.slug];
 
   const { data, error } = await supabase
     .from("stories")
     .select("id, slug, title, tease, image_url, published_at")
+    .eq("district_key", districtKey)
     .eq("status", "published")
     .overlaps("tags", tagFilters)
     .order("published_at", { ascending: false })
@@ -46,10 +60,10 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
   }
 
   const stories = (data || []) as Story[];
-  const childTags = isTopLevelTag(params.slug)
-    ? getChildTags(params.slug)
-    : isUcsdChildTag
-      ? getChildTags("ucsd")
+  const childTags = isTopLevelTag(districtKey, params.slug)
+    ? getChildTags(districtKey, params.slug)
+    : isDistrictSchoolChildTag
+      ? getChildTags(districtKey, districtUcsdTag)
       : [];
 
   return (
@@ -57,9 +71,9 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
       {childTags.length > 0 && (
         <section className="mb-6 rounded-lg bg-white p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
-            {params.slug === "ucsd"
+            {params.slug === districtUcsdTag
               ? "Dive into YOUR school..."
-              : isUcsdChildTag
+              : isDistrictSchoolChildTag
                 ? "Switch Schools..."
                 : `${tag.label} Sections`}
           </h2>

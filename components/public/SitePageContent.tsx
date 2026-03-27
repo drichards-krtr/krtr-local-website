@@ -1,8 +1,9 @@
 import Markdown from "@/components/public/Markdown";
 import { getSitePage, type SitePageSlug } from "@/lib/site-pages";
+import { getCurrentDistrictKey } from "@/lib/districtServer";
 
 export default async function SitePageContent({ slug }: { slug: SitePageSlug }) {
-  const data = await getSitePage(slug);
+  const data = await getSitePage(getCurrentDistrictKey(), slug);
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">

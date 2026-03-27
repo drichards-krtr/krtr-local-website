@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { getDistrictConfig, resolveDistrictFromHost } from "@/lib/districts";
 
-async function sendSubmissionNotificationEmail(submitterEmail: string) {
+async function sendSubmissionNotificationEmail(submitterEmail: string, districtName: string) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
     console.warn("[StorySubmission] RESEND_API_KEY missing; skipping email notification.");
@@ -31,8 +32,8 @@ async function sendSubmissionNotificationEmail(submitterEmail: string) {
       from,
       to,
       reply_to: submitterEmail,
-      subject: "New Story submission",
-      text: "There is a new story submission to review.",
+      subject: `New ${districtName} story submission`,
+      text: `There is a new story submission to review for ${districtName}.`,
     }),
   }).catch((error) => {
     console.error("[StorySubmission] Resend request failed", error);
@@ -54,6 +55,10 @@ async function sendSubmissionNotificationEmail(submitterEmail: string) {
 }
 
 export async function POST(request: Request) {
+  const districtKey = resolveDistrictFromHost(
+    request.headers.get("x-forwarded-host") || request.headers.get("host")
+  );
+  const district = getDistrictConfig(districtKey);
   const body = await request.json().catch(() => ({}));
   const title = String(body?.title || "").trim();
   const tease = String(body?.tease || "").trim();
@@ -88,6 +93,7 @@ export async function POST(request: Request) {
   const { data: story, error: storyError } = await service
     .from("stories")
     .insert({
+      district_key: districtKey,
       title,
       tease: tease || null,
       body_markdown: bodyMarkdown,
@@ -111,7 +117,7 @@ export async function POST(request: Request) {
     .update({ submitted_story_id: story.id })
     .eq("id", submitter.id);
 
-  await sendSubmissionNotificationEmail(submitterEmail);
+  await sendSubmissionNotificationEmail(submitterEmail, district.name);
 
   return NextResponse.json({ ok: true, storyId: story.id });
 }

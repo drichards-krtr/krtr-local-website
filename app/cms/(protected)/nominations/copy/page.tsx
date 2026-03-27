@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   NOMINATION_CATEGORIES,
@@ -16,11 +17,24 @@ type NominationCopy = {
   success_message: string;
 };
 
-export default async function NominationCopyPage() {
+function revalidateNominationCopyPaths(districtKey: DistrictKey) {
+  revalidatePath("/cms/nominations/copy");
+  revalidatePath(`/cms/nominations/copy?district=${districtKey}`);
+  revalidatePath("/nominations");
+}
+
+export default async function NominationCopyPage({
+  searchParams,
+}: {
+  searchParams?: { district?: string };
+}) {
+  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
+  const district = getDistrictConfig(districtKey);
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("nomination_copy")
-    .select("category, title, body_markdown, submit_button_text, success_message");
+    .select("category, title, body_markdown, submit_button_text, success_message")
+    .eq("district_key", districtKey);
 
   if (error) {
     throw new Error(`[NominationCopyPage] ${error.message}`);
@@ -32,7 +46,9 @@ export default async function NominationCopyPage() {
   async function saveCopy(formData: FormData) {
     "use server";
     const supabase = createServerSupabase();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const payload = NOMINATION_CATEGORIES.map((category) => ({
+      district_key: nextDistrictKey,
       category,
       title: String(formData.get(`${category}_title`) || "").trim(),
       body_markdown: String(formData.get(`${category}_body_markdown`) || "").trim(),
@@ -44,10 +60,9 @@ export default async function NominationCopyPage() {
         "Thank You For Nominating",
     }));
 
-    await supabase.from("nomination_copy").upsert(payload, { onConflict: "category" });
-    revalidatePath("/cms/nominations/copy");
-    revalidatePath("/nominations");
-    redirect("/cms/nominations/copy");
+    await supabase.from("nomination_copy").upsert(payload, { onConflict: "district_key,category" });
+    revalidateNominationCopyPaths(nextDistrictKey);
+    redirect(`/cms/nominations/copy?district=${nextDistrictKey}`);
   }
 
   return (
@@ -58,13 +73,36 @@ export default async function NominationCopyPage() {
           <p className="text-sm text-neutral-500">
             Edit the public copy shown for each nomination category.
           </p>
+          <p className="mt-1 text-sm text-neutral-600">Editing {district.name}.</p>
         </div>
-        <Link href="/cms/nominations" className="text-sm underline">
+        <Link href={`/cms/nominations?district=${districtKey}`} className="text-sm underline">
           Back to Nominations
         </Link>
       </header>
 
+      <form className="rounded border border-neutral-200 bg-white p-4">
+        <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="ml-3 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Switch
+        </button>
+      </form>
+
       <form action={saveCopy} className="grid gap-6">
+        <input type="hidden" name="district_key" value={districtKey} />
         {NOMINATION_CATEGORIES.map((category) => {
           const row = rows.get(category);
           return (

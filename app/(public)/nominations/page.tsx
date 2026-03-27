@@ -9,6 +9,7 @@ import {
   NOMINATION_CATEGORY_LABELS,
   type NominationCategory,
 } from "@/lib/nominations";
+import { getCurrentDistrict } from "@/lib/districtServer";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ type NominationCopy = {
 
 async function sendSubmissionNotificationEmail(args: {
   submitterEmail: string;
+  districtName: string;
   category: NominationCategory;
   nominationId: string;
   submittedAt: string;
@@ -62,7 +64,7 @@ async function sendSubmissionNotificationEmail(args: {
       from,
       to,
       reply_to: args.submitterEmail,
-      subject: `New ${NOMINATION_CATEGORY_LABELS[args.category]} nomination`,
+      subject: `New ${args.districtName} ${NOMINATION_CATEGORY_LABELS[args.category]} nomination`,
       text: lines.join("\n"),
     }),
   }).catch((error) => {
@@ -88,7 +90,8 @@ export default async function NominationsPublicPage({
 }: {
   searchParams: { success?: string };
 }) {
-  const nomination = await getCurrentOpenNomination();
+  const district = getCurrentDistrict();
+  const nomination = await getCurrentOpenNomination(district.key);
 
   if (!nomination) {
     return (
@@ -106,6 +109,7 @@ export default async function NominationsPublicPage({
   const { data: copyData } = await publicSupabase
     .from("nomination_copy")
     .select("category, title, body_markdown, submit_button_text, success_message")
+    .eq("district_key", district.key)
     .eq("category", activeNomination.category)
     .maybeSingle();
 
@@ -120,7 +124,7 @@ export default async function NominationsPublicPage({
   async function submitNomination(formData: FormData) {
     "use server";
 
-    const latestOpen = await getCurrentOpenNomination();
+    const latestOpen = await getCurrentOpenNomination(district.key);
     if (!latestOpen || latestOpen.id !== activeNomination.id) {
       redirect("/nominations");
     }
@@ -202,6 +206,7 @@ export default async function NominationsPublicPage({
     await service.rpc("purge_old_nomination_submissions");
 
     const { error } = await service.from("nomination_submissions").insert({
+      district_key: district.key,
       nomination_id: activeNomination.id,
       category,
       submitter_name: submitterName,
@@ -213,6 +218,7 @@ export default async function NominationsPublicPage({
     if (!error) {
       await sendSubmissionNotificationEmail({
         submitterEmail,
+        districtName: district.name,
         category,
         nominationId: activeNomination.id,
         submittedAt: formatDateTimeInTimeZone(new Date(), { timeZoneName: "short" }),
@@ -337,10 +343,11 @@ export default async function NominationsPublicPage({
                   className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
                 >
                   <option value="">Campus</option>
-                  <option value="LPC Elementary">LPC Elementary</option>
-                  <option value="DG Elementary">DG Elementary</option>
-                  <option value="UMS">UMS</option>
-                  <option value="UHS">UHS</option>
+                  {district.teacherCampuses.map((campus) => (
+                    <option key={campus} value={campus}>
+                      {campus}
+                    </option>
+                  ))}
                 </select>
                 <textarea
                   name="why_nominate"

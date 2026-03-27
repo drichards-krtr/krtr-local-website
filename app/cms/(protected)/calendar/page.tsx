@@ -11,6 +11,7 @@ import {
   getNaiveDateTimeText,
 } from "@/lib/dates";
 import { randomUUID } from "crypto";
+import { DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
 
 const WEEKDAYS = [
   { value: 0, label: "Sun" },
@@ -48,17 +49,19 @@ function formatDateOnly(date: Date) {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string; range?: string; savedAt?: string };
+  searchParams: { search?: string; status?: string; range?: string; savedAt?: string; district?: string };
 }) {
   const supabase = createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
   const range = searchParams.range || "upcoming";
+  const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
   const savedAtLabel = searchParams.savedAt ? formatSavedAt(searchParams.savedAt) : null;
 
   let query = supabase
     .from("events")
     .select("id, title, location, start_at, end_at, status, image_url")
+    .eq("district_key", districtKey)
     .order("start_at", { ascending: false });
 
   if (status !== "all") {
@@ -113,6 +116,7 @@ export default async function CalendarPage({
 
     if (recurrence !== "weekly") {
       await supabase.from("events").insert({
+        district_key: districtKey,
         title,
         description,
         location,
@@ -139,6 +143,7 @@ export default async function CalendarPage({
       const selectedDays = recurrenceDays.length ? recurrenceDays : [defaultDay];
 
       const rows: Array<{
+        district_key: string;
         title: string;
         description: string;
         location: string;
@@ -161,6 +166,7 @@ export default async function CalendarPage({
         if (!selectedDays.includes(cursor.getDay())) continue;
         const dayText = formatDateOnly(cursor);
         rows.push({
+          district_key: districtKey,
           title,
           description,
           location,
@@ -182,7 +188,9 @@ export default async function CalendarPage({
     }
     revalidatePath("/cms/calendar");
     revalidatePath("/calendar");
-    redirect(`/cms/calendar?savedAt=${encodeURIComponent(new Date().toISOString())}`);
+    redirect(
+      `/cms/calendar?district=${districtKey}&savedAt=${encodeURIComponent(new Date().toISOString())}`
+    );
   }
 
   async function unpublishEvent(formData: FormData) {
@@ -192,7 +200,7 @@ export default async function CalendarPage({
     await supabase.from("events").update({ status: "archived" }).eq("id", id);
     revalidatePath("/cms/calendar");
     revalidatePath("/calendar");
-    redirect("/cms/calendar");
+    redirect(`/cms/calendar?district=${districtKey}`);
   }
 
   return (
@@ -203,6 +211,17 @@ export default async function CalendarPage({
       </header>
 
       <form className="flex flex-wrap gap-3 rounded border border-neutral-200 bg-white p-4">
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <input
           name="search"
           placeholder="Search events"
@@ -358,7 +377,7 @@ export default async function CalendarPage({
             </div>
             <div className="capitalize">{event.status}</div>
             <div className="flex gap-3">
-              <a href={`/cms/calendar/${event.id}`} className="text-sm underline">
+              <a href={`/cms/calendar/${event.id}?district=${districtKey}`} className="text-sm underline">
                 Edit
               </a>
               <form action={unpublishEvent}>

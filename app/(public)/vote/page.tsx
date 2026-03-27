@@ -1,5 +1,6 @@
 import Markdown from "@/components/public/Markdown";
 import { createPublicClient } from "@/lib/supabase/public";
+import { getCurrentDistrict } from "@/lib/districtServer";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +18,17 @@ type VoteCandidate = {
 };
 
 export default async function VotePage() {
+  const district = getCurrentDistrict();
+  if (!district.features.vote) {
+    return null;
+  }
   const supabase = createPublicClient();
   const [{ data: copyData }, { data: candidatesData }] =
     await Promise.all([
       supabase
         .from("vote_page_content")
         .select("body_markdown")
+        .eq("district_key", district.key)
         .eq("id", 1)
         .maybeSingle(),
       supabase
@@ -30,6 +36,7 @@ export default async function VotePage() {
         .select(
           "id, jurisdiction_name, seat_label, candidate_name, photo_url, link_1_url, link_1_text, link_2_url, link_2_text"
         )
+        .eq("district_key", district.key)
         .order("jurisdiction_name", { ascending: true })
         .order("candidate_name", { ascending: true }),
     ]);

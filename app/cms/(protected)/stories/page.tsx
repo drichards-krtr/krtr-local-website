@@ -3,19 +3,25 @@ import { formatDateInTimeZone } from "@/lib/dates";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { DISTRICT_OPTIONS, parseDistrictKey, type DistrictKey } from "@/lib/districts";
+
+type SlotRow = { slot: string; story_id: string | null };
+type StoryOption = { id: string; title: string; published_at: string | null };
 
 export default async function StoriesPage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string };
+  searchParams: { search?: string; status?: string; district?: string };
 }) {
   const supabase = createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
+  const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
 
   let query = supabase
     .from("stories")
-    .select("id, title, status, published_at, updated_at")
+    .select("id, district_key, title, status, published_at, updated_at")
+    .eq("district_key", districtKey)
     .order("created_at", { ascending: false });
 
   if (status !== "all") {
@@ -27,13 +33,16 @@ export default async function StoriesPage({
 
   const { data: stories } = await query;
 
-  // load current slot assignments and recent published stories (last 30 days)
-  const { data: slots } = await supabase.from("story_slots").select("slot, story_id");
+  const { data: slots } = await supabase
+    .from("story_slots")
+    .select("slot, story_id")
+    .eq("district_key", districtKey);
 
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { data: recentPublished } = await supabase
     .from("stories")
     .select("id, title, published_at")
+    .eq("district_key", districtKey)
     .eq("status", "published")
     .gte("published_at", cutoff)
     .order("published_at", { ascending: false })
@@ -44,12 +53,10 @@ export default async function StoriesPage({
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Stories</h1>
-          <p className="text-sm text-neutral-500">
-            Search, filter, and manage published content.
-          </p>
+          <p className="text-sm text-neutral-500">Search, filter, and manage published content.</p>
         </div>
         <Link
-          href="/cms/stories/new"
+          href={`/cms/stories/new?district=${districtKey}`}
           className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
         >
           New Story
@@ -60,15 +67,26 @@ export default async function StoriesPage({
         <h2 className="text-lg font-semibold">Homepage Slot Assignments</h2>
         <p className="text-sm text-neutral-500">Select stories published within the last 30 days.</p>
         <div className="mt-3 grid gap-3">
-          {renderSlotSelector("hero", slots || [], recentPublished || [])}
-          {renderSlotSelector("top1", slots || [], recentPublished || [])}
-          {renderSlotSelector("top2", slots || [], recentPublished || [])}
-          {renderSlotSelector("top3", slots || [], recentPublished || [])}
-          {renderSlotSelector("top4", slots || [], recentPublished || [])}
+          {renderSlotSelector("hero", districtKey, slots || [], recentPublished || [])}
+          {renderSlotSelector("top1", districtKey, slots || [], recentPublished || [])}
+          {renderSlotSelector("top2", districtKey, slots || [], recentPublished || [])}
+          {renderSlotSelector("top3", districtKey, slots || [], recentPublished || [])}
+          {renderSlotSelector("top4", districtKey, slots || [], recentPublished || [])}
         </div>
       </section>
 
       <form className="flex flex-wrap gap-3 rounded border border-neutral-200 bg-white p-4">
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <input
           name="search"
           placeholder="Search titles"
@@ -111,13 +129,10 @@ export default async function StoriesPage({
               {story.published_at ? formatDateInTimeZone(story.published_at) : "-"}
             </div>
             <div className="flex gap-3 text-sm">
-              <Link
-                href={`/cms/stories/${story.id}`}
-                className="text-neutral-900 underline"
-              >
+              <Link href={`/cms/stories/${story.id}?district=${districtKey}`} className="text-neutral-900 underline">
                 Edit
               </Link>
-              <UnpublishButton storyId={story.id} />
+              <UnpublishButton storyId={story.id} districtKey={districtKey} />
             </div>
           </div>
         ))}
@@ -126,14 +141,14 @@ export default async function StoriesPage({
   );
 }
 
-async function UnpublishButton({ storyId }: { storyId: string }) {
+async function UnpublishButton({ storyId, districtKey }: { storyId: string; districtKey: DistrictKey }) {
   async function unpublish() {
     "use server";
     const supabase = createServerSupabase();
-    await supabase.from("stories").update({ status: "archived" }).eq("id", storyId);
+    await supabase.from("stories").update({ status: "archived" }).eq("id", storyId).eq("district_key", districtKey);
     revalidatePath("/");
     revalidatePath("/cms/stories");
-    redirect("/cms/stories");
+    redirect(`/cms/stories?district=${districtKey}`);
   }
 
   return (
@@ -145,11 +160,7 @@ async function UnpublishButton({ storyId }: { storyId: string }) {
   );
 }
 
-function renderSlotSelector(
-  slot: string,
-  slots: { slot: string; story_id: string | null }[],
-  options: { id: string; title: string; published_at: string | null }[]
-) {
+function renderSlotSelector(slot: string, districtKey: DistrictKey, slots: SlotRow[], options: StoryOption[]) {
   const current = slots.find((s) => s.slot === slot)?.story_id || "";
 
   async function updateSlot(formData: FormData) {
@@ -159,14 +170,33 @@ function renderSlotSelector(
     const storyId = (formData.get("storyId") as string) || "";
 
     if (!storyId) {
-      await supabase.from("story_slots").delete().eq("slot", slotValue);
+      await supabase.from("story_slots").delete().eq("district_key", districtKey).eq("slot", slotValue);
     } else {
-      await supabase.from("story_slots").upsert({ slot: slotValue, story_id: storyId }, { onConflict: "slot" });
+      const { data: existingSlot } = await supabase
+        .from("story_slots")
+        .select("slot")
+        .eq("district_key", districtKey)
+        .eq("slot", slotValue)
+        .maybeSingle();
+
+      if (existingSlot) {
+        await supabase
+          .from("story_slots")
+          .update({ story_id: storyId })
+          .eq("district_key", districtKey)
+          .eq("slot", slotValue);
+      } else {
+        await supabase.from("story_slots").insert({
+          district_key: districtKey,
+          slot: slotValue,
+          story_id: storyId,
+        });
+      }
     }
 
     revalidatePath("/");
     revalidatePath("/cms/stories");
-    redirect("/cms/stories");
+    redirect(`/cms/stories?district=${districtKey}`);
   }
 
   return (
@@ -177,11 +207,13 @@ function renderSlotSelector(
         <option value="">None</option>
         {options.map((opt) => (
           <option key={opt.id} value={opt.id}>
-            {opt.title} {opt.published_at ? ` — ${formatDateInTimeZone(opt.published_at)}` : ""}
+            {opt.title} {opt.published_at ? ` - ${formatDateInTimeZone(opt.published_at)}` : ""}
           </option>
         ))}
       </select>
-      <button type="submit" className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Save</button>
+      <button type="submit" className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">
+        Save
+      </button>
     </form>
   );
 }

@@ -8,6 +8,7 @@ import { formatDateInTimeZone } from "@/lib/dates";
 import { getNominationBannerText } from "@/lib/nominations";
 import { getCurrentOpenNomination } from "@/lib/nominationsServer";
 import { storyHref } from "@/lib/stories";
+import { getCurrentDistrictKey } from "@/lib/districtServer";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,12 @@ type Story = {
   published_at: string | null;
 };
 
-async function getHomepageAds() {
+async function getHomepageAds(districtKey: string) {
   try {
     const supabase = createServiceClient();
     return await pickAndTrackAdsForPlacement({
       supabase,
+      districtKey,
       placement: "homepage",
       count: 3,
     });
@@ -34,11 +36,12 @@ async function getHomepageAds() {
   }
 }
 
-async function getSlotStories() {
+async function getSlotStories(districtKey: string) {
   const supabase = createPublicClient();
   const { data: slots, error: slotsError } = await supabase
     .from("story_slots")
-    .select("slot, story_id");
+    .select("slot, story_id")
+    .eq("district_key", districtKey);
 
   if (slotsError) {
     console.error("[HomePage:getSlotStories] story_slots query failed", slotsError);
@@ -54,6 +57,7 @@ async function getSlotStories() {
   const { data: stories, error: storiesError } = await supabase
     .from("stories")
     .select("id, slug, title, tease, image_url, published_at")
+    .eq("district_key", districtKey)
     .eq("status", "published")
     .in("id", slotIds);
 
@@ -67,11 +71,12 @@ async function getSlotStories() {
   return { storiesById, slots: slots || [] };
 }
 
-async function getRecentStories(skipIds: string[]) {
+async function getRecentStories(districtKey: string, skipIds: string[]) {
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("stories")
     .select("id, slug, title, tease, image_url, published_at")
+    .eq("district_key", districtKey)
     .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(16);
@@ -88,6 +93,7 @@ async function getRecentStories(skipIds: string[]) {
     const { data: fallbackData, error: fallbackError } = await supabase
       .from("stories")
       .select("id, slug, title, tease, image_url, published_at")
+      .eq("district_key", districtKey)
       .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(16);
@@ -113,10 +119,11 @@ export default async function HomePage({
 }: {
   searchParams?: { debug?: string };
 }) {
+  const districtKey = getCurrentDistrictKey();
   const [{ storiesById, slots }, homepageAds, activeNomination] = await Promise.all([
-    getSlotStories(),
-    getHomepageAds(),
-    getCurrentOpenNomination(),
+    getSlotStories(districtKey),
+    getHomepageAds(districtKey),
+    getCurrentOpenNomination(districtKey),
   ]);
 
   const slotMap = new Map(slots.map((slot) => [slot.slot, slot.story_id]));
@@ -134,7 +141,7 @@ export default async function HomePage({
     ...(heroStory?.id ? [heroStory.id] : []),
     ...topStories.map((story) => story.id),
   ];
-  const recentStories = await getRecentStories(skipIds);
+  const recentStories = await getRecentStories(districtKey, skipIds);
   const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
     ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
     : "missing";

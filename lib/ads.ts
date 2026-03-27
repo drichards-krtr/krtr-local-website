@@ -67,6 +67,7 @@ export function pickLeastShownAds(
 
 type PickAndTrackAdsForPlacementOptions = {
   supabase: SupabaseClient;
+  districtKey: string;
   placement: Ad["placement"];
   count?: number;
   onDate?: string;
@@ -74,6 +75,7 @@ type PickAndTrackAdsForPlacementOptions = {
 
 export async function pickAndTrackAdsForPlacement({
   supabase,
+  districtKey,
   placement,
   count = 1,
   onDate,
@@ -83,6 +85,7 @@ export async function pickAndTrackAdsForPlacement({
   const { data: adRows, error: adError } = await supabase
     .from("ads")
     .select("id, placement, image_url, link_url, html, weight")
+    .eq("district_key", districtKey)
     .eq("placement", placement)
     .eq("active", true)
     .lte("start_date", day)

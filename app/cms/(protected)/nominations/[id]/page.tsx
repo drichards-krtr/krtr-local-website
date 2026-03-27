@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";
-import {
-  NOMINATION_CATEGORY_LABELS,
-  type NominationCategory,
-} from "@/lib/nominations";
+import { NOMINATION_CATEGORY_LABELS, type NominationCategory } from "@/lib/nominations";
 
 type Nomination = {
   id: string;
@@ -17,15 +15,21 @@ type Nomination = {
 
 function getErrorMessage(error: string) {
   if (error.includes("overlaps")) {
-    return "Date range overlaps an existing nomination. Only one nomination can be open at once.";
+    return "Date range overlaps an existing nomination in this district. Only one nomination can be open at once per district.";
   }
   if (error.includes("locked")) {
     return "Category is locked after creation.";
   }
   if (error.includes("nominations_one_force_open_idx")) {
-    return "Only one nomination can be forced open at a time.";
+    return "Only one nomination can be forced open at a time within the selected district.";
   }
   return error;
+}
+
+function revalidateNominationPaths(districtKey: DistrictKey) {
+  revalidatePath("/cms/nominations");
+  revalidatePath(`/cms/nominations?district=${districtKey}`);
+  revalidatePath("/nominations");
 }
 
 export default async function EditNominationPage({
@@ -33,13 +37,16 @@ export default async function EditNominationPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { error?: string; success?: string };
+  searchParams?: { district?: string; error?: string; success?: string };
 }) {
+  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
+  const district = getDistrictConfig(districtKey);
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("nominations")
     .select("id, category, open_date, close_date, status_override")
     .eq("id", params.id)
+    .eq("district_key", districtKey)
     .maybeSingle();
 
   if (error) {
@@ -54,19 +61,24 @@ export default async function EditNominationPage({
   async function saveNomination(formData: FormData) {
     "use server";
     const supabase = createServerSupabase();
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const payload = {
+      district_key: nextDistrictKey,
       open_date: String(formData.get("open_date") || ""),
       close_date: String(formData.get("close_date") || ""),
       status_override: String(formData.get("status_override") || "auto"),
     };
 
-    const { error } = await supabase.from("nominations").update(payload).eq("id", params.id);
+    const { error } = await supabase
+      .from("nominations")
+      .update(payload)
+      .eq("id", params.id)
+      .eq("district_key", districtKey);
     if (error) {
-      redirect(`/cms/nominations/${params.id}?error=${encodeURIComponent(error.message)}`);
+      redirect(`/cms/nominations/${params.id}?district=${nextDistrictKey}&error=${encodeURIComponent(error.message)}`);
     }
-    revalidatePath("/cms/nominations");
-    revalidatePath("/nominations");
-    redirect("/cms/nominations?success=updated");
+    revalidateNominationPaths(nextDistrictKey);
+    redirect(`/cms/nominations?district=${nextDistrictKey}&success=updated`);
   }
 
   return (
@@ -74,27 +86,48 @@ export default async function EditNominationPage({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Edit Nomination</h1>
-          <p className="text-sm text-neutral-500">
-            Category is locked once created.
-          </p>
+          <p className="text-sm text-neutral-500">Category is locked once created.</p>
+          <p className="mt-1 text-sm text-neutral-600">Editing {district.name}.</p>
         </div>
-        <Link href="/cms/nominations" className="text-sm underline">
+        <Link href={`/cms/nominations?district=${districtKey}`} className="text-sm underline">
           Back to Nominations
         </Link>
       </header>
 
-      {searchParams.error && (
+      {searchParams?.error && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {getErrorMessage(searchParams.error)}
         </div>
       )}
-      {searchParams.success && (
+      {searchParams?.success && (
         <div className="rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Nomination updated.
         </div>
       )}
 
+      <form className="rounded border border-neutral-200 bg-white p-4">
+        <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="ml-3 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Switch
+        </button>
+      </form>
+
       <form action={saveNomination} className="grid gap-3 rounded border border-neutral-200 bg-white p-6 md:grid-cols-2">
+        <input type="hidden" name="district_key" value={districtKey} />
         <div className="md:col-span-2">
           <label className="mb-1 block text-sm font-medium">Category</label>
           <input

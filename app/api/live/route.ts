@@ -5,12 +5,17 @@ import {
   isLiveBySchedule,
   type StreamScheduleRow,
 } from "@/lib/streamSchedule";
+import { resolveDistrictFromHost } from "@/lib/districts";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const districtKey = resolveDistrictFromHost(
+    request.headers.get("x-forwarded-host") || request.headers.get("host")
+  );
   const supabase = getSupabaseServer();
   const { data, error } = await supabase
     .from("stream_config")
     .select("is_live, stream_id, hls_url, mode, timezone, updated_at")
+    .eq("district_key", districtKey)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -27,6 +32,7 @@ export async function GET() {
   const { data: scheduleRows } = await supabase
     .from("stream_schedule")
     .select("id, day_of_week, start_time, end_time, is_active")
+    .eq("district_key", districtKey)
     .eq("is_active", true);
 
   const schedules = (scheduleRows || []) as StreamScheduleRow[];
@@ -36,6 +42,7 @@ export async function GET() {
 
   if (mode === "auto" && data && data.is_live !== isLiveAuto) {
     await supabase.from("stream_config").insert({
+      district_key: districtKey,
       is_live: isLiveAuto,
       stream_id: data.stream_id || null,
       hls_url: data.hls_url || null,

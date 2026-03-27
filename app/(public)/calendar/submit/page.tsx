@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/admin";
 import ImageUploadField from "@/components/shared/ImageUploadField";
+import { getCurrentDistrict } from "@/lib/districtServer";
 
 const fieldClassName =
   "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm";
 
-async function sendSubmissionNotificationEmail(submitterEmail: string) {
+async function sendSubmissionNotificationEmail(submitterEmail: string, districtLabel: string) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
     console.warn("[CalendarSubmission] RESEND_API_KEY missing; skipping email notification.");
@@ -29,8 +30,8 @@ async function sendSubmissionNotificationEmail(submitterEmail: string) {
       from,
       to,
       reply_to: submitterEmail,
-      subject: "New Community Calendar submission",
-      text: "There is a new submission to review for the Community Calendar.",
+      subject: `New ${districtLabel} Community Calendar submission`,
+      text: `There is a new submission to review for the ${districtLabel} Community Calendar.`,
     }),
   }).catch((error) => {
     console.error("[CalendarSubmission] Resend request failed", error);
@@ -52,6 +53,7 @@ async function sendSubmissionNotificationEmail(submitterEmail: string) {
 }
 
 export default function SubmitCalendarEventPage() {
+  const district = getCurrentDistrict();
   async function submitEvent(formData: FormData) {
     "use server";
 
@@ -77,14 +79,15 @@ export default function SubmitCalendarEventPage() {
     const { data: event, error: eventError } = await service
       .from("events")
       .insert({
-      title: String(formData.get("title") || "").trim(),
-      description: String(formData.get("description") || "").trim() || null,
-      location: String(formData.get("location") || "").trim() || null,
-      start_at: String(formData.get("start_at") || ""),
-      end_at: String(formData.get("end_at") || "").trim() || null,
-      image_url: String(formData.get("image_url") || "").trim() || null,
-      status: "draft",
-      submitter_id: submitter.id,
+        district_key: district.key,
+        title: String(formData.get("title") || "").trim(),
+        description: String(formData.get("description") || "").trim() || null,
+        location: String(formData.get("location") || "").trim() || null,
+        start_at: String(formData.get("start_at") || ""),
+        end_at: String(formData.get("end_at") || "").trim() || null,
+        image_url: String(formData.get("image_url") || "").trim() || null,
+        status: "draft",
+        submitter_id: submitter.id,
       })
       .select("id")
       .single();
@@ -101,7 +104,7 @@ export default function SubmitCalendarEventPage() {
       throw new Error(`Unable to link submitter to event: ${linkError.message}`);
     }
 
-    await sendSubmissionNotificationEmail(submitterEmail);
+    await sendSubmissionNotificationEmail(submitterEmail, district.name);
     redirect("/calendar/submit/thanks");
   }
 

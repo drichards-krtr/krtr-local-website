@@ -3,16 +3,7 @@ import { getTopLevelTags } from "@/lib/tags";
 import { createPublicClient } from "@/lib/supabase/public";
 import HeaderNav from "@/components/public/HeaderNav";
 import { getPreferredLogo } from "@/lib/logos";
-
-const BASE_NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  ...getTopLevelTags().map((tag) => ({
-    label: tag.label,
-    href: `/tags/${tag.slug}`,
-  })),
-  { label: "Community Calendar", href: "/calendar" },
-  { label: "Share", href: "/submit-story" },
-];
+import { getCurrentDistrict } from "@/lib/districtServer";
 
 type ActiveLogo = {
   image_url: string;
@@ -25,11 +16,14 @@ type SeasonalNavItem = {
   nav_enabled: boolean;
 };
 
-async function getSeasonalNavItems(): Promise<Array<{ label: string; href: string }>> {
+async function getSeasonalNavItems(
+  districtKey: string
+): Promise<Array<{ label: string; href: string }>> {
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("seasonal_pages")
     .select("slug, nav_label, nav_enabled")
+    .eq("district_key", districtKey)
     .in("slug", ["vote", "festival-of-trails"]);
 
   if (error) {
@@ -47,11 +41,23 @@ async function getSeasonalNavItems(): Promise<Array<{ label: string; href: strin
 }
 
 export default async function Header() {
+  const district = getCurrentDistrict();
+  const baseNavItems = [
+    { label: "Home", href: "/" },
+    ...getTopLevelTags(district.key).map((tag) => ({
+      label: tag.label,
+      href: `/tags/${tag.slug}`,
+    })),
+    { label: "Community Calendar", href: "/calendar" },
+    { label: "Share", href: "/submit-story" },
+  ];
   const [activeLogo, seasonalNavItems] = await Promise.all([
-    getPreferredLogo(),
-    getSeasonalNavItems(),
+    getPreferredLogo(district.key),
+    getSeasonalNavItems(district.key),
   ]);
-  const navItems = [...BASE_NAV_ITEMS, ...seasonalNavItems];
+  const navItems = [...baseNavItems, ...seasonalNavItems].filter((item) =>
+    item.href === "/festival-of-trails" ? district.features.festivalOfTrails : true
+  );
 
   return (
     <header>

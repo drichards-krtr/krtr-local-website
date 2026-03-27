@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";
-import {
-  formatDateInTimeZone,
-  getDayRangeInTimeZone,
-} from "@/lib/dates";
+import { formatDateInTimeZone, getDayRangeInTimeZone } from "@/lib/dates";
 import {
   NOMINATION_CATEGORIES,
   NOMINATION_CATEGORY_LABELS,
@@ -31,22 +29,30 @@ function getNomineeName(row: NominationSubmission) {
   return String(data.worker_name || "-");
 }
 
+function revalidateSubmissionPaths(districtKey: DistrictKey) {
+  revalidatePath("/cms/nominations/submissions");
+  revalidatePath(`/cms/nominations/submissions?district=${districtKey}`);
+}
+
 export default async function NominationSubmissionsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; from?: string; to?: string; error?: string; success?: string };
+  searchParams?: { district?: string; category?: string; from?: string; to?: string; error?: string; success?: string };
 }) {
+  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
+  const district = getDistrictConfig(districtKey);
   const supabase = createServerSupabase();
 
   await supabase.rpc("purge_old_nomination_submissions");
 
-  const categoryFilter = searchParams.category || "all";
-  const from = searchParams.from || "";
-  const to = searchParams.to || "";
+  const categoryFilter = searchParams?.category || "all";
+  const from = searchParams?.from || "";
+  const to = searchParams?.to || "";
 
   let query = supabase
     .from("nomination_submissions")
     .select("id, nomination_id, category, submitter_name, submitter_email, submitter_phone, payload, submitted_at")
+    .eq("district_key", districtKey)
     .order("submitted_at", { ascending: false });
 
   if (categoryFilter !== "all") {
@@ -65,20 +71,25 @@ export default async function NominationSubmissionsPage({
   }
 
   const rows = (data || []) as NominationSubmission[];
-  const exportHref = `/api/nominations/submissions-export?category=${encodeURIComponent(
-    categoryFilter
-  )}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  const exportHref = `/api/nominations/submissions-export?district=${encodeURIComponent(
+    districtKey
+  )}&category=${encodeURIComponent(categoryFilter)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
   async function deleteSubmission(formData: FormData) {
     "use server";
     const supabase = createServerSupabase();
     const id = String(formData.get("id") || "");
-    const { error } = await supabase.from("nomination_submissions").delete().eq("id", id);
+    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
+    const { error } = await supabase
+      .from("nomination_submissions")
+      .delete()
+      .eq("id", id)
+      .eq("district_key", districtKey);
     if (error) {
-      redirect(`/cms/nominations/submissions?error=${encodeURIComponent(error.message)}`);
+      redirect(`/cms/nominations/submissions?district=${nextDistrictKey}&error=${encodeURIComponent(error.message)}`);
     }
-    revalidatePath("/cms/nominations/submissions");
-    redirect("/cms/nominations/submissions");
+    revalidateSubmissionPaths(nextDistrictKey);
+    redirect(`/cms/nominations/submissions?district=${nextDistrictKey}`);
   }
 
   return (
@@ -89,29 +100,52 @@ export default async function NominationSubmissionsPage({
           <p className="text-sm text-neutral-500">
             Admin-only submissions list. Data older than 90 days is purged automatically.
           </p>
+          <p className="mt-1 text-sm text-neutral-600">Editing {district.name}.</p>
         </div>
         <div className="flex gap-3">
           <a href={exportHref} className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold">
             Export CSV
           </a>
-          <Link href="/cms/nominations" className="text-sm underline">
+          <Link href={`/cms/nominations?district=${districtKey}`} className="text-sm underline">
             Back to Nominations
           </Link>
         </div>
       </header>
 
-      {searchParams.error && (
+      {searchParams?.error && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {searchParams.error}
         </div>
       )}
-      {searchParams.success && (
+      {searchParams?.success && (
         <div className="rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Submission updated.
         </div>
       )}
 
+      <form className="rounded border border-neutral-200 bg-white p-4">
+        <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
+        <select
+          name="district"
+          defaultValue={districtKey}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm"
+        >
+          {DISTRICT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="ml-3 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Switch
+        </button>
+      </form>
+
       <form className="flex flex-wrap items-end gap-3 rounded border border-neutral-200 bg-white p-4">
+        <input type="hidden" name="district" value={districtKey} />
         <div className="grid gap-1">
           <label className="text-xs font-semibold uppercase text-neutral-500">Category</label>
           <select
@@ -181,11 +215,12 @@ export default async function NominationSubmissionsPage({
               <div>{row.submitter_phone}</div>
             </div>
             <div className="flex gap-3">
-              <Link href={`/cms/nominations/submissions/${row.id}`} className="underline">
+              <Link href={`/cms/nominations/submissions/${row.id}?district=${districtKey}`} className="underline">
                 Edit
               </Link>
               <form action={deleteSubmission}>
                 <input type="hidden" name="id" value={row.id} />
+                <input type="hidden" name="district_key" value={districtKey} />
                 <button type="submit" className="text-red-700 underline">
                   Delete
                 </button>

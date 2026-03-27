@@ -2,6 +2,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { unstable_noStore as noStore } from "next/cache";
 import { getDateTimeTextInTimeZone, getNaiveDateTimeText } from "@/lib/dates";
 import { getCurrentWeather } from "@/lib/weather";
+import { getCurrentDistrict } from "@/lib/districtServer";
 
 type AlertRow = {
   id: string;
@@ -22,7 +23,8 @@ function isActiveNowInChicago(alert: AlertRow) {
 
 export default async function AlertBanner() {
   noStore();
-  const weather = await getCurrentWeather().catch(() => null);
+  const district = getCurrentDistrict();
+  const weather = await getCurrentWeather(district.key).catch(() => null);
   if (weather && weather.alerts.length > 0) {
     return (
       <div className="bg-krtrRed text-white">
@@ -39,6 +41,7 @@ export default async function AlertBanner() {
   const { data, error } = await supabase
     .from("alerts")
     .select("id, message, link_url, active, start_at, end_at, created_at")
+    .eq("district_key", district.key)
     .eq("active", true)
     .order("created_at", { ascending: false })
     .limit(20);

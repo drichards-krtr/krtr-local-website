@@ -1,5 +1,7 @@
 import Markdown from "@/components/public/Markdown";
 import { createPublicClient } from "@/lib/supabase/public";
+import { getCurrentDistrict } from "@/lib/districtServer";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +21,22 @@ type FestivalLink = {
 };
 
 export default async function FestivalOfTrailsPage() {
+  const district = getCurrentDistrict();
+  if (!district.features.festivalOfTrails) {
+    notFound();
+  }
   const supabase = createPublicClient();
   const [{ data: contentData }, { data: linksData }] = await Promise.all([
     supabase
       .from("festival_of_trails_content")
       .select("body_markdown, photo_url, photo_active, video_url, video_active")
+      .eq("district_key", district.key)
       .eq("id", 1)
       .maybeSingle(),
     supabase
       .from("festival_of_trails_links")
       .select("id, link_text, link_url, priority")
+      .eq("district_key", district.key)
       .order("priority", { ascending: true }),
   ]);
 
@@ -45,7 +53,7 @@ export default async function FestivalOfTrailsPage() {
     <main className="mx-auto max-w-site px-4 py-6">
       <section className="rounded-lg bg-white p-6">
         <header className="mb-4">
-          <h1 className="text-2xl font-semibold">Festival of Trails - La Porte City</h1>
+          <h1 className="text-2xl font-semibold">Festival of Trails</h1>
         </header>
 
         {content.body_markdown && <Markdown content={content.body_markdown} />}
