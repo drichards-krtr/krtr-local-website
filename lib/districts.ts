@@ -118,6 +118,7 @@ export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
     },
     teacherCampuses: [
       "Tilford Elementary",
+      "Shellsburg Elementary",
       "Vinton-Shellsburg Middle School",
       "Vinton-Shellsburg High School",
     ],
@@ -126,9 +127,10 @@ export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
       { slug: "shellsburg", label: "Shellsburg" },
       {
         slug: "vscsd",
-        label: "VSCSD",
+        label: "Vinton-Shellsburg CSD",
         children: [
           { slug: "tilford-elementary", label: "Tilford Elementary" },
+          { slug: "shellsburg-elementary", label: "Shellsburg Elementary" },
           { slug: "vs-middle-school", label: "Middle School" },
           { slug: "vs-high-school", label: "High School" },
         ],
@@ -164,17 +166,34 @@ export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
       nominations: true,
     },
     teacherCampuses: [
-      "Benton Community Elementary",
-      "Benton Community Middle School",
-      "Benton Community High School",
+      "Atkins Elementary",
+      "Keystone Elementary",
+      "Norway Intermediate",
+      "Middle School",
+      "High School",
     ],
     tags: [
-      { slug: "benton-community", label: "Benton Community" },
+      {
+        slug: "bc-towns",
+        label: "BC Towns",
+        children: [
+          { slug: "atkins", label: "Atkins" },
+          { slug: "blairstown", label: "Blairstown" },
+          { slug: "elberon", label: "Elberon" },
+          { slug: "keystone", label: "Keystone" },
+          { slug: "newhall", label: "Newhall" },
+          { slug: "norway", label: "Norway" },
+          { slug: "van-horne", label: "Van Horne" },
+          { slug: "watkins", label: "Watkins" },
+        ],
+      },
       {
         slug: "bcsd",
-        label: "BCSD",
+        label: "Benton CSD",
         children: [
-          { slug: "bc-elementary", label: "Elementary" },
+          { slug: "atkins-elementary", label: "Atkins Elementary" },
+          { slug: "keystone-elementary", label: "Keystone Elementary" },
+          { slug: "norway-intermediate", label: "Norway Intermediate" },
           { slug: "bc-middle-school", label: "Middle School" },
           { slug: "bc-high-school", label: "High School" },
         ],

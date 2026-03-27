@@ -28,8 +28,14 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
     districtKey === "dlpc"
       ? ["lpc-elementary", "dg-elementary", "ums", "uhs"]
       : districtKey === "vs"
-        ? ["tilford-elementary", "vs-middle-school", "vs-high-school"]
-        : ["bc-elementary", "bc-middle-school", "bc-high-school"];
+        ? ["tilford-elementary", "shellsburg-elementary", "vs-middle-school", "vs-high-school"]
+        : [
+            "atkins-elementary",
+            "keystone-elementary",
+            "norway-intermediate",
+            "bc-middle-school",
+            "bc-high-school",
+          ];
   const tag = getTagBySlug(districtKey, params.slug);
   if (!tag) notFound();
   const isDistrictSchoolChildTag = districtSchoolChildren.includes(params.slug);
