@@ -172,10 +172,26 @@ function renderSlotSelector(slot: string, districtKey: DistrictKey, slots: SlotR
     if (!storyId) {
       await supabase.from("story_slots").delete().eq("district_key", districtKey).eq("slot", slotValue);
     } else {
-      await supabase.from("story_slots").upsert(
-        { district_key: districtKey, slot: slotValue, story_id: storyId },
-        { onConflict: "district_key,slot" }
-      );
+      const { data: existingSlot } = await supabase
+        .from("story_slots")
+        .select("slot")
+        .eq("district_key", districtKey)
+        .eq("slot", slotValue)
+        .maybeSingle();
+
+      if (existingSlot) {
+        await supabase
+          .from("story_slots")
+          .update({ story_id: storyId })
+          .eq("district_key", districtKey)
+          .eq("slot", slotValue);
+      } else {
+        await supabase.from("story_slots").insert({
+          district_key: districtKey,
+          slot: slotValue,
+          story_id: storyId,
+        });
+      }
     }
 
     revalidatePath("/");

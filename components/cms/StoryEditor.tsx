@@ -141,14 +141,29 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
       }
 
       if (slot) {
-        const { error: slotError } = await supabase
+        const nextSlotRow = { district_key: form.district_key, slot, story_id: storyId };
+        const { data: existingSlot, error: existingSlotError } = await supabase
           .from("story_slots")
-          .upsert(
-            { district_key: form.district_key, slot, story_id: storyId },
-            { onConflict: "district_key,slot" }
-          );
-        if (slotError) {
-          setError(slotError.message);
+          .select("slot")
+          .eq("district_key", form.district_key)
+          .eq("slot", slot)
+          .maybeSingle();
+        if (existingSlotError) {
+          setError(existingSlotError.message);
+          setSaving(false);
+          return;
+        }
+
+        const slotResult = existingSlot
+          ? await supabase
+              .from("story_slots")
+              .update({ story_id: storyId })
+              .eq("district_key", form.district_key)
+              .eq("slot", slot)
+          : await supabase.from("story_slots").insert(nextSlotRow);
+
+        if (slotResult.error) {
+          setError(slotResult.error.message);
           setSaving(false);
           return;
         }
