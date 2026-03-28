@@ -11,6 +11,12 @@ type DistrictConfig = {
   host: string;
   name: string;
   schoolDistrictName: string;
+  socialNav: {
+    facebookUrl: string;
+    instagramUrl: string;
+    youtubeUrl: string;
+    watchLiveEnabled: boolean;
+  };
   footer: {
     legalName: string;
     addressLine: string;
@@ -50,6 +56,12 @@ export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
     host: "dlpc.krtrlocal.tv",
     name: "Dysart-La Porte City",
     schoolDistrictName: "Union Community School District",
+    socialNav: {
+      facebookUrl: "https://www.facebook.com/KRTRLocal/",
+      instagramUrl: "https://www.instagram.com/krtr_local/",
+      youtubeUrl: "https://www.youtube.com/@KRTR-Local",
+      watchLiveEnabled: true,
+    },
     footer: {
       legalName: "KRTR Local, LLC",
       addressLine: "502 Main Street, La Porte City, IA 50651",
@@ -94,6 +106,12 @@ export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
     host: "vs.krtrlocal.tv",
     name: "Vinton-Shellsburg",
     schoolDistrictName: "Vinton-Shellsburg Community School District",
+    socialNav: {
+      facebookUrl: "https://www.facebook.com/KRTRLocal/",
+      instagramUrl: "https://www.instagram.com/krtr_local/",
+      youtubeUrl: "https://www.youtube.com/@KRTR-Local",
+      watchLiveEnabled: true,
+    },
     footer: {
       legalName: "KRTR Local, LLC",
       addressLine: "KRTR Local serving the Vinton-Shellsburg area",
@@ -143,6 +161,12 @@ export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
     host: "bc.krtrlocal.tv",
     name: "Benton Community",
     schoolDistrictName: "Benton Community School District",
+    socialNav: {
+      facebookUrl: "https://www.facebook.com/KRTRLocal/",
+      instagramUrl: "https://www.instagram.com/krtr_local/",
+      youtubeUrl: "https://www.youtube.com/@KRTR-Local",
+      watchLiveEnabled: true,
+    },
     footer: {
       legalName: "KRTR Local, LLC",
       addressLine: "KRTR Local serving the Benton Community area",
@@ -215,6 +239,31 @@ export function parseDistrictKey(value: string | null | undefined): DistrictKey 
 
 export function getDistrictConfig(districtKey: DistrictKey) {
   return DISTRICT_CONFIGS[districtKey];
+}
+
+export function isExplicitDistrictHost(host: string | null | undefined) {
+  const normalizedHost = String(host || "")
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, "");
+
+  return (
+    normalizedHost === "dlpc.krtrlocal.tv" ||
+    normalizedHost === "dlpc-test.krtrlocal.tv" ||
+    normalizedHost.startsWith("dlpc.") ||
+    normalizedHost.startsWith("dlpc-test.") ||
+    normalizedHost === "dlpc.localhost" ||
+    normalizedHost === "vs.krtrlocal.tv" ||
+    normalizedHost === "vs-test.krtrlocal.tv" ||
+    normalizedHost.startsWith("vs.") ||
+    normalizedHost.startsWith("vs-test.") ||
+    normalizedHost === "vs.localhost" ||
+    normalizedHost === "bc.krtrlocal.tv" ||
+    normalizedHost === "bc-test.krtrlocal.tv" ||
+    normalizedHost.startsWith("bc.") ||
+    normalizedHost.startsWith("bc-test.") ||
+    normalizedHost === "bc.localhost"
+  );
 }
 
 export function resolveDistrictFromHost(host: string | null | undefined): DistrictKey {

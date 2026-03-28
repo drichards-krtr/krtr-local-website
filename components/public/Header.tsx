@@ -4,6 +4,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import HeaderNav from "@/components/public/HeaderNav";
 import { getPreferredLogo } from "@/lib/logos";
 import { getCurrentDistrict } from "@/lib/districtServer";
+import { getSocialLinkSettings } from "@/lib/socialLinks";
 
 type ActiveLogo = {
   image_url: string;
@@ -51,7 +52,8 @@ export default async function Header() {
     { label: "Community Calendar", href: "/calendar" },
     { label: "Share", href: "/submit-story" },
   ];
-  const [activeLogo, seasonalNavItems] = await Promise.all([
+  const [socialLinks, activeLogo, seasonalNavItems] = await Promise.all([
+    getSocialLinkSettings(district.key),
     getPreferredLogo(district.key),
     getSeasonalNavItems(district.key),
   ]);
@@ -63,25 +65,30 @@ export default async function Header() {
     <header>
       <div className="bg-black text-white">
         <div className="mx-auto flex max-w-site items-center justify-center gap-3 py-1 text-xs">
-          <a href="https://www.facebook.com/KRTRLocal/" aria-label="Facebook">
-            FB
-          </a>
-          <a href="https://www.instagram.com/krtr_local/" aria-label="Instagram">
-            IG
-          </a>
-          <a
-            href="/watch-live"
-            aria-label="Watch live"
-            className="text-sm font-bold text-red-600 [text-shadow:-0.5px_0_0_#fff,0.5px_0_0_#fff,0_-0.5px_0_#fff,0_0.5px_0_#fff]"
-          >
-            WATCH LIVE BROADCAST
-          </a>
-          <a href="https://x.com/KRTR_Local" aria-label="X">
-            X
-          </a>
-          <a href="https://www.youtube.com/@KRTR-Local" aria-label="YouTube">
-            YT
-          </a>
+          {socialLinks.facebook_url && (
+            <a href={socialLinks.facebook_url} aria-label="Facebook">
+              FB
+            </a>
+          )}
+          {socialLinks.instagram_url && (
+            <a href={socialLinks.instagram_url} aria-label="Instagram">
+              IG
+            </a>
+          )}
+          {socialLinks.youtube_url && (
+            <a href={socialLinks.youtube_url} aria-label="YouTube">
+              YT
+            </a>
+          )}
+          {socialLinks.watch_live_enabled && (
+            <a
+              href="/watch-live"
+              aria-label="Watch live"
+              className="text-sm font-bold text-red-600 [text-shadow:-0.5px_0_0_#fff,0.5px_0_0_#fff,0_-0.5px_0_#fff,0_0.5px_0_#fff]"
+            >
+              WATCH LIVE BROADCAST
+            </a>
+          )}
         </div>
       </div>
       <div className="bg-krtrNavy text-white">

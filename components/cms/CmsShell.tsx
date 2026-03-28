@@ -7,13 +7,14 @@ const NAV_ITEMS = [
   { label: "Stories", href: "/cms/stories" },
   { label: "Ads", href: "/cms/ads" },
   { label: "Logos", href: "/cms/logos" },
+  { label: "Social Links", href: "/cms/social-links" },
   { label: "Calendar", href: "/cms/calendar" },
   { label: "Stream Config", href: "/cms/stream-config" },
   { label: "Alerts", href: "/cms/alerts" },
   { label: "Nominations", href: "/cms/nominations" },
   { label: "Seasonal Pages", href: "/cms/seasonal-pages" },
   { label: "Users", href: "/cms/users" },
-  { label: "Advertise, Terms/Privacy, About", href: "/cms/settings" },
+  { label: "Advertise, Terms/Privacy, About, Footer", href: "/cms/settings" },
 ];
 
 export default function CmsShell({ children }: { children: ReactNode }) {
