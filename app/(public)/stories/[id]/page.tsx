@@ -82,7 +82,7 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
             <p className="mt-2 text-neutral-700">{story.tease}</p>
           )}
         </header>
-        {story.image_url && (
+        {!story.mux_playback_id && story.image_url && (
           <img
             src={story.image_url}
             alt=""
