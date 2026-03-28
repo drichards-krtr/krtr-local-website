@@ -90,7 +90,7 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
           />
         )}
         {story.mux_playback_id && (
-          <MuxPlayer playbackId={story.mux_playback_id} />
+          <MuxPlayer playbackId={story.mux_playback_id} poster={story.image_url} />
         )}
         <Markdown content={story.body_markdown || ""} />
       </article>

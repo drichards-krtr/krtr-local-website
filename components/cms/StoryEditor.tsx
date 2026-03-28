@@ -429,6 +429,9 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
             <p className="text-xs text-neutral-500">
               Status: {form.mux_status || "none"}
             </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              If a hero image is set, it will automatically be used as the video thumbnail.
+            </p>
             <input
               type="file"
               accept="video/*"
