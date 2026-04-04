@@ -114,12 +114,17 @@ export function formatDateInTimeZone(
 ) {
   const { timeZone = KRTR_TIMEZONE, ...rest } = options || {};
   const date = value instanceof Date ? value : new Date(value);
+  const hasStyle = Boolean(rest.dateStyle || rest.timeStyle);
 
   return new Intl.DateTimeFormat("en-US", {
     timeZone,
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
+    ...(hasStyle
+      ? {}
+      : {
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+        }),
     ...rest,
   }).format(date);
 }
@@ -128,10 +133,16 @@ export function formatDateTimeInTimeZone(
   value: string | Date,
   options?: Intl.DateTimeFormatOptions & { timeZone?: string }
 ) {
+  const hasStyle = Boolean(options?.dateStyle || options?.timeStyle);
+
   return formatDateInTimeZone(value, {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
+    ...(hasStyle
+      ? {}
+      : {
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
     ...options,
   });
 }
