@@ -87,7 +87,12 @@ export async function POST(request: Request) {
   const supabase = createServiceClient();
   await supabase
     .from("stories")
-    .update({ mux_status: "uploading" })
+    .update({
+      mux_upload_id: uploadId,
+      mux_asset_id: null,
+      mux_playback_id: null,
+      mux_status: "uploading",
+    })
     .eq("district_key", districtKey)
     .eq("id", storyId);
 

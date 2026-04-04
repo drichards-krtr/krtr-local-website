@@ -1,4 +1,5 @@
 import StoryEditor from "@/components/cms/StoryEditor";
+import { syncStoryVideoState } from "@/lib/mux";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getTagTree } from "@/lib/tags";
 
@@ -12,7 +13,7 @@ export default async function EditStoryPage({
     supabase
       .from("stories")
       .select(
-        "id, district_key, title, tease, body_markdown, status, published_at, image_url, cloudinary_public_id, cloudinary_width, cloudinary_height, mux_playback_id, mux_status, tags, slug, submitter_id"
+        "id, district_key, title, tease, body_markdown, status, published_at, image_url, cloudinary_public_id, cloudinary_width, cloudinary_height, mux_asset_id, mux_upload_id, mux_playback_id, mux_status, tags, slug, submitter_id"
       )
       .eq("id", params.id)
       .maybeSingle(),
@@ -28,17 +29,31 @@ export default async function EditStoryPage({
     return <p>Story not found.</p>;
   }
 
+  const syncedVideo =
+    story.mux_status === "ready" && story.mux_playback_id
+      ? null
+      : await syncStoryVideoState(story.id);
+  const syncedStory = syncedVideo
+    ? {
+        ...story,
+        mux_asset_id: syncedVideo.mux_asset_id,
+        mux_upload_id: syncedVideo.mux_upload_id,
+        mux_playback_id: syncedVideo.mux_playback_id,
+        mux_status: syncedVideo.mux_status,
+      }
+    : story;
+
   let submitter: { name: string; phone: string; email: string } | null = null;
-  if (story.submitter_id) {
+  if (syncedStory.submitter_id) {
     const { data: submitterRow } = await supabase
       .from("story_submitters")
       .select("name, phone, email")
-      .eq("id", story.submitter_id)
+      .eq("id", syncedStory.submitter_id)
       .maybeSingle();
     submitter = submitterRow || null;
   }
 
-  const storyWithSlot = { ...story, slot: slotRow?.slot || null };
+  const storyWithSlot = { ...syncedStory, slot: slotRow?.slot || null };
 
   return (
     <div>
@@ -55,8 +70,8 @@ export default async function EditStoryPage({
       )}
       <StoryEditor
         initialStory={storyWithSlot}
-        initialDistrictKey={story.district_key}
-        tagTree={getTagTree(story.district_key)}
+        initialDistrictKey={syncedStory.district_key}
+        tagTree={getTagTree(syncedStory.district_key)}
       />
     </div>
   );

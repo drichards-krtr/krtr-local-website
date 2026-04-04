@@ -6,6 +6,7 @@ import AdSlot from "@/components/public/AdSlot";
 import { pickAndTrackAdsForPlacement, type Ad } from "@/lib/ads";
 import { formatDateInTimeZone } from "@/lib/dates";
 import { buildPageMetadata, markdownToDescription } from "@/lib/metadata";
+import { syncStoryVideoState } from "@/lib/mux";
 import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
 
@@ -51,6 +52,11 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
     );
   }
 
+  const syncedVideo =
+    story.mux_playback_id ? null : await syncStoryVideoState(story.id).catch(() => null);
+  const playbackId = syncedVideo?.mux_playback_id || story.mux_playback_id;
+  const fallbackImage = !playbackId ? story.image_url : null;
+
   let storyAd: Ad | null = null;
   try {
     const service = createServiceClient();
@@ -82,15 +88,15 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
             <p className="mt-2 text-neutral-700">{story.tease}</p>
           )}
         </header>
-        {!story.mux_playback_id && story.image_url && (
+        {fallbackImage && (
           <img
-            src={story.image_url}
+            src={fallbackImage}
             alt=""
             className="mb-4 mx-auto block h-auto max-h-[300px] w-auto max-w-[calc(100%-2px)] rounded-lg"
           />
         )}
-        {story.mux_playback_id && (
-          <MuxPlayer playbackId={story.mux_playback_id} poster={story.image_url} />
+        {playbackId && (
+          <MuxPlayer playbackId={playbackId} poster={story.image_url || undefined} />
         )}
         <Markdown content={story.body_markdown || ""} />
       </article>

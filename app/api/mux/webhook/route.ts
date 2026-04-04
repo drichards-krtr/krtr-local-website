@@ -36,31 +36,50 @@ export async function POST(request: Request) {
   const eventType = event?.type;
   const data = event?.data;
   const passthrough = data?.passthrough;
-  const storyId = passthrough || null;
+  const supabase = createServiceClient();
 
-  if (!storyId) {
-    return NextResponse.json({ ok: true });
+  async function updateStory(update: Record<string, string | null>) {
+    let query = supabase.from("stories").update(update);
+
+    if (passthrough) {
+      query = query.eq("id", passthrough);
+    } else if (data?.upload_id) {
+      query = query.eq("mux_upload_id", data.upload_id);
+    } else if (data?.id && eventType === "video.upload.asset_created") {
+      query = query.eq("mux_upload_id", data.id);
+    } else if (data?.id) {
+      query = query.eq("mux_asset_id", data.id);
+    } else {
+      return;
+    }
+
+    await query;
   }
 
-  const supabase = createServiceClient();
+  if (eventType === "video.upload.asset_created") {
+    await updateStory({
+      mux_upload_id: data?.id || null,
+      mux_asset_id: data?.asset_id || null,
+      mux_status: "processing",
+    });
+  }
 
   if (eventType === "video.asset.ready") {
     const playbackId = data?.playback_ids?.[0]?.id || null;
-    await supabase
-      .from("stories")
-      .update({
-        mux_asset_id: data?.id || null,
-        mux_playback_id: playbackId,
-        mux_status: "ready",
-      })
-      .eq("id", storyId);
+    await updateStory({
+      mux_upload_id: data?.upload_id || null,
+      mux_asset_id: data?.id || null,
+      mux_playback_id: playbackId,
+      mux_status: "ready",
+    });
   }
 
   if (eventType === "video.asset.errored") {
-    await supabase
-      .from("stories")
-      .update({ mux_status: "errored" })
-      .eq("id", storyId);
+    await updateStory({
+      mux_upload_id: data?.upload_id || null,
+      mux_asset_id: data?.id || null,
+      mux_status: "errored",
+    });
   }
 
   return NextResponse.json({ ok: true });

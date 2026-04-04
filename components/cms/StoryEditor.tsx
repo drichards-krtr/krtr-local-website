@@ -20,6 +20,8 @@ type Story = {
   cloudinary_public_id: string | null;
   cloudinary_width: number | null;
   cloudinary_height: number | null;
+  mux_asset_id: string | null;
+  mux_upload_id: string | null;
   mux_playback_id: string | null;
   mux_status: string | null;
   tags: TagSlug[];
@@ -45,6 +47,8 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
     cloudinary_public_id: initialStory?.cloudinary_public_id || null,
     cloudinary_width: initialStory?.cloudinary_width || null,
     cloudinary_height: initialStory?.cloudinary_height || null,
+    mux_asset_id: initialStory?.mux_asset_id || null,
+    mux_upload_id: initialStory?.mux_upload_id || null,
     mux_playback_id: initialStory?.mux_playback_id || null,
     mux_status: initialStory?.mux_status || "none",
     tags: initialStory?.tags || [],
@@ -55,6 +59,7 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
     initialStory?.slot || ""
   );
   const [saving, setSaving] = useState(false);
+  const [refreshingMux, setRefreshingMux] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -109,6 +114,8 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
       cloudinary_public_id: form.cloudinary_public_id,
       cloudinary_width: form.cloudinary_width,
       cloudinary_height: form.cloudinary_height,
+      mux_asset_id: form.mux_asset_id,
+      mux_upload_id: form.mux_upload_id,
       mux_playback_id: form.mux_playback_id,
       mux_status: form.mux_status,
       tags: form.tags,
@@ -231,6 +238,55 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
       .update({ mux_status: "processing" })
       .eq("district_key", form.district_key)
       .eq("id", initialStory.id);
+  };
+
+  const refreshMuxStatus = async () => {
+    if (!initialStory?.id) {
+      setError("Save the story before refreshing Mux status.");
+      return;
+    }
+
+    setRefreshingMux(true);
+    setError(null);
+    setSuccess(null);
+
+    const saveIds = await createBrowserSupabase()
+      .from("stories")
+      .update({
+        mux_asset_id: form.mux_asset_id,
+        mux_upload_id: form.mux_upload_id,
+      })
+      .eq("district_key", form.district_key)
+      .eq("id", initialStory.id);
+
+    if (saveIds.error) {
+      setRefreshingMux(false);
+      setError(saveIds.error.message);
+      return;
+    }
+
+    const response = await fetch("/api/mux/sync-story", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storyId: initialStory.id }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setRefreshingMux(false);
+      setError(payload?.error || "Unable to refresh Mux status.");
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      mux_asset_id: payload.mux_asset_id || prev.mux_asset_id,
+      mux_upload_id: payload.mux_upload_id || prev.mux_upload_id,
+      mux_playback_id: payload.mux_playback_id || null,
+      mux_status: payload.mux_status || "none",
+    }));
+    setSuccess("Mux status refreshed.");
+    setRefreshingMux(false);
   };
 
   return (
@@ -441,6 +497,42 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
                 if (file) handleVideoUpload(file);
               }}
             />
+            <div className="mt-3 grid gap-3">
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Mux Asset ID
+                </label>
+                <input
+                  value={form.mux_asset_id || ""}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, mux_asset_id: event.target.value || null }))
+                  }
+                  className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+                  placeholder="Paste from Mux if this story is stuck processing"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Mux Upload ID
+                </label>
+                <input
+                  value={form.mux_upload_id || ""}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, mux_upload_id: event.target.value || null }))
+                  }
+                  className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+                  placeholder="Optional direct upload id"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={refreshMuxStatus}
+              className="mt-3 rounded border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 disabled:opacity-60"
+              disabled={refreshingMux}
+            >
+              {refreshingMux ? "Refreshing..." : "Refresh from Mux"}
+            </button>
             {form.mux_playback_id && (
               <p className="mt-2 text-xs text-neutral-500">
                 Playback ID: {form.mux_playback_id}
