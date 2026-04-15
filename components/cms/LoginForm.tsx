@@ -21,6 +21,10 @@ export default function LoginForm() {
     if (error) {
       setError(error.message);
     } else {
+      await fetch("/api/cms/session", {
+        method: "POST",
+        credentials: "same-origin",
+      });
       window.location.href = "/cms";
     }
     setLoading(false);
@@ -52,6 +56,9 @@ export default function LoginForm() {
         />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
+      <p className="text-xs text-neutral-500">
+        CMS sessions expire after 8 hours and require sign-in again.
+      </p>
       <button
         type="submit"
         className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"

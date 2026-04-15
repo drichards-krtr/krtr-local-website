@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import LogoutButton from "@/components/cms/LogoutButton";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/cms" },
@@ -40,7 +41,10 @@ export default function CmsShell({ children }: { children: ReactNode }) {
             <div className="text-sm text-neutral-500">
               Admin Console
             </div>
-            <div className="text-sm text-neutral-500">KRTR Local</div>
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-neutral-500">KRTR Local</div>
+              <LogoutButton />
+            </div>
           </header>
           <main className="flex-1 px-8 py-6">{children}</main>
         </div>
