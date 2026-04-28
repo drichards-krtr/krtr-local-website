@@ -134,6 +134,12 @@ export default async function NominationsPage({
           >
             View Submissions
           </Link>
+          <Link
+            href={`/cms/nominations/voting?district=${districtKey}`}
+            className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-900"
+          >
+            Voting Dashboard
+          </Link>
         </div>
       </header>
 

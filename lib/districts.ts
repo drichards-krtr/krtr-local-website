@@ -84,7 +84,12 @@ export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
       vote: true,
       nominations: true,
     },
-    teacherCampuses: ["LPC Elementary", "DG Elementary", "UMS", "UHS"],
+    teacherCampuses: [
+      "LPC Elementary/Preschool",
+      "DG Elementary/Preschool",
+      "Union Middle School",
+      "Union High School",
+    ],
     tags: [
       { slug: "dysart", label: "Dysart" },
       { slug: "la-porte-city", label: "La Porte City" },

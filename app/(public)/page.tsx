@@ -7,6 +7,8 @@ import { pickAndTrackAdsForPlacement } from "@/lib/ads";
 import { formatDateInTimeZone } from "@/lib/dates";
 import { getNominationBannerText } from "@/lib/nominations";
 import { getCurrentOpenNomination } from "@/lib/nominationsServer";
+import { getVotingBannerText } from "@/lib/nominationVoting";
+import { getCurrentOpenVotingSession } from "@/lib/nominationVotingServer";
 import { storyHref } from "@/lib/stories";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
 
@@ -120,10 +122,11 @@ export default async function HomePage({
   searchParams?: { debug?: string };
 }) {
   const districtKey = getCurrentDistrictKey();
-  const [{ storiesById, slots }, homepageAds, activeNomination] = await Promise.all([
+  const [{ storiesById, slots }, homepageAds, activeNomination, activeVotingSession] = await Promise.all([
     getSlotStories(districtKey),
     getHomepageAds(districtKey),
     getCurrentOpenNomination(districtKey),
+    getCurrentOpenVotingSession(districtKey),
   ]);
 
   const slotMap = new Map(slots.map((slot) => [slot.slot, slot.story_id]));
@@ -187,6 +190,23 @@ export default async function HomePage({
               )}
             </div>
           </a>
+        </section>
+      )}
+
+      {activeVotingSession && (
+        <section className="mb-8">
+          <Link
+            href={`/nominations/vote/${activeVotingSession.slug}`}
+            className="block rounded-lg border border-neutral-200 bg-gradient-to-r from-sky-100 via-white to-emerald-50 p-5 transition hover:border-neutral-300 hover:shadow-sm"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-600">
+              Voting Open
+            </p>
+            <p className="mt-2 text-xl font-semibold text-neutral-900">
+              {getVotingBannerText(activeVotingSession.category)}
+            </p>
+            <p className="mt-2 text-sm text-neutral-700">Tap here to vote for this month&apos;s finalists.</p>
+          </Link>
         </section>
       )}
 

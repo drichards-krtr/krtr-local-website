@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { label: "Stream Config", href: "/cms/stream-config" },
   { label: "Alerts", href: "/cms/alerts" },
   { label: "Nominations", href: "/cms/nominations" },
+  { label: "Nomination Voting", href: "/cms/nominations/voting" },
   { label: "Seasonal Pages", href: "/cms/seasonal-pages" },
   { label: "Users", href: "/cms/users" },
   { label: "Advertise, Terms/Privacy, About, Footer", href: "/cms/settings" },

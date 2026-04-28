@@ -98,7 +98,7 @@ export default async function NominationSubmissionsPage({
         <div>
           <h1 className="text-2xl font-semibold">Nomination Submissions</h1>
           <p className="text-sm text-neutral-500">
-            Admin-only submissions list. Data older than 90 days is purged automatically.
+            Admin-only submissions list. Data older than 365 days is purged automatically.
           </p>
           <p className="mt-1 text-sm text-neutral-600">Editing {district.name}.</p>
         </div>
