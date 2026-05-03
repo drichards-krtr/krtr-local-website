@@ -6,6 +6,7 @@ import { createBrowserSupabase } from "@/lib/supabase/browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { DISTRICT_OPTIONS, type DistrictKey, type DistrictTagNode } from "@/lib/districts";
 import { buildStorySlug } from "@/lib/stories";
+import { getDateTimeTextInTimeZone, naiveDateTimeTextToUtcIso } from "@/lib/dates";
 import type { TagSlug } from "@/lib/tags";
 
 type Story = {
@@ -36,13 +37,14 @@ type Props = {
 };
 
 export default function StoryEditor({ initialStory, initialDistrictKey, tagTree }: Props) {
+  const initialPublishedAt = initialStory?.published_at || null;
   const [form, setForm] = useState<Story>({
     district_key: initialStory?.district_key || initialDistrictKey,
     title: initialStory?.title || "",
     tease: initialStory?.tease || "",
     body_markdown: initialStory?.body_markdown || "",
     status: initialStory?.status || "draft",
-    published_at: initialStory?.published_at || null,
+    published_at: initialPublishedAt,
     image_url: initialStory?.image_url || null,
     cloudinary_public_id: initialStory?.cloudinary_public_id || null,
     cloudinary_width: initialStory?.cloudinary_width || null,
@@ -65,6 +67,9 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
 
   const isEdit = !!initialStory?.id;
   const preview = useMemo(() => form.body_markdown || "", [form.body_markdown]);
+  const scheduledPublishValue = form.published_at
+    ? getDateTimeTextInTimeZone(new Date(form.published_at)).slice(0, 16)
+    : "";
 
   const saveStory = async () => {
     setSaving(true);
@@ -338,6 +343,25 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
               <option value="archived">Archived</option>
             </select>
           </div>
+          <div>
+            <label className="text-sm font-medium">Publish Date/Time</label>
+            <input
+              type="datetime-local"
+              value={scheduledPublishValue}
+              onChange={(event) => {
+                const isoValue = event.target.value
+                  ? naiveDateTimeTextToUtcIso(event.target.value)
+                  : null;
+                setForm((prev) => ({ ...prev, published_at: isoValue }));
+              }}
+              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-neutral-500">
+              Leave blank to publish immediately when status is Published.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <label className="text-sm font-medium">Homepage Slot</label>
             <select

@@ -39,12 +39,14 @@ export default async function StoriesPage({
     .eq("district_key", districtKey);
 
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
   const { data: recentPublished } = await supabase
     .from("stories")
     .select("id, title, published_at")
     .eq("district_key", districtKey)
     .eq("status", "published")
     .gte("published_at", cutoff)
+    .lte("published_at", now)
     .order("published_at", { ascending: false })
     .limit(100);
 
@@ -124,7 +126,13 @@ export default async function StoriesPage({
             className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
           >
             <div className="font-medium">{story.title || "(Untitled)"}</div>
-            <div className="capitalize text-neutral-500">{story.status}</div>
+            <div className="capitalize text-neutral-500">
+              {story.status === "published" &&
+              story.published_at &&
+              new Date(story.published_at).getTime() > Date.now()
+                ? "Scheduled"
+                : story.status}
+            </div>
             <div className="text-neutral-500">
               {story.published_at ? formatDateInTimeZone(story.published_at) : "-"}
             </div>

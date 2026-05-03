@@ -14,11 +14,13 @@ function escapeXml(value: string) {
 export async function GET() {
   const district = getCurrentDistrict();
   const supabase = createPublicClient();
+  const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
   const { data: stories, error } = await supabase
     .from("stories")
     .select("id, slug, title, tease, body_markdown, published_at")
     .eq("district_key", district.key)
     .eq("status", "published")
+    .or(publishVisibilityFilter)
     .order("published_at", { ascending: false })
     .limit(50);
 

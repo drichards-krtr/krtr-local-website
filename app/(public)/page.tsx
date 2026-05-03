@@ -40,6 +40,7 @@ async function getHomepageAds(districtKey: string) {
 
 async function getSlotStories(districtKey: string) {
   const supabase = createPublicClient();
+  const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
   const { data: slots, error: slotsError } = await supabase
     .from("story_slots")
     .select("slot, story_id")
@@ -61,6 +62,7 @@ async function getSlotStories(districtKey: string) {
     .select("id, slug, title, tease, image_url, published_at")
     .eq("district_key", districtKey)
     .eq("status", "published")
+    .or(publishVisibilityFilter)
     .in("id", slotIds);
 
   if (storiesError) {
@@ -75,11 +77,13 @@ async function getSlotStories(districtKey: string) {
 
 async function getRecentStories(districtKey: string, skipIds: string[]) {
   const supabase = createPublicClient();
+  const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
   const { data, error } = await supabase
     .from("stories")
     .select("id, slug, title, tease, image_url, published_at")
     .eq("district_key", districtKey)
     .eq("status", "published")
+    .or(publishVisibilityFilter)
     .order("published_at", { ascending: false })
     .limit(16);
 
@@ -97,6 +101,7 @@ async function getRecentStories(districtKey: string, skipIds: string[]) {
       .select("id, slug, title, tease, image_url, published_at")
       .eq("district_key", districtKey)
       .eq("status", "published")
+      .or(publishVisibilityFilter)
       .order("created_at", { ascending: false })
       .limit(16);
 

@@ -41,6 +41,7 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
   const isDistrictSchoolChildTag = districtSchoolChildren.includes(params.slug);
 
   const supabase = createPublicClient();
+  const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
   const tagFilters = isTopLevelTag(districtKey, params.slug)
     ? getDescendantSlugs(districtKey, params.slug)
     : [params.slug];
@@ -50,6 +51,7 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
     .select("id, slug, title, tease, image_url, published_at")
     .eq("district_key", districtKey)
     .eq("status", "published")
+    .or(publishVisibilityFilter)
     .overlaps("tags", tagFilters)
     .order("published_at", { ascending: false })
     .limit(30);

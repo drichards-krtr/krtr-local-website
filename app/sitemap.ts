@@ -35,6 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .select("id, slug, updated_at, published_at")
     .eq("district_key", district.key)
     .eq("status", "published")
+    .or(`published_at.is.null,published_at.lte.${now.toISOString()}`)
     .order("published_at", { ascending: false })
     .limit(5000);
 

@@ -61,7 +61,7 @@ function getTimeZoneOffsetMilliseconds(date: Date, timeZone = KRTR_TIMEZONE) {
   return zonedUtcMs - date.getTime();
 }
 
-function zonedDateTimeToUtc(
+export function zonedDateTimeToUtc(
   year: number,
   month: number,
   day: number,
@@ -169,6 +169,21 @@ function parseNaiveDateTimeText(value: string) {
     minute: Number(match[5] || "0"),
     second: Number(match[6] || "0"),
   };
+}
+
+export function naiveDateTimeTextToUtcIso(value: string, timeZone = KRTR_TIMEZONE) {
+  const parts = parseNaiveDateTimeText(value);
+  if (!parts) return null;
+
+  return zonedDateTimeToUtc(
+    parts.year,
+    parts.month,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+    timeZone
+  ).toISOString();
 }
 
 export function formatNaiveDateTime(

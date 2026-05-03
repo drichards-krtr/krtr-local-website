@@ -19,6 +19,10 @@ export type PublishedStory = {
 const STORY_SELECT =
   "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id";
 
+function publishedAtVisibilityFilter() {
+  return `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
+}
+
 export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStoryByIdOrSlug(
   districtKey: DistrictKey,
   idOrSlug: string,
@@ -31,6 +35,7 @@ export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStor
     .eq("district_key", districtKey)
     .eq("slug", idOrSlug)
     .eq("status", "published")
+    .or(publishedAtVisibilityFilter())
     .maybeSingle();
 
   if (storyBySlugError) {
@@ -53,6 +58,7 @@ export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStor
     .eq("district_key", districtKey)
     .eq("id", idOrSlug)
     .eq("status", "published")
+    .or(publishedAtVisibilityFilter())
     .maybeSingle();
 
   if (storyByIdError) {
