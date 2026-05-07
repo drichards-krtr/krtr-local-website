@@ -19,8 +19,16 @@ export type PublishedStory = {
 const STORY_SELECT =
   "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id";
 
+const DATED_SLUG_SUFFIX_PATTERN = /-\d{2}-[a-z]+-\d{4}$/;
+
 function publishedAtVisibilityFilter() {
   return `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
+}
+
+function getDatedSlugPrefix(slug: string) {
+  const match = slug.match(DATED_SLUG_SUFFIX_PATTERN);
+  if (!match?.index) return null;
+  return slug.slice(0, match.index);
 }
 
 export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStoryByIdOrSlug(
@@ -46,6 +54,31 @@ export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStor
 
   if (storyBySlug) {
     return storyBySlug as PublishedStory;
+  }
+
+  const datedSlugPrefix = getDatedSlugPrefix(idOrSlug);
+  if (datedSlugPrefix) {
+    const { data: storyByDatedSlugPrefix, error: storyByDatedSlugPrefixError } =
+      await supabase
+        .from("stories")
+        .select(STORY_SELECT)
+        .eq("district_key", districtKey)
+        .like("slug", `${datedSlugPrefix}-%`)
+        .eq("status", "published")
+        .or(publishedAtVisibilityFilter())
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (storyByDatedSlugPrefixError) {
+      throw new Error(
+        `[getPublishedStoryByIdOrSlug:${districtKey}:datedSlugPrefixLookup] ${storyByDatedSlugPrefixError.message}`
+      );
+    }
+
+    if (storyByDatedSlugPrefix) {
+      return storyByDatedSlugPrefix as PublishedStory;
+    }
   }
 
   if (!UUID_PATTERN.test(idOrSlug)) {

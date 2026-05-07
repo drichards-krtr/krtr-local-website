@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/admin";
 import MuxPlayer from "@/components/public/MuxPlayer";
 import Markdown from "@/components/public/Markdown";
@@ -11,6 +12,17 @@ import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
 
 export const dynamic = "force-dynamic";
+
+function getStoryPreviewImage(story: {
+  image_url: string | null;
+  mux_playback_id: string | null;
+}) {
+  if (story.image_url) return story.image_url;
+  if (story.mux_playback_id) {
+    return `https://image.mux.com/${story.mux_playback_id}/thumbnail.jpg?time=0`;
+  }
+  return null;
+}
 
 export async function generateMetadata({
   params,
@@ -35,7 +47,7 @@ export async function generateMetadata({
     title: story.title,
     description: story.tease || markdownToDescription(story.body_markdown),
     path: storyPath,
-    image: story.image_url,
+    image: getStoryPreviewImage(story),
     type: "article",
   });
 }
@@ -50,6 +62,10 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
         <p>Story not found.</p>
       </main>
     );
+  }
+
+  if (story.slug && params.id !== story.slug) {
+    redirect(`/stories/${story.slug}`);
   }
 
   const syncedVideo =
