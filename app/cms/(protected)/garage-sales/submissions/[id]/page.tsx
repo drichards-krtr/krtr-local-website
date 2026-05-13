@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
+import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
 
@@ -149,7 +149,7 @@ export default async function EditGarageSaleSubmissionPage({
           </div>
         </div>
         <div className="md:col-span-2">
-          <CloudinaryUploadWidgetField
+          <CloudinaryMediaLibraryField
             name="image_url"
             label="Optional Image"
             folder="krtr/garage-sales"

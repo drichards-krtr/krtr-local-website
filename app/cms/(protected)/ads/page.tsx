@@ -1,5 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
+import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
@@ -170,7 +170,7 @@ export default async function AdsPage({
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <div className="md:col-span-2">
-            <CloudinaryUploadWidgetField name="image_url" label="Ad Image" folder="krtr/ads" />
+            <CloudinaryMediaLibraryField name="image_url" label="Ad Image" folder="krtr/ads" />
           </div>
           <input
             name="link_url"

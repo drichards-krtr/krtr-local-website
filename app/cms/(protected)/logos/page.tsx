@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
-import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
+import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 
 function normalizeLogoDates(formData: FormData) {
@@ -127,7 +127,7 @@ export default async function LogosPage({
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <div className="md:col-span-2">
-            <CloudinaryUploadWidgetField name="image_url" label="Logo Image" folder="krtr/logos" />
+            <CloudinaryMediaLibraryField name="image_url" label="Logo Image" folder="krtr/logos" />
           </div>
           <input
             name="start_date"

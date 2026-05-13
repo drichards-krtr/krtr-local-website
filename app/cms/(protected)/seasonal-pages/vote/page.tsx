@@ -2,7 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Markdown from "@/components/public/Markdown";
-import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
+import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -285,7 +285,7 @@ export default async function SeasonalVoteCms({
             className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
           />
           <div className="md:col-span-2">
-            <CloudinaryUploadWidgetField name="photo_url" label="Candidate Photo" folder="krtr/vote" />
+            <CloudinaryMediaLibraryField name="photo_url" label="Candidate Photo" folder="krtr/vote" />
           </div>
           <input
             name="link_1_url"
@@ -340,7 +340,7 @@ export default async function SeasonalVoteCms({
                 className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2"
               />
               <div className="md:col-span-2">
-                <CloudinaryUploadWidgetField
+                <CloudinaryMediaLibraryField
                   name="photo_url"
                   label="Candidate Photo"
                   folder="krtr/vote"

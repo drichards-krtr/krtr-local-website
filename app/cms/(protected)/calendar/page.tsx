@@ -1,7 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
+import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import {
   formatDateTimeInTimeZone,
   formatNaiveDate,
@@ -341,7 +341,7 @@ export default async function CalendarPage({
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <div className="md:col-span-2">
-            <CloudinaryUploadWidgetField name="image_url" label="Event Image" folder="krtr/events" />
+            <CloudinaryMediaLibraryField name="image_url" label="Event Image" folder="krtr/events" />
           </div>
           <button
             type="submit"
