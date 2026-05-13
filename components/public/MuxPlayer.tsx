@@ -16,16 +16,25 @@ export default function MuxPlayer({ playbackId, poster }: Props) {
     "thumbnail-time": "0",
     "prefer-playback": "mse",
     "accent-color": "#d71e1f",
-    style: { width: "100%", borderRadius: "8px", overflow: "hidden" },
+    style: { borderRadius: "8px", overflow: "hidden" },
   };
 
   return (
-    <div className="videoWrap">
+    <div className="mb-4 flex justify-center">
       <Script
         src="https://cdn.jsdelivr.net/npm/@mux/mux-player@2/dist/mux-player.js"
         strategy="afterInteractive"
       />
-      {React.createElement("mux-player", muxProps)}
+      <div className="w-full lg:w-[min(100%,calc(72vh*9/16))]">
+        {React.createElement("mux-player", {
+          ...muxProps,
+          style: {
+            ...muxProps.style,
+            width: "100%",
+            maxHeight: "72vh",
+          },
+        })}
+      </div>
     </div>
   );
 }
