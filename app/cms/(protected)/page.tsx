@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getDistrictConfig, DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
 import {
@@ -142,6 +143,23 @@ export default async function CmsDashboard({
           Switch
         </button>
       </form>
+
+      <section className="mb-6 rounded border border-neutral-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold">Global Home Preview</h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              View the root-site homepage with only global-scoped data and no DLPC fallback.
+            </p>
+          </div>
+          <Link
+            href="/cms/global-home-preview"
+            className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+          >
+            Open Preview
+          </Link>
+        </div>
+      </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[

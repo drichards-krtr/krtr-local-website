@@ -1,4 +1,5 @@
 export type DistrictKey = "dlpc" | "vs" | "bc";
+export type SiteScopeKey = DistrictKey | "global";
 
 export type DistrictTagNode = {
   slug: string;
@@ -43,11 +44,17 @@ type DistrictConfig = {
 };
 
 export const DISTRICT_KEYS: DistrictKey[] = ["dlpc", "vs", "bc"];
+export const SITE_SCOPE_KEYS: SiteScopeKey[] = ["global", ...DISTRICT_KEYS];
 
 export const DISTRICT_OPTIONS: Array<{ value: DistrictKey; label: string }> = [
   { value: "dlpc", label: "DLPC" },
   { value: "vs", label: "VS" },
   { value: "bc", label: "BC" },
+];
+
+export const SITE_SCOPE_OPTIONS: Array<{ value: SiteScopeKey; label: string }> = [
+  { value: "global", label: "Global / Root Site" },
+  ...DISTRICT_OPTIONS,
 ];
 
 export const DISTRICT_CONFIGS: Record<DistrictKey, DistrictConfig> = {
@@ -236,10 +243,24 @@ export function isDistrictKey(value: string): value is DistrictKey {
   return DISTRICT_KEYS.includes(value as DistrictKey);
 }
 
+export function isSiteScopeKey(value: string): value is SiteScopeKey {
+  return SITE_SCOPE_KEYS.includes(value as SiteScopeKey);
+}
+
 export function parseDistrictKey(value: string | null | undefined): DistrictKey | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
   return isDistrictKey(normalized) ? normalized : null;
+}
+
+export function parseSiteScopeKey(value: string | null | undefined): SiteScopeKey | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  return isSiteScopeKey(normalized) ? normalized : null;
+}
+
+export function getFallbackDistrictKey(siteScopeKey: SiteScopeKey): DistrictKey {
+  return siteScopeKey === "global" ? "dlpc" : siteScopeKey;
 }
 
 export function getDistrictConfig(districtKey: DistrictKey) {

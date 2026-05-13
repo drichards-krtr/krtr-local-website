@@ -1,7 +1,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
+import {
+  SITE_SCOPE_OPTIONS,
+  getDistrictConfig,
+  getFallbackDistrictKey,
+  parseSiteScopeKey,
+  type SiteScopeKey,
+} from "@/lib/districts";
 
 type SocialLinksRow = {
   facebook_url: string;
@@ -10,11 +16,11 @@ type SocialLinksRow = {
   watch_live_enabled: boolean;
 };
 
-function revalidateSocialLinkPaths(districtKey: DistrictKey) {
+function revalidateSocialLinkPaths(siteScopeKey: SiteScopeKey) {
   revalidatePath("/", "layout");
   revalidatePath("/watch-live");
   revalidatePath("/cms/social-links");
-  revalidatePath(`/cms/social-links?district=${districtKey}`);
+  revalidatePath(`/cms/social-links?district=${siteScopeKey}`);
 }
 
 export default async function SocialLinksPage({
@@ -22,34 +28,49 @@ export default async function SocialLinksPage({
 }: {
   searchParams?: { district?: string };
 }) {
-  const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
-  const district = getDistrictConfig(districtKey);
+  const siteScopeKey = parseSiteScopeKey(searchParams?.district) || "dlpc";
+  const fallbackDistrictKey = getFallbackDistrictKey(siteScopeKey);
+  const district = getDistrictConfig(fallbackDistrictKey);
+  const scopeLabel =
+    SITE_SCOPE_OPTIONS.find((option) => option.value === siteScopeKey)?.label || district.name;
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("social_links")
     .select("facebook_url, instagram_url, youtube_url, watch_live_enabled")
-    .eq("district_key", districtKey)
+    .eq("district_key", siteScopeKey)
     .maybeSingle();
+  let effectiveData = data;
+
+  if (!effectiveData && siteScopeKey === "global") {
+    const { data: fallbackData } = await supabase
+      .from("social_links")
+      .select("facebook_url, instagram_url, youtube_url, watch_live_enabled")
+      .eq("district_key", "dlpc")
+      .maybeSingle();
+
+    effectiveData = fallbackData;
+  }
 
   const settings: SocialLinksRow = {
-    facebook_url: data?.facebook_url || district.socialNav.facebookUrl,
-    instagram_url: data?.instagram_url || district.socialNav.instagramUrl,
-    youtube_url: data?.youtube_url || district.socialNav.youtubeUrl,
+    facebook_url: effectiveData?.facebook_url || district.socialNav.facebookUrl,
+    instagram_url: effectiveData?.instagram_url || district.socialNav.instagramUrl,
+    youtube_url: effectiveData?.youtube_url || district.socialNav.youtubeUrl,
     watch_live_enabled:
-      typeof data?.watch_live_enabled === "boolean"
-        ? data.watch_live_enabled
+      typeof effectiveData?.watch_live_enabled === "boolean"
+        ? effectiveData.watch_live_enabled
         : district.socialNav.watchLiveEnabled,
   };
 
   async function saveSocialLinks(formData: FormData) {
     "use server";
     const service = createServiceClient();
-    const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
-    const nextDistrict = getDistrictConfig(nextDistrictKey);
+    const nextSiteScopeKey =
+      parseSiteScopeKey(String(formData.get("district_key") || "")) || siteScopeKey;
+    const nextDistrict = getDistrictConfig(getFallbackDistrictKey(nextSiteScopeKey));
 
     await service.from("social_links").upsert(
       {
-        district_key: nextDistrictKey,
+        district_key: nextSiteScopeKey,
         facebook_url:
           String(formData.get("facebook_url") || "").trim() || nextDistrict.socialNav.facebookUrl,
         instagram_url:
@@ -61,8 +82,8 @@ export default async function SocialLinksPage({
       { onConflict: "district_key" }
     );
 
-    revalidateSocialLinkPaths(nextDistrictKey);
-    redirect(`/cms/social-links?district=${nextDistrictKey}`);
+    revalidateSocialLinkPaths(nextSiteScopeKey);
+    redirect(`/cms/social-links?district=${nextSiteScopeKey}`);
   }
 
   return (
@@ -70,10 +91,10 @@ export default async function SocialLinksPage({
       <header>
         <h1 className="text-2xl font-semibold">Social Links</h1>
         <p className="text-sm text-neutral-500">
-          Edit the top social nav URLs for district subdomains and control whether Watch Live appears.
+          Edit the top social nav URLs and control whether Watch Live appears.
         </p>
         <p className="mt-1 text-sm text-neutral-600">
-          Editing {district.name}. The root domain keeps its built-in fallback links.
+          Editing {scopeLabel}. Global starts with DLPC defaults but can be overridden here.
         </p>
       </header>
 
@@ -81,10 +102,10 @@ export default async function SocialLinksPage({
         <label className="mb-2 block text-xs font-semibold uppercase text-neutral-500">District</label>
         <select
           name="district"
-          defaultValue={districtKey}
+          defaultValue={siteScopeKey}
           className="rounded border border-neutral-300 px-3 py-2 text-sm"
         >
-          {DISTRICT_OPTIONS.map((option) => (
+          {SITE_SCOPE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -99,7 +120,7 @@ export default async function SocialLinksPage({
       </form>
 
       <form action={saveSocialLinks} className="grid gap-6 rounded border border-neutral-200 bg-white p-6">
-        <input type="hidden" name="district_key" value={districtKey} />
+        <input type="hidden" name="district_key" value={siteScopeKey} />
 
         <div className="grid gap-3">
           <label className="text-sm font-medium">Facebook URL</label>

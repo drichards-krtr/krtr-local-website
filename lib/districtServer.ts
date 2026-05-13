@@ -1,8 +1,10 @@
 import { headers } from "next/headers";
 import {
+  isExplicitDistrictHost,
   getDistrictConfig,
   parseDistrictKey,
   resolveDistrictFromHost,
+  type SiteScopeKey,
   type DistrictKey,
 } from "@/lib/districts";
 
@@ -27,6 +29,20 @@ export function getCurrentDistrictKey(): DistrictKey {
   }
 
   return resolveDistrictFromHost(getRequestHost());
+}
+
+export function getCurrentSiteScopeKey(): SiteScopeKey {
+  const headerStore = headers();
+  const explicitDistrict =
+    parseDistrictKey(headerStore.get("x-krtr-district")) ||
+    parseDistrictKey(headerStore.get("x-district-key"));
+
+  if (explicitDistrict) {
+    return explicitDistrict;
+  }
+
+  const host = getRequestHost();
+  return isExplicitDistrictHost(host) ? resolveDistrictFromHost(host) : "global";
 }
 
 export function getCurrentDistrict() {

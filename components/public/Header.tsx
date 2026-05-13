@@ -3,7 +3,7 @@ import { getTopLevelTags } from "@/lib/tags";
 import { createPublicClient } from "@/lib/supabase/public";
 import HeaderNav from "@/components/public/HeaderNav";
 import { getPreferredLogo } from "@/lib/logos";
-import { getCurrentDistrict } from "@/lib/districtServer";
+import { getCurrentDistrict, getCurrentSiteScopeKey } from "@/lib/districtServer";
 import { getSocialLinkSettings } from "@/lib/socialLinks";
 import { getOpenGarageSaleSessions } from "@/lib/garage-sales";
 
@@ -44,6 +44,7 @@ async function getSeasonalNavItems(
 
 export default async function Header() {
   const district = getCurrentDistrict();
+  const siteScopeKey = getCurrentSiteScopeKey();
   const baseNavItems = [
     { label: "Home", href: "/" },
     ...getTopLevelTags(district.key).map((tag) => ({
@@ -54,7 +55,7 @@ export default async function Header() {
     { label: "Share", href: "/submit-story" },
   ];
   const [socialLinks, activeLogo, seasonalNavItems, garageSaleSessions] = await Promise.all([
-    getSocialLinkSettings(district.key),
+    getSocialLinkSettings(siteScopeKey),
     getPreferredLogo(district.key),
     getSeasonalNavItems(district.key),
     getOpenGarageSaleSessions(district.key),
