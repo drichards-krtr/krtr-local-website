@@ -5,6 +5,7 @@ import HeaderNav from "@/components/public/HeaderNav";
 import { getPreferredLogo } from "@/lib/logos";
 import { getCurrentDistrict } from "@/lib/districtServer";
 import { getSocialLinkSettings } from "@/lib/socialLinks";
+import { getOpenGarageSaleSessions } from "@/lib/garage-sales";
 
 type ActiveLogo = {
   image_url: string;
@@ -52,12 +53,15 @@ export default async function Header() {
     { label: "Community Calendar", href: "/calendar" },
     { label: "Share", href: "/submit-story" },
   ];
-  const [socialLinks, activeLogo, seasonalNavItems] = await Promise.all([
+  const [socialLinks, activeLogo, seasonalNavItems, garageSaleSessions] = await Promise.all([
     getSocialLinkSettings(district.key),
     getPreferredLogo(district.key),
     getSeasonalNavItems(district.key),
+    getOpenGarageSaleSessions(district.key),
   ]);
-  const navItems = [...baseNavItems, ...seasonalNavItems].filter((item) =>
+  const garageSaleNavItems =
+    garageSaleSessions.length > 0 ? [{ label: "Garage Sales", href: "/garage-sales" }] : [];
+  const navItems = [...baseNavItems, ...garageSaleNavItems, ...seasonalNavItems].filter((item) =>
     item.href === "/festival-of-trails" ? district.features.festivalOfTrails : true
   );
 

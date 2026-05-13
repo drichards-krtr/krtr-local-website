@@ -3,6 +3,7 @@ import { getCurrentDistrict } from "@/lib/districtServer";
 import { absoluteUrl } from "@/lib/metadata";
 import { createPublicClient } from "@/lib/supabase/public";
 import { getAllTagSlugs } from "@/lib/tags";
+import { getOpenGarageSaleSessions } from "@/lib/garage-sales";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const district = getCurrentDistrict();
@@ -13,6 +14,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (district.features.vote) staticRoutes.push("/vote");
   if (district.features.nominations) staticRoutes.push("/nominations");
   if (district.features.festivalOfTrails) staticRoutes.push("/festival-of-trails");
+  const garageSaleSessions = await getOpenGarageSaleSessions(district.key);
+  if (garageSaleSessions.length > 0) staticRoutes.push("/garage-sales");
 
   const entries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: absoluteUrl(path, district.key),
