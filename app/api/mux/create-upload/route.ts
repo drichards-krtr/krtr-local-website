@@ -40,8 +40,11 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         cors_origin: corsOrigin,
         new_asset_settings: {
-          playback_policy: ["public"],
+          playback_policies: ["public"],
           passthrough: storyId,
+          meta: {
+            external_id: storyId,
+          },
         },
       }),
     });
@@ -85,7 +88,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient();
-  await supabase
+  const { error: updateError } = await supabase
     .from("stories")
     .update({
       mux_upload_id: uploadId,
@@ -95,6 +98,18 @@ export async function POST(request: Request) {
     })
     .eq("district_key", districtKey)
     .eq("id", storyId);
+
+  if (updateError) {
+    console.error("[Mux] Failed to save direct upload on story", {
+      storyId,
+      uploadId,
+      error: updateError.message,
+    });
+    return NextResponse.json(
+      { error: "Mux upload was created, but the story could not be updated." },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ uploadUrl, uploadId });
 }

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
-import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
+import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { DISTRICT_OPTIONS, type DistrictKey, type DistrictTagNode } from "@/lib/districts";
 import { buildStorySlug } from "@/lib/stories";
 import { getDateTimeTextInTimeZone, naiveDateTimeTextToUtcIso } from "@/lib/dates";
@@ -205,10 +205,17 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
       setError(payload?.error || "Unable to create Mux upload.");
       return;
     }
-    const { uploadUrl } = await response.json();
+    const { uploadUrl, uploadId } = await response.json();
+    setForm((prev) => ({
+      ...prev,
+      mux_upload_id: uploadId || prev.mux_upload_id,
+      mux_asset_id: null,
+      mux_playback_id: null,
+    }));
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       body: file,
+      headers: file.type ? { "Content-Type": file.type } : undefined,
     });
     if (!uploadRes.ok) {
       setForm((prev) => ({ ...prev, mux_status: "errored" }));
@@ -448,7 +455,7 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
         <h2 className="text-lg font-semibold">Media</h2>
         <div className="mt-4 grid gap-6 md:grid-cols-2">
           <div>
-            <CloudinaryUploadWidgetField
+            <CloudinaryMediaLibraryField
               name="image_url"
               label="Hero Image"
               folder="krtr/stories"
