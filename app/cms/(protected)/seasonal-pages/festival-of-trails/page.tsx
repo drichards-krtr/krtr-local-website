@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import ImageUploadField from "@/components/shared/ImageUploadField";
+import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
 import VideoUploadField from "@/components/shared/VideoUploadField";
 import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -284,7 +284,7 @@ export default async function SeasonalFestivalCms({
             defaultValue={content.body_markdown}
             className="min-h-[220px] rounded border border-neutral-300 px-3 py-2 text-sm"
           />
-          <ImageUploadField
+          <CloudinaryUploadWidgetField
             name="photo_url"
             label="Festival Photo"
             folder="krtr/festival-of-trails"

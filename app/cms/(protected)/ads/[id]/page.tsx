@@ -1,5 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import ImageUploadField from "@/components/shared/ImageUploadField";
+import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DISTRICT_OPTIONS } from "@/lib/districts";
@@ -71,7 +71,7 @@ export default async function EditAdPage({ params }: { params: { id: string } })
         <input name="start_date" type="date" defaultValue={ad.start_date} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <input name="end_date" type="date" defaultValue={ad.end_date} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <div className="md:col-span-2">
-          <ImageUploadField name="image_url" label="Ad Image" folder="krtr/ads" initialUrl={ad.image_url || ""} />
+          <CloudinaryUploadWidgetField name="image_url" label="Ad Image" folder="krtr/ads" initialUrl={ad.image_url || ""} />
         </div>
         <input name="link_url" placeholder="Link URL" defaultValue={ad.link_url || ""} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <textarea name="html" placeholder="Optional HTML" defaultValue={ad.html || ""} className="min-h-[100px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />

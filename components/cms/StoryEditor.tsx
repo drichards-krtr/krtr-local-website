@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
-import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
 import { DISTRICT_OPTIONS, type DistrictKey, type DistrictTagNode } from "@/lib/districts";
 import { buildStorySlug } from "@/lib/stories";
 import { getDateTimeTextInTimeZone, naiveDateTimeTextToUtcIso } from "@/lib/dates";
@@ -185,27 +185,6 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
       window.location.href = `/cms/stories?district=${form.district_key}`;
     }
     setSaving(false);
-  };
-
-  const handleImageUpload = async (file: File) => {
-    setError(null);
-    try {
-      const payload = await uploadToCloudinary({
-        file,
-        folder: "krtr/stories",
-        resourceType: "image",
-      });
-
-      setForm((prev) => ({
-        ...prev,
-        image_url: payload.secure_url || null,
-        cloudinary_public_id: payload.public_id || null,
-        cloudinary_width: payload.width || null,
-        cloudinary_height: payload.height || null,
-      }));
-    } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Image upload failed.");
-    }
   };
 
   const handleVideoUpload = async (file: File) => {
@@ -469,40 +448,30 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
         <h2 className="text-lg font-semibold">Media</h2>
         <div className="mt-4 grid gap-6 md:grid-cols-2">
           <div>
-            <label className="text-sm font-medium">Hero Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="mt-2 w-full text-sm"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) handleImageUpload(file);
-              }}
+            <CloudinaryUploadWidgetField
+              name="image_url"
+              label="Hero Image"
+              folder="krtr/stories"
+              initialUrl={form.image_url}
+              onUpload={(payload) =>
+                setForm((prev) => ({
+                  ...prev,
+                  image_url: payload.secure_url || null,
+                  cloudinary_public_id: payload.public_id || null,
+                  cloudinary_width: payload.width || null,
+                  cloudinary_height: payload.height || null,
+                }))
+              }
+              onRemove={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  image_url: null,
+                  cloudinary_public_id: null,
+                  cloudinary_width: null,
+                  cloudinary_height: null,
+                }))
+              }
             />
-            {form.image_url && (
-              <div className="mt-3">
-                <img
-                  src={form.image_url}
-                  alt=""
-                  className="w-full rounded border"
-                />
-                <button
-                  type="button"
-                  className="mt-2 text-sm text-neutral-500 underline"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      image_url: null,
-                      cloudinary_public_id: null,
-                      cloudinary_width: null,
-                      cloudinary_height: null,
-                    }))
-                  }
-                >
-                  Remove image
-                </button>
-              </div>
-            )}
           </div>
           <div>
             <label className="text-sm font-medium">Video Upload</label>

@@ -1,7 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import ImageUploadField from "@/components/shared/ImageUploadField";
+import CloudinaryUploadWidgetField from "@/components/cms/CloudinaryUploadWidgetField";
 import { DISTRICT_OPTIONS } from "@/lib/districts";
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
@@ -92,7 +92,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
         <input name="link_2_url" defaultValue={event.link_2_url || ""} placeholder="Link 2" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <input name="link_2_text" defaultValue={event.link_2_text || ""} placeholder="Text 2" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <div className="md:col-span-2">
-          <ImageUploadField name="image_url" label="Event Image" folder="krtr/events" initialUrl={event.image_url || ""} />
+          <CloudinaryUploadWidgetField name="image_url" label="Event Image" folder="krtr/events" initialUrl={event.image_url || ""} />
         </div>
         <button type="submit" className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white md:col-span-2">
           Save Changes
