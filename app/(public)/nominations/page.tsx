@@ -6,6 +6,8 @@ import { formatDateTimeInTimeZone } from "@/lib/dates";
 import { createPublicClient } from "@/lib/supabase/public";
 import { getCurrentOpenNomination } from "@/lib/nominationsServer";
 import {
+  getAthleteGradeOptions,
+  isAthleteGradeAllowed,
   NOMINATION_CATEGORY_LABELS,
   type NominationCategory,
 } from "@/lib/nominations";
@@ -120,6 +122,9 @@ export default async function NominationsPublicPage({
     submit_button_text: "Submit Nomination",
     success_message: "Thank You For Nominating",
   };
+  const athleteGradeOptions = getAthleteGradeOptions(
+    Boolean(activeNomination.middle_school_athletes_enabled)
+  );
 
   async function submitNomination(formData: FormData) {
     "use server";
@@ -165,6 +170,10 @@ export default async function NominationsPublicPage({
         !payload.athlete_name ||
         !payload.boy_or_girl ||
         !payload.grade ||
+        !isAthleteGradeAllowed(
+          String(payload.grade),
+          Boolean(latestOpen.middle_school_athletes_enabled)
+        ) ||
         !payload.sport ||
         !payload.why_nominate ||
         !payload.parent_guardian_contact
@@ -296,12 +305,18 @@ export default async function NominationsPublicPage({
                   <option value="boy">Boy</option>
                   <option value="girl">Girl</option>
                 </select>
-                <input
+                <select
                   name="grade"
-                  placeholder="Grade"
                   required
                   className="rounded border border-neutral-300 px-3 py-2 text-sm"
-                />
+                >
+                  <option value="">Grade</option>
+                  {athleteGradeOptions.map((grade) => (
+                    <option key={grade} value={grade}>
+                      Grade {grade}
+                    </option>
+                  ))}
+                </select>
                 <input
                   name="sport"
                   placeholder="Sport"

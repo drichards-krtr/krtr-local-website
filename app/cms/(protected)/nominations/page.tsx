@@ -16,6 +16,7 @@ type Nomination = {
   open_date: string;
   close_date: string;
   status_override: "auto" | "force_open" | "force_closed";
+  middle_school_athletes_enabled: boolean;
   created_at: string;
 };
 
@@ -45,7 +46,7 @@ export default async function NominationsPage({
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("nominations")
-    .select("id, category, open_date, close_date, status_override, created_at")
+    .select("id, category, open_date, close_date, status_override, middle_school_athletes_enabled, created_at")
     .eq("district_key", districtKey)
     .order("open_date", { ascending: false });
 
@@ -60,12 +61,15 @@ export default async function NominationsPage({
     const supabase = createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
 
+    const category = String(formData.get("category") || "") as NominationCategory;
     const payload = {
       district_key: nextDistrictKey,
-      category: String(formData.get("category") || "") as NominationCategory,
+      category,
       open_date: String(formData.get("open_date") || ""),
       close_date: String(formData.get("close_date") || ""),
       status_override: String(formData.get("status_override") || "auto"),
+      middle_school_athletes_enabled:
+        category === "athletes" && formData.get("middle_school_athletes_enabled") === "on",
     };
 
     const { error } = await supabase.from("nominations").insert(payload);
@@ -211,6 +215,10 @@ export default async function NominationsPage({
             <option value="force_open">Force Open</option>
             <option value="force_closed">Force Closed</option>
           </select>
+          <label className="flex items-center gap-2 rounded border border-neutral-200 px-3 py-2 text-sm md:col-span-4">
+            <input name="middle_school_athletes_enabled" type="checkbox" className="h-4 w-4" />
+            Allow 7th and 8th grade athlete nominations when the category is Athletes
+          </label>
           <button
             type="submit"
             className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white md:col-span-4 md:w-fit"

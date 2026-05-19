@@ -18,6 +18,21 @@ export const NOMINATION_CATEGORY_LABELS: Record<NominationCategory, string> = {
   workforce: "Workforce Star of the Month",
 };
 
+export const ATHLETE_HIGH_SCHOOL_GRADES = ["9", "10", "11", "12"] as const;
+export const ATHLETE_MIDDLE_SCHOOL_GRADES = ["7", "8"] as const;
+
+export function getAthleteGradeOptions(middleSchoolEnabled: boolean) {
+  return middleSchoolEnabled
+    ? [...ATHLETE_MIDDLE_SCHOOL_GRADES, ...ATHLETE_HIGH_SCHOOL_GRADES]
+    : [...ATHLETE_HIGH_SCHOOL_GRADES];
+}
+
+export function isAthleteGradeAllowed(grade: string, middleSchoolEnabled: boolean) {
+  return getAthleteGradeOptions(middleSchoolEnabled).includes(
+    grade as (typeof ATHLETE_HIGH_SCHOOL_GRADES | typeof ATHLETE_MIDDLE_SCHOOL_GRADES)[number]
+  );
+}
+
 export function getNominationBannerText(category: NominationCategory) {
   const label = NOMINATION_CATEGORY_LABELS[category];
 

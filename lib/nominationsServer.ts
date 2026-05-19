@@ -8,6 +8,7 @@ export type NominationRecord = {
   open_date: string;
   close_date: string;
   status_override: "auto" | "force_open" | "force_closed";
+  middle_school_athletes_enabled: boolean;
   created_at: string;
 };
 
@@ -15,7 +16,7 @@ export async function getCurrentOpenNomination(districtKey: DistrictKey) {
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("nominations")
-    .select("id, category, open_date, close_date, status_override, created_at")
+    .select("id, category, open_date, close_date, status_override, middle_school_athletes_enabled, created_at")
     .eq("district_key", districtKey)
     .order("open_date", { ascending: false });
 

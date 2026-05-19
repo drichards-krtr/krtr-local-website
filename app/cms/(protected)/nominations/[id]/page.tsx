@@ -11,6 +11,7 @@ type Nomination = {
   open_date: string;
   close_date: string;
   status_override: "auto" | "force_open" | "force_closed";
+  middle_school_athletes_enabled: boolean;
 };
 
 function getErrorMessage(error: string) {
@@ -44,7 +45,7 @@ export default async function EditNominationPage({
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("nominations")
-    .select("id, category, open_date, close_date, status_override")
+    .select("id, category, open_date, close_date, status_override, middle_school_athletes_enabled")
     .eq("id", params.id)
     .eq("district_key", districtKey)
     .maybeSingle();
@@ -67,6 +68,8 @@ export default async function EditNominationPage({
       open_date: String(formData.get("open_date") || ""),
       close_date: String(formData.get("close_date") || ""),
       status_override: String(formData.get("status_override") || "auto"),
+      middle_school_athletes_enabled:
+        nomination.category === "athletes" && formData.get("middle_school_athletes_enabled") === "on",
     };
 
     const { error } = await supabase
@@ -170,6 +173,18 @@ export default async function EditNominationPage({
             <option value="force_closed">Force Closed</option>
           </select>
         </div>
+
+        {nomination.category === "athletes" && (
+          <label className="flex items-center gap-2 rounded border border-neutral-200 px-3 py-2 text-sm md:col-span-2">
+            <input
+              name="middle_school_athletes_enabled"
+              type="checkbox"
+              defaultChecked={nomination.middle_school_athletes_enabled}
+              className="h-4 w-4"
+            />
+            Allow 7th and 8th grade athlete nominations
+          </label>
+        )}
 
         <button
           type="submit"
