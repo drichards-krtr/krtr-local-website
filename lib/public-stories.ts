@@ -14,10 +14,11 @@ export type PublishedStory = {
   published_at: string | null;
   image_url: string | null;
   mux_playback_id: string | null;
+  video_orientation: "vertical" | "horizontal";
 };
 
 const STORY_SELECT =
-  "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id";
+  "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id, video_orientation";
 
 const DATED_SLUG_SUFFIX_PATTERN = /-\d{2}-[a-z]+-\d{4}$/;
 

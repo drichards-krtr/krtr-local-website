@@ -13,7 +13,7 @@ export default async function EditStoryPage({
     supabase
       .from("stories")
       .select(
-        "id, district_key, title, tease, body_markdown, status, published_at, image_url, cloudinary_public_id, cloudinary_width, cloudinary_height, mux_asset_id, mux_upload_id, mux_playback_id, mux_status, tags, slug, submitter_id"
+        "id, district_key, title, tease, body_markdown, status, published_at, image_url, cloudinary_public_id, cloudinary_width, cloudinary_height, mux_asset_id, mux_upload_id, mux_playback_id, mux_status, video_orientation, tags, slug, submitter_id"
       )
       .eq("id", params.id)
       .maybeSingle(),

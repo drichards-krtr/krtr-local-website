@@ -25,6 +25,7 @@ type Story = {
   mux_upload_id: string | null;
   mux_playback_id: string | null;
   mux_status: string | null;
+  video_orientation: "vertical" | "horizontal";
   tags: TagSlug[];
   slot: "hero" | "top1" | "top2" | "top3" | "top4" | null;
   slug?: string | null;
@@ -53,6 +54,7 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
     mux_upload_id: initialStory?.mux_upload_id || null,
     mux_playback_id: initialStory?.mux_playback_id || null,
     mux_status: initialStory?.mux_status || "none",
+    video_orientation: initialStory?.video_orientation || "vertical",
     tags: initialStory?.tags || [],
     slot: initialStory?.slot || null,
     slug: initialStory?.slug || null,
@@ -123,6 +125,7 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
       mux_upload_id: form.mux_upload_id,
       mux_playback_id: form.mux_playback_id,
       mux_status: form.mux_status,
+      video_orientation: form.video_orientation,
       tags: form.tags,
       slug,
     };
@@ -482,6 +485,23 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
           </div>
           <div>
             <label className="text-sm font-medium">Video Upload</label>
+            <label className="mt-2 grid gap-1 text-sm font-medium text-neutral-700">
+              <span>Video Orientation</span>
+              <select
+                required
+                value={form.video_orientation}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    video_orientation: event.target.value as Story["video_orientation"],
+                  }))
+                }
+                className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+              >
+                <option value="vertical">Vertical</option>
+                <option value="horizontal">Horizontal</option>
+              </select>
+            </label>
             <p className="text-xs text-neutral-500">
               Status: {form.mux_status || "none"}
             </p>

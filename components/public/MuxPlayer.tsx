@@ -6,9 +6,10 @@ import Script from "next/script";
 type Props = {
   playbackId: string;
   poster?: string | null;
+  orientation?: "vertical" | "horizontal";
 };
 
-export default function MuxPlayer({ playbackId, poster }: Props) {
+export default function MuxPlayer({ playbackId, poster, orientation = "vertical" }: Props) {
   const muxProps = {
     "stream-type": "on-demand",
     "playback-id": playbackId,
@@ -18,6 +19,24 @@ export default function MuxPlayer({ playbackId, poster }: Props) {
     "accent-color": "#d71e1f",
     style: { borderRadius: "8px", overflow: "hidden" },
   };
+
+  if (orientation === "horizontal") {
+    return (
+      <div className="videoWrap">
+        <Script
+          src="https://cdn.jsdelivr.net/npm/@mux/mux-player@2/dist/mux-player.js"
+          strategy="afterInteractive"
+        />
+        {React.createElement("mux-player", {
+          ...muxProps,
+          style: {
+            ...muxProps.style,
+            width: "100%",
+          },
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="mb-4 flex justify-center">

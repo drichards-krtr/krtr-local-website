@@ -112,7 +112,11 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
           />
         )}
         {playbackId && (
-          <MuxPlayer playbackId={playbackId} poster={story.image_url || undefined} />
+          <MuxPlayer
+            playbackId={playbackId}
+            poster={story.image_url || undefined}
+            orientation={story.video_orientation}
+          />
         )}
         <Markdown content={story.body_markdown || ""} />
       </article>
