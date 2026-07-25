@@ -5,6 +5,7 @@ import LogoutButton from "@/components/cms/LogoutButton";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/cms" },
   { label: "Analytics", href: "/cms/analytics" },
+  { label: "Daily's", href: "/cms/dailys" },
   { label: "Stories", href: "/cms/stories" },
   { label: "Ads", href: "/cms/ads" },
   { label: "Logos", href: "/cms/logos" },

@@ -52,5 +52,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
+  const { data: dailys } = await supabase
+    .from("dailys")
+    .select("id, slug, updated_at, published_at")
+    .eq("district_key", district.key)
+    .eq("status", "published")
+    .or(`published_at.is.null,published_at.lte.${now.toISOString()}`)
+    .order("published_at", { ascending: false })
+    .limit(5000);
+
+  for (const daily of dailys || []) {
+    const dailyIdOrSlug = daily.slug || daily.id;
+    entries.push({
+      url: absoluteUrl(`/${dailyIdOrSlug}`, district.key),
+      lastModified: daily.updated_at || daily.published_at || now,
+      changeFrequency: "daily",
+      priority: 0.8,
+    });
+  }
+
   return entries;
 }

@@ -5,6 +5,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { createServiceClient } from "@/lib/supabase/admin";
 import StoryRow from "@/components/public/StoryRow";
 import { pickAndTrackAdsForPlacement, type Ad } from "@/lib/ads";
+import { dailyHref, getLatestPublishedDaily, type PublicDaily } from "@/lib/dailys";
 import { formatDateInTimeZone, getDateTextInTimeZone } from "@/lib/dates";
 import { getNominationBannerText } from "@/lib/nominations";
 import { getCurrentOpenNomination } from "@/lib/nominationsServer";
@@ -147,6 +148,42 @@ async function getRecentStories(siteScopeKey: string, skipIds: string[]) {
   return stories.filter((story) => !skipIds.includes(story.id));
 }
 
+function DailyCard({ daily }: { daily: PublicDaily }) {
+  return (
+    <section className="mb-8">
+      <article className="grid gap-4 rounded-lg border border-black/5 bg-white p-4 md:grid-cols-[180px_1fr]">
+        {daily.image_url ? (
+          <a href={dailyHref(daily)} className="block aspect-video overflow-hidden rounded">
+            <img src={daily.image_url} alt="" className="h-full w-full object-cover" />
+          </a>
+        ) : (
+          <div className="block aspect-video rounded bg-neutral-100" />
+        )}
+        <div className="grid content-start gap-3">
+          <h2 className="text-lg font-semibold">
+            <a href={dailyHref(daily)} className="hover:underline">
+              {daily.title || "(Untitled)"}
+            </a>
+          </h2>
+          {daily.published_at && (
+            <time className="text-sm text-muted" dateTime={daily.published_at}>
+              {formatDateInTimeZone(daily.published_at)}
+            </time>
+          )}
+          <div>
+            <a
+              href={dailyHref(daily)}
+              className="inline-flex rounded bg-krtrRed px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+            >
+              Watch Now
+            </a>
+          </div>
+        </div>
+      </article>
+    </section>
+  );
+}
+
 export default async function HomePageContent({
   siteScopeKey,
   debug = false,
@@ -154,7 +191,7 @@ export default async function HomePageContent({
   trackAds = true,
   previewBanner,
 }: HomePageContentProps) {
-  const [{ storiesById, slots }, homepageAds, activeNomination, activeVotingSession] =
+  const [{ storiesById, slots }, homepageAds, activeNomination, activeVotingSession, latestDaily] =
     await Promise.all([
       getSlotStories(siteScopeKey),
       getHomepageAds(siteScopeKey, trackAds),
@@ -164,6 +201,10 @@ export default async function HomePageContent({
       showDistrictBanners
         ? getCurrentOpenVotingSession(siteScopeKey as DistrictKey)
         : Promise.resolve(null),
+      getLatestPublishedDaily(siteScopeKey as DistrictKey).catch((error) => {
+        console.error("[HomePageContent:getLatestPublishedDaily] Failed to load Daily", error);
+        return null;
+      }),
     ]);
 
   const slotMap = new Map(slots.map((slot) => [slot.slot, slot.story_id]));
@@ -224,6 +265,8 @@ export default async function HomePageContent({
           </Link>
         </section>
       )}
+
+      {latestDaily && <DailyCard daily={latestDaily} />}
 
       {heroStory && (
         <section className="mb-8 rounded-lg bg-white p-4">

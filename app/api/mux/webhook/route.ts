@@ -48,13 +48,21 @@ function verifyMuxSignature(payload: string, signatureHeader: string | null) {
   return Math.abs(Date.now() / 1000 - sentAt) <= 300;
 }
 
-function getStoryIdFromMuxData(data: MuxWebhookData | null | undefined) {
-  return (
+function getMediaRefFromMuxData(data: MuxWebhookData | null | undefined) {
+  const value =
     data?.passthrough ||
     data?.meta?.external_id ||
     data?.new_asset_settings?.passthrough ||
     data?.new_asset_settings?.meta?.external_id ||
-    null
+    null;
+
+  if (!value) return null;
+  if (value.startsWith("daily:")) {
+    return { table: "dailys" as const, id: value.slice("daily:".length) };
+  }
+
+  return (
+    { table: "stories" as const, id: value }
   );
 }
 
@@ -99,41 +107,51 @@ export async function POST(request: Request) {
   const data = event?.data as MuxWebhookData | undefined;
   const supabase = createServiceClient();
 
-  async function updateStory(update: Record<string, string | null>, resolvedData = data) {
-    const storyId = getStoryIdFromMuxData(resolvedData);
-    let query = supabase.from("stories").update(update).select("id");
+  async function updateMedia(update: Record<string, string | null>, resolvedData = data) {
+    const mediaRef = getMediaRefFromMuxData(resolvedData);
+    const tables = mediaRef ? [mediaRef.table] : (["stories", "dailys"] as const);
+    let matched = false;
 
-    if (storyId) {
-      query = query.eq("id", storyId);
-    } else if (resolvedData?.upload_id) {
-      query = query.eq("mux_upload_id", resolvedData.upload_id);
-    } else if (resolvedData?.id && eventType === "video.upload.asset_created") {
-      query = query.eq("mux_upload_id", resolvedData.id);
-    } else if (resolvedData?.id) {
-      query = query.eq("mux_asset_id", resolvedData.id);
-    } else {
-      return;
+    for (const table of tables) {
+      let query = supabase.from(table).update(update).select("id");
+
+      if (mediaRef) {
+        query = query.eq("id", mediaRef.id);
+      } else if (resolvedData?.upload_id) {
+        query = query.eq("mux_upload_id", resolvedData.upload_id);
+      } else if (resolvedData?.id && eventType === "video.upload.asset_created") {
+        query = query.eq("mux_upload_id", resolvedData.id);
+      } else if (resolvedData?.id) {
+        query = query.eq("mux_asset_id", resolvedData.id);
+      } else {
+        return;
+      }
+
+      const { data: updatedRows, error } = await query;
+      if (error) {
+        console.error("[Mux] Failed to update media from webhook", {
+          eventType,
+          table,
+          update,
+          error: error.message,
+        });
+      } else if (updatedRows && updatedRows.length > 0) {
+        matched = true;
+      }
     }
 
-    const { data: updatedRows, error } = await query;
-    if (error) {
-      console.error("[Mux] Failed to update story from webhook", {
-        eventType,
-        update,
-        error: error.message,
-      });
-    } else if (!updatedRows || updatedRows.length === 0) {
-      console.error("[Mux] Webhook did not match a story", {
+    if (!matched) {
+      console.error("[Mux] Webhook did not match a media record", {
         eventType,
         muxId: resolvedData?.id || null,
         uploadId: resolvedData?.upload_id || resolvedData?.asset_id || null,
-        storyId,
+        mediaRef,
       });
     }
   }
 
   if (eventType === "video.upload.asset_created") {
-    await updateStory({
+    await updateMedia({
       mux_upload_id: data?.id || null,
       mux_asset_id: data?.asset_id || null,
       mux_status: "processing",
@@ -143,7 +161,7 @@ export async function POST(request: Request) {
   if (eventType === "video.asset.ready") {
     const asset = data?.id ? (await fetchMuxAsset(data.id)) || data : data;
     const playbackId = asset?.playback_ids?.[0]?.id || null;
-    await updateStory({
+    await updateMedia({
       mux_upload_id: asset?.upload_id || data?.upload_id || null,
       mux_asset_id: asset?.id || data?.id || null,
       mux_playback_id: playbackId,
@@ -152,7 +170,7 @@ export async function POST(request: Request) {
   }
 
   if (eventType === "video.asset.errored") {
-    await updateStory({
+    await updateMedia({
       mux_upload_id: data?.upload_id || null,
       mux_asset_id: data?.id || null,
       mux_status: "errored",
@@ -164,7 +182,7 @@ export async function POST(request: Request) {
     eventType === "video.upload.cancelled" ||
     eventType === "video.upload.timed_out"
   ) {
-    await updateStory({
+    await updateMedia({
       mux_upload_id: data?.id || null,
       mux_status: "errored",
     });

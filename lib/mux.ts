@@ -1,6 +1,8 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 
-type StoryVideoRow = {
+type VideoTable = "stories" | "dailys";
+
+type VideoRow = {
   id: string;
   district_key: string;
   mux_asset_id: string | null;
@@ -26,7 +28,7 @@ type MuxUpload = {
   asset_id?: string | null;
 };
 
-type StoryVideoPatch = Partial<{
+type VideoPatch = Partial<{
   mux_asset_id: string | null;
   mux_upload_id: string | null;
   mux_playback_id: string | null;
@@ -94,41 +96,41 @@ function getNextStatusFromAsset(status: string | null | undefined) {
   return "processing";
 }
 
-async function applyStoryVideoPatch(storyId: string, patch: StoryVideoPatch) {
+async function applyVideoPatch(table: VideoTable, id: string, patch: VideoPatch) {
   if (Object.keys(patch).length === 0) {
     return;
   }
 
   const supabase = createServiceClient();
-  const { error } = await supabase.from("stories").update(patch).eq("id", storyId);
+  const { error } = await supabase.from(table).update(patch).eq("id", id);
   if (error) {
-    throw new Error(`[Mux] Failed to update story ${storyId}: ${error.message}`);
+    throw new Error(`[Mux] Failed to update ${table} ${id}: ${error.message}`);
   }
 }
 
-export async function syncStoryVideoState(storyId: string) {
+async function syncVideoState(table: VideoTable, id: string) {
   const credentials = getMuxCredentials();
   const supabase = createServiceClient();
 
-  const { data: story, error } = await supabase
-    .from("stories")
+  const { data: row, error } = await supabase
+    .from(table)
     .select("id, district_key, mux_asset_id, mux_upload_id, mux_playback_id, mux_status")
-    .eq("id", storyId)
+    .eq("id", id)
     .maybeSingle();
 
   if (error) {
-    throw new Error(`[Mux] Failed to load story ${storyId}: ${error.message}`);
+    throw new Error(`[Mux] Failed to load ${table} ${id}: ${error.message}`);
   }
 
-  if (!story) {
+  if (!row) {
     return null;
   }
 
   if (!credentials) {
-    return story as StoryVideoRow;
+    return row as VideoRow;
   }
 
-  const current = story as StoryVideoRow;
+  const current = row as VideoRow;
   let nextAssetId = current.mux_asset_id;
   let nextUploadId = current.mux_upload_id;
   let nextPlaybackId = current.mux_playback_id;
@@ -163,13 +165,13 @@ export async function syncStoryVideoState(storyId: string) {
     }
   }
 
-  const patch: StoryVideoPatch = {};
+  const patch: VideoPatch = {};
   if (nextAssetId !== current.mux_asset_id) patch.mux_asset_id = nextAssetId;
   if (nextUploadId !== current.mux_upload_id) patch.mux_upload_id = nextUploadId;
   if (nextPlaybackId !== current.mux_playback_id) patch.mux_playback_id = nextPlaybackId;
   if (nextStatus !== (current.mux_status || "none")) patch.mux_status = nextStatus;
 
-  await applyStoryVideoPatch(current.id, patch);
+  await applyVideoPatch(table, current.id, patch);
 
   return {
     ...current,
@@ -177,5 +179,13 @@ export async function syncStoryVideoState(storyId: string) {
     mux_upload_id: nextUploadId,
     mux_playback_id: nextPlaybackId,
     mux_status: nextStatus,
-  } satisfies StoryVideoRow;
+  } satisfies VideoRow;
+}
+
+export async function syncStoryVideoState(storyId: string) {
+  return syncVideoState("stories", storyId);
+}
+
+export async function syncDailyVideoState(dailyId: string) {
+  return syncVideoState("dailys", dailyId);
 }

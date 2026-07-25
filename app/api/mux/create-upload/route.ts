@@ -6,9 +6,12 @@ export async function POST(request: Request) {
   const districtKey = resolveDistrictFromHost(
     request.headers.get("x-forwarded-host") || request.headers.get("host")
   );
-  const { storyId } = await request.json().catch(() => ({}));
-  if (!storyId) {
-    return NextResponse.json({ error: "Missing storyId" }, { status: 400 });
+  const { storyId, dailyId } = await request.json().catch(() => ({}));
+  const mediaId = storyId || dailyId;
+  const mediaTable = dailyId ? "dailys" : "stories";
+  const passthrough = dailyId ? `daily:${dailyId}` : storyId;
+  if (!mediaId) {
+    return NextResponse.json({ error: "Missing storyId or dailyId" }, { status: 400 });
   }
 
   const muxToken = process.env.MUX_TOKEN_ID;
@@ -41,9 +44,9 @@ export async function POST(request: Request) {
         cors_origin: corsOrigin,
         new_asset_settings: {
           playback_policies: ["public"],
-          passthrough: storyId,
+          passthrough,
           meta: {
-            external_id: storyId,
+            external_id: passthrough,
           },
         },
       }),
@@ -60,7 +63,7 @@ export async function POST(request: Request) {
     const errorText = await res.text();
     console.error("[Mux] Create upload rejected", {
       status: res.status,
-      storyId,
+      mediaId,
       errorText,
     });
     return NextResponse.json(
@@ -78,7 +81,7 @@ export async function POST(request: Request) {
   const uploadId = json?.data?.id;
   if (!uploadUrl || !uploadId) {
     console.error("[Mux] Create upload returned incomplete payload", {
-      storyId,
+      mediaId,
       json,
     });
     return NextResponse.json(
@@ -89,7 +92,7 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient();
   const { error: updateError } = await supabase
-    .from("stories")
+    .from(mediaTable)
     .update({
       mux_upload_id: uploadId,
       mux_asset_id: null,
@@ -97,16 +100,17 @@ export async function POST(request: Request) {
       mux_status: "uploading",
     })
     .eq("district_key", districtKey)
-    .eq("id", storyId);
+    .eq("id", mediaId);
 
   if (updateError) {
-    console.error("[Mux] Failed to save direct upload on story", {
-      storyId,
+    console.error("[Mux] Failed to save direct upload", {
+      mediaId,
+      mediaTable,
       uploadId,
       error: updateError.message,
     });
     return NextResponse.json(
-      { error: "Mux upload was created, but the story could not be updated." },
+      { error: "Mux upload was created, but the media record could not be updated." },
       { status: 500 }
     );
   }
