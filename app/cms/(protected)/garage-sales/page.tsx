@@ -12,6 +12,8 @@ type SessionRow = {
   name: string;
   open_date: string;
   close_date: string;
+  sale_start_date: string;
+  sale_end_date: string;
   page_copy: string;
   status: string;
   city: string;
@@ -112,7 +114,7 @@ export default async function GarageSalesCmsPage({
   const [{ data: sessions }, { data: geocodeFailedRows }, { data: submissions }] = await Promise.all([
     supabase
       .from("garage_sale_sessions")
-      .select("id, district_key, slug, name, open_date, close_date, page_copy, status, city, state, zip, map_enabled")
+      .select("id, district_key, slug, name, open_date, close_date, sale_start_date, sale_end_date, page_copy, status, city, state, zip, map_enabled")
       .eq("district_key", districtKey)
       .order("open_date", { ascending: false }),
     supabase
@@ -135,6 +137,8 @@ export default async function GarageSalesCmsPage({
       slug,
       open_date: String(formData.get("open_date") || ""),
       close_date: String(formData.get("close_date") || ""),
+      sale_start_date: String(formData.get("sale_start_date") || ""),
+      sale_end_date: String(formData.get("sale_end_date") || ""),
       page_copy: String(formData.get("page_copy") || "").trim(),
       status: String(formData.get("status") || "active"),
       city: String(formData.get("city") || "").trim(),
@@ -166,6 +170,8 @@ export default async function GarageSalesCmsPage({
         slug,
         open_date: String(formData.get("open_date") || ""),
         close_date: String(formData.get("close_date") || ""),
+        sale_start_date: String(formData.get("sale_start_date") || ""),
+        sale_end_date: String(formData.get("sale_end_date") || ""),
         page_copy: String(formData.get("page_copy") || "").trim(),
         status: String(formData.get("status") || "active"),
         city: String(formData.get("city") || "").trim(),
@@ -315,7 +321,7 @@ export default async function GarageSalesCmsPage({
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <label className="grid gap-1 text-sm font-medium text-neutral-700">
-            <span>Open date</span>
+            <span>Session open date</span>
             <input
               name="open_date"
               type="date"
@@ -324,7 +330,7 @@ export default async function GarageSalesCmsPage({
             />
           </label>
           <label className="grid gap-1 text-sm font-medium text-neutral-700">
-            <span>Close date</span>
+            <span>Session close date</span>
             <input
               name="close_date"
               type="date"
@@ -340,6 +346,24 @@ export default async function GarageSalesCmsPage({
             <option value="active">Active</option>
             <option value="archived">Archived</option>
           </select>
+          <label className="grid gap-1 text-sm font-medium text-neutral-700">
+            <span>First selectable sale date</span>
+            <input
+              name="sale_start_date"
+              type="date"
+              required
+              className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium text-neutral-700">
+            <span>Last selectable sale date</span>
+            <input
+              name="sale_end_date"
+              type="date"
+              required
+              className="rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+          </label>
           <label className="flex items-center gap-2 rounded border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700">
             <input name="map_enabled" type="checkbox" />
             <span>Enable map for this session</span>
@@ -401,7 +425,7 @@ export default async function GarageSalesCmsPage({
                 className="rounded border border-neutral-300 px-3 py-2 text-sm"
               />
               <label className="grid gap-1 text-sm font-medium text-neutral-700">
-                <span>Open date</span>
+                <span>Session open date</span>
                 <input
                   name="open_date"
                   type="date"
@@ -411,7 +435,7 @@ export default async function GarageSalesCmsPage({
                 />
               </label>
               <label className="grid gap-1 text-sm font-medium text-neutral-700">
-                <span>Close date</span>
+                <span>Session close date</span>
                 <input
                   name="close_date"
                   type="date"
@@ -428,13 +452,37 @@ export default async function GarageSalesCmsPage({
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
               </select>
+              <label className="grid gap-1 text-sm font-medium text-neutral-700">
+                <span>First selectable sale date</span>
+                <input
+                  name="sale_start_date"
+                  type="date"
+                  defaultValue={session.sale_start_date}
+                  required
+                  className="rounded border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium text-neutral-700">
+                <span>Last selectable sale date</span>
+                <input
+                  name="sale_end_date"
+                  type="date"
+                  defaultValue={session.sale_end_date}
+                  required
+                  className="rounded border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </label>
               <label className="flex items-center gap-2 rounded border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700">
                 <input name="map_enabled" type="checkbox" defaultChecked={session.map_enabled} />
                 <span>Enable map for this session</span>
               </label>
               <p className="self-center text-sm text-neutral-500">
-                Public window: {formatDateInTimeZone(session.open_date)} -{" "}
+                Session open: {formatDateInTimeZone(session.open_date)} -{" "}
                 {formatDateInTimeZone(session.close_date)}
+              </p>
+              <p className="self-center text-sm text-neutral-500">
+                Selectable sale dates: {formatDateInTimeZone(session.sale_start_date)} -{" "}
+                {formatDateInTimeZone(session.sale_end_date)}
               </p>
               <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
                 <input

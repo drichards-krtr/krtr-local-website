@@ -10,6 +10,8 @@ export type GarageSaleSession = {
   name: string;
   open_date: string;
   close_date: string;
+  sale_start_date: string;
+  sale_end_date: string;
   page_copy: string;
   status: string;
   city: string;
@@ -45,7 +47,7 @@ export const getOpenGarageSaleSessions = cache(async function getOpenGarageSaleS
   const today = getDateTextInTimeZone();
   const { data, error } = await supabase
     .from("garage_sale_sessions")
-    .select("id, district_key, slug, name, open_date, close_date, page_copy, status, city, state, zip, map_enabled")
+    .select("id, district_key, slug, name, open_date, close_date, sale_start_date, sale_end_date, page_copy, status, city, state, zip, map_enabled")
     .eq("district_key", districtKey)
     .eq("status", "active")
     .lte("open_date", today)

@@ -2,7 +2,31 @@ alter table garage_sale_sessions
 add column if not exists city text not null default '',
 add column if not exists state text not null default '',
 add column if not exists zip text not null default '',
-add column if not exists map_enabled boolean not null default false;
+add column if not exists map_enabled boolean not null default false,
+add column if not exists sale_start_date date null,
+add column if not exists sale_end_date date null;
+
+update garage_sale_sessions
+set
+  sale_start_date = coalesce(sale_start_date, open_date),
+  sale_end_date = coalesce(sale_end_date, close_date);
+
+alter table garage_sale_sessions
+alter column sale_start_date set not null,
+alter column sale_end_date set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'garage_sale_sessions_sale_date_order_check'
+  ) then
+    alter table garage_sale_sessions
+    add constraint garage_sale_sessions_sale_date_order_check
+    check (sale_end_date >= sale_start_date);
+  end if;
+end $$;
 
 alter table garage_sale_submissions
 add column if not exists latitude numeric null,

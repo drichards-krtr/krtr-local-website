@@ -116,7 +116,7 @@ export default async function SubmitGarageSalePage({
     const today = getDateTextInTimeZone();
     const { data: session, error: sessionError } = await service
       .from("garage_sale_sessions")
-      .select("id, district_key, name, slug, status, open_date, close_date, map_enabled")
+      .select("id, district_key, name, slug, status, open_date, close_date, sale_start_date, sale_end_date, map_enabled")
       .eq("id", sessionId)
       .eq("district_key", district.key)
       .eq("status", "active")
@@ -208,7 +208,7 @@ export default async function SubmitGarageSalePage({
   }
 
   const sessionDateOptions = selectedSession
-    ? getSessionDateOptions(selectedSession.open_date, selectedSession.close_date)
+    ? getSessionDateOptions(selectedSession.sale_start_date, selectedSession.sale_end_date)
     : [];
 
   return (

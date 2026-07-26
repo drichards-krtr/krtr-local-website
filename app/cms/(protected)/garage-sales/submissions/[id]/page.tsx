@@ -16,6 +16,8 @@ type SessionRow = {
   district_key: string;
   open_date: string;
   close_date: string;
+  sale_start_date: string;
+  sale_end_date: string;
 };
 
 function getSessionDateOptions(openDate: string, closeDate: string) {
@@ -75,7 +77,7 @@ export default async function EditGarageSaleSubmissionPage({
       .maybeSingle(),
     supabase
       .from("garage_sale_sessions")
-      .select("id, name, district_key, open_date, close_date")
+      .select("id, name, district_key, open_date, close_date, sale_start_date, sale_end_date")
       .eq("district_key", districtKey)
       .order("open_date", { ascending: false }),
     supabase
@@ -180,7 +182,7 @@ export default async function EditGarageSaleSubmissionPage({
   const datesByDate = new Map(dateRows.map((row) => [row.sale_date, row]));
   const selectedSession = sessionRows.find((session) => session.id === submission.session_id) || sessionRows[0] || null;
   const sessionDateOptions = selectedSession
-    ? getSessionDateOptions(selectedSession.open_date, selectedSession.close_date)
+    ? getSessionDateOptions(selectedSession.sale_start_date, selectedSession.sale_end_date)
     : dateRows.map((row) => row.sale_date);
 
   return (

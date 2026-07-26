@@ -58,7 +58,7 @@ export default async function GarageSalesPage({
   );
   const submissionsBySession = new Map<string, typeof submissions>();
   const filterDates = Array.from(
-    new Set(sessions.flatMap((session) => getSessionDateOptions(session.open_date, session.close_date)))
+    new Set(sessions.flatMap((session) => getSessionDateOptions(session.sale_start_date, session.sale_end_date)))
   ).sort();
 
   for (const submission of submissions) {
