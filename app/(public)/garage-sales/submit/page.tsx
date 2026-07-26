@@ -43,7 +43,7 @@ async function sendGarageSaleSubmissionEmail(
       to,
       reply_to: submitterEmail,
       subject: `New ${districtLabel} garage sale submission`,
-      text: `There is a new garage sale submission to review for ${sessionName}.`,
+      text: `There is a new published garage sale submission for ${sessionName}.`,
     }),
   }).catch((error) => {
     console.error("[GarageSaleSubmission] Resend request failed", error);
@@ -92,7 +92,14 @@ export default async function SubmitGarageSalePage({
       throw new Error("Unable to find an open garage sale session for this submission.");
     }
 
+    const submitterName = String(formData.get("submitter_name") || "").trim();
+    const submitterPhone = String(formData.get("submitter_phone") || "").trim();
     const submitterEmail = String(formData.get("submitter_email") || "").trim();
+
+    if (!submitterName || !submitterPhone || !submitterEmail) {
+      throw new Error("Name, phone number, and email are required for garage sale submissions.");
+    }
+
     const { error: submissionError } = await service.from("garage_sale_submissions").insert({
       session_id: session.id,
       district_key: district.key,
@@ -100,10 +107,10 @@ export default async function SubmitGarageSalePage({
       date_times: String(formData.get("date_times") || "").trim(),
       items: String(formData.get("items") || "").trim(),
       image_url: String(formData.get("image_url") || "").trim() || null,
-      submitter_name: String(formData.get("submitter_name") || "").trim(),
-      submitter_phone: String(formData.get("submitter_phone") || "").trim(),
+      submitter_name: submitterName,
+      submitter_phone: submitterPhone,
       submitter_email: submitterEmail,
-      status: "draft",
+      status: "published",
     });
 
     if (submissionError) {
@@ -120,7 +127,7 @@ export default async function SubmitGarageSalePage({
         <header className="mb-4">
           <h1 className="text-2xl font-semibold">Submit Garage Sale</h1>
           <p className="text-sm text-neutral-600">
-            Submit your sale for review. Submissions are saved as draft until approved.
+            Submit your sale to be published on the garage sales page.
           </p>
         </header>
 
@@ -169,7 +176,7 @@ export default async function SubmitGarageSalePage({
             <div className="min-w-0 rounded border border-neutral-200 bg-neutral-50 p-3 md:col-span-2">
               <h2 className="text-sm font-semibold">Contact Information</h2>
               <p className="mb-3 text-xs text-neutral-600">
-                This is used if we need questions answered before publishing.
+                Name, email and phone number are not published publicly and are only used in case there is an issue with your submission.
               </p>
               <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
                 <input
