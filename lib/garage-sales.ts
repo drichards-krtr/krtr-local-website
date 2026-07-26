@@ -12,6 +12,16 @@ export type GarageSaleSession = {
   close_date: string;
   page_copy: string;
   status: string;
+  city: string;
+  state: string;
+  zip: string;
+  map_enabled: boolean;
+};
+
+export type GarageSaleSubmissionDate = {
+  sale_date: string;
+  start_time: string;
+  end_time: string;
 };
 
 export type GarageSaleSubmission = {
@@ -22,6 +32,10 @@ export type GarageSaleSubmission = {
   items: string;
   image_url: string | null;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
+  geocode_status: string;
+  garage_sale_submission_dates?: GarageSaleSubmissionDate[];
 };
 
 export const getOpenGarageSaleSessions = cache(async function getOpenGarageSaleSessions(
@@ -31,7 +45,7 @@ export const getOpenGarageSaleSessions = cache(async function getOpenGarageSaleS
   const today = getDateTextInTimeZone();
   const { data, error } = await supabase
     .from("garage_sale_sessions")
-    .select("id, district_key, slug, name, open_date, close_date, page_copy, status")
+    .select("id, district_key, slug, name, open_date, close_date, page_copy, status, city, state, zip, map_enabled")
     .eq("district_key", districtKey)
     .eq("status", "active")
     .lte("open_date", today)
@@ -49,21 +63,34 @@ export const getOpenGarageSaleSessions = cache(async function getOpenGarageSaleS
   return (data || []) as GarageSaleSession[];
 });
 
-export async function getPublishedGarageSaleSubmissions(sessionIds: string[]) {
+export async function getPublishedGarageSaleSubmissions(sessionIds: string[], saleDate?: string) {
   if (sessionIds.length === 0) return [] as GarageSaleSubmission[];
 
   const supabase = createPublicClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("garage_sale_submissions")
-    .select("id, session_id, address, date_times, items, image_url, created_at")
+    .select(
+      "id, session_id, address, date_times, items, image_url, created_at, latitude, longitude, geocode_status, garage_sale_submission_dates(sale_date, start_time, end_time)"
+    )
     .in("session_id", sessionIds)
     .eq("status", "published")
     .order("created_at", { ascending: false });
+
+  if (saleDate) {
+    query = query.eq("garage_sale_submission_dates.sale_date", saleDate);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[garage-sales:getPublishedGarageSaleSubmissions] Supabase query failed", error);
     return [];
   }
 
-  return (data || []) as GarageSaleSubmission[];
+  const submissions = (data || []) as GarageSaleSubmission[];
+  if (!saleDate) return submissions;
+
+  return submissions.filter((submission) =>
+    (submission.garage_sale_submission_dates || []).some((entry) => entry.sale_date === saleDate)
+  );
 }

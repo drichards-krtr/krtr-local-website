@@ -8,6 +8,42 @@ import { getDateTextInTimeZone } from "@/lib/dates";
 const fieldClassName =
   "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm";
 
+function getSessionDateOptions(openDate: string, closeDate: string) {
+  const dates = [];
+  const current = new Date(`${openDate}T00:00:00Z`);
+  const end = new Date(`${closeDate}T00:00:00Z`);
+
+  while (current <= end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+
+  return dates;
+}
+
+function formatSessionDate(dateText: string) {
+  const [year, month, day] = dateText.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function formatSaleTime(timeText: string) {
+  const [hourText, minuteText] = timeText.split(":");
+  const date = new Date(Date.UTC(2026, 0, 1, Number(hourText || "0"), Number(minuteText || "0")));
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
 async function sendGarageSaleSubmissionEmail(
   submitterEmail: string,
   districtLabel: string,
@@ -80,7 +116,7 @@ export default async function SubmitGarageSalePage({
     const today = getDateTextInTimeZone();
     const { data: session, error: sessionError } = await service
       .from("garage_sale_sessions")
-      .select("id, district_key, name, slug, status, open_date, close_date")
+      .select("id, district_key, name, slug, status, open_date, close_date, map_enabled")
       .eq("id", sessionId)
       .eq("district_key", district.key)
       .eq("status", "active")
@@ -95,31 +131,85 @@ export default async function SubmitGarageSalePage({
     const submitterName = String(formData.get("submitter_name") || "").trim();
     const submitterPhone = String(formData.get("submitter_phone") || "").trim();
     const submitterEmail = String(formData.get("submitter_email") || "").trim();
+    const selectedDates = formData
+      .getAll("sale_date")
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
 
     if (!submitterName || !submitterPhone || !submitterEmail) {
       throw new Error("Name, phone number, and email are required for garage sale submissions.");
     }
 
-    const { error: submissionError } = await service.from("garage_sale_submissions").insert({
+    if (selectedDates.length === 0) {
+      throw new Error("Select at least one sale date.");
+    }
+
+    const saleDateRows = selectedDates.map((saleDate) => {
+      const startTime = String(formData.get(`start_time_${saleDate}`) || "").trim();
+      const endTime = String(formData.get(`end_time_${saleDate}`) || "").trim();
+
+      if (!startTime || !endTime) {
+        throw new Error("Start and end times are required for each selected sale date.");
+      }
+
+      return {
+        sale_date: saleDate,
+        start_time: startTime,
+        end_time: endTime,
+      };
+    });
+    const dateTimeNotes = String(formData.get("date_time_notes") || "").trim();
+    const dateTimes = [
+      ...saleDateRows.map(
+        (entry) =>
+          `${formatSessionDate(entry.sale_date)}: ${formatSaleTime(entry.start_time)} - ${formatSaleTime(entry.end_time)}`
+      ),
+      dateTimeNotes,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const { data: submission, error: submissionError } = await service
+      .from("garage_sale_submissions")
+      .insert({
       session_id: session.id,
       district_key: district.key,
       address: String(formData.get("address") || "").trim(),
-      date_times: String(formData.get("date_times") || "").trim(),
+      date_times: dateTimes,
       items: String(formData.get("items") || "").trim(),
       image_url: String(formData.get("image_url") || "").trim() || null,
       submitter_name: submitterName,
       submitter_phone: submitterPhone,
       submitter_email: submitterEmail,
       status: "published",
-    });
+      geocode_status: session.map_enabled ? "pending" : "skipped",
+    })
+      .select("id")
+      .single();
 
     if (submissionError) {
       throw new Error(`Unable to save garage sale submission: ${submissionError.message}`);
     }
 
+    const { error: saleDateError } = await service.from("garage_sale_submission_dates").insert(
+      saleDateRows.map((row) => ({
+        ...row,
+        submission_id: submission.id,
+      }))
+    );
+
+    if (saleDateError) {
+      await service.from("garage_sale_submissions").delete().eq("id", submission.id);
+      throw new Error(`Unable to save garage sale dates: ${saleDateError.message}`);
+    }
+
     await sendGarageSaleSubmissionEmail(submitterEmail, district.name, session.name);
     redirect("/garage-sales/submit/thanks");
   }
+
+  const sessionDateOptions = selectedSession
+    ? getSessionDateOptions(selectedSession.open_date, selectedSession.close_date)
+    : [];
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
@@ -161,12 +251,45 @@ export default async function SubmitGarageSalePage({
               required
               className={`${fieldClassName} md:col-span-2`}
             />
-            <textarea
-              name="date_times"
-              placeholder="Dates/times"
-              required
-              className={`min-h-[100px] ${fieldClassName} md:col-span-2`}
-            />
+            <div className="grid gap-3 rounded border border-neutral-200 bg-neutral-50 p-3 md:col-span-2">
+              <h2 className="text-sm font-semibold">Sale Dates and Times</h2>
+              <div className="grid gap-3">
+                {sessionDateOptions.map((dateText) => (
+                  <div
+                    key={dateText}
+                    className="grid gap-2 rounded border border-neutral-200 bg-white p-3 md:grid-cols-[1fr_160px_160px]"
+                  >
+                    <label className="flex items-center gap-2 text-sm font-medium text-neutral-700">
+                      <input name="sale_date" type="checkbox" value={dateText} />
+                      <span>{formatSessionDate(dateText)}</span>
+                    </label>
+                    <label className="grid gap-1 text-xs font-medium uppercase text-neutral-500">
+                      <span>Start</span>
+                      <input
+                        name={`start_time_${dateText}`}
+                        type="time"
+                        defaultValue="08:00"
+                        className={fieldClassName}
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-medium uppercase text-neutral-500">
+                      <span>End</span>
+                      <input
+                        name={`end_time_${dateText}`}
+                        type="time"
+                        defaultValue="16:00"
+                        className={fieldClassName}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <textarea
+                name="date_time_notes"
+                placeholder="Optional date/time notes"
+                className={`min-h-[80px] ${fieldClassName}`}
+              />
+            </div>
             <textarea
               name="items"
               placeholder="Items in Sale - tools, clothing, dishes, toys, books"

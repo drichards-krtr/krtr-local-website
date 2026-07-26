@@ -8,6 +8,12 @@ import {
   getNaiveDateTimeText,
 } from "@/lib/dates";
 
+type GarageSaleGeocodeFailureRow = {
+  id: string;
+  session_id: string;
+  garage_sale_sessions: { name: string } | { name: string }[] | null;
+};
+
 export default async function CmsDashboard({
   searchParams,
 }: {
@@ -36,6 +42,7 @@ export default async function CmsDashboard({
     streamEntriesEnabled,
     analyticsTodayTotal,
     analyticsTodayActive,
+    garageSaleGeocodeFailures,
   ] = await Promise.all([
     supabase.from("stories").select("id", { count: "exact", head: true }).eq("district_key", districtKey),
     supabase
@@ -108,6 +115,11 @@ export default async function CmsDashboard({
       .gte("started_at", todayStartIso)
       .lt("started_at", tomorrowStartIso)
       .is("ended_at", null),
+    supabase
+      .from("garage_sale_submissions")
+      .select("id, session_id, garage_sale_sessions(name)")
+      .eq("district_key", districtKey)
+      .eq("geocode_status", "failed"),
   ]);
 
   const nowChicago = getDateTimeTextInTimeZone();
@@ -117,6 +129,15 @@ export default async function CmsDashboard({
       const endOk = !alert.end_at || getNaiveDateTimeText(alert.end_at) >= nowChicago;
       return startOk && endOk;
     }).length || 0;
+  const garageSaleMapIssues = new Map<string, { name: string; count: number }>();
+
+  for (const row of (garageSaleGeocodeFailures.data || []) as GarageSaleGeocodeFailureRow[]) {
+    const relation = row.garage_sale_sessions;
+    const name = Array.isArray(relation) ? relation[0]?.name || "-" : relation?.name || "-";
+    const current = garageSaleMapIssues.get(row.session_id) || { name, count: 0 };
+    current.count += 1;
+    garageSaleMapIssues.set(row.session_id, current);
+  }
 
   return (
     <div>
@@ -208,6 +229,13 @@ export default async function CmsDashboard({
               ["Total Sessions", analyticsTodayTotal.count || 0],
               ["Active Sessions", analyticsTodayActive.count || 0],
             ],
+          },
+          {
+            label: "Garage Sale Map Issues",
+            rows:
+              garageSaleMapIssues.size > 0
+                ? Array.from(garageSaleMapIssues.values()).map((entry) => [entry.name, entry.count])
+                : [["Address Errors", 0]],
           },
         ].map((card) => (
           <div key={card.label} className="rounded-lg border border-neutral-200 bg-white p-4">
