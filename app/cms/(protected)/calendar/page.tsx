@@ -39,6 +39,11 @@ function formatSavedAt(timestamp: string) {
   return formatDateTimeInTimeZone(date, { dateStyle: "medium", timeStyle: "short" });
 }
 
+function getErrorMessage(message: string | undefined) {
+  if (!message) return null;
+  return message.slice(0, 240);
+}
+
 function formatDateOnly(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -49,7 +54,7 @@ function formatDateOnly(date: Date) {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string; range?: string; savedAt?: string; district?: string };
+  searchParams: { search?: string; status?: string; range?: string; savedAt?: string; district?: string; error?: string };
 }) {
   const supabase = createServerSupabase();
   const search = searchParams.search?.trim() || "";
@@ -57,6 +62,7 @@ export default async function CalendarPage({
   const range = searchParams.range || "upcoming";
   const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
   const savedAtLabel = searchParams.savedAt ? formatSavedAt(searchParams.savedAt) : null;
+  const errorMessage = getErrorMessage(searchParams.error);
 
   let query = supabase
     .from("events")
@@ -95,9 +101,9 @@ export default async function CalendarPage({
   async function addEvent(formData: FormData) {
     "use server";
     const supabase = createServerSupabase();
-    const title = String(formData.get("title") || "");
-    const description = String(formData.get("description") || "");
-    const location = String(formData.get("location") || "");
+    const title = String(formData.get("title") || "").trim();
+    const description = String(formData.get("description") || "").trim();
+    const location = String(formData.get("location") || "").trim();
     const startAt = String(formData.get("start_at") || "");
     const endAt = String(formData.get("end_at") || "");
     const imageUrl = String(formData.get("image_url") || "") || null;
@@ -114,14 +120,18 @@ export default async function CalendarPage({
       .map((value) => Number(value))
       .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6);
 
+    if (!title || !startAt) {
+      redirect(`/cms/calendar?district=${districtKey}&error=${encodeURIComponent("Title and start time are required.")}`);
+    }
+
     if (recurrence !== "weekly") {
-      await supabase.from("events").insert({
+      const { error } = await supabase.from("events").insert({
         district_key: districtKey,
         title,
-        description,
-        location,
+        description: description || null,
+        location: location || null,
         start_at: startAt,
-        end_at: endAt || "",
+        end_at: endAt || null,
         image_url: imageUrl,
         status: statusValue,
         link_1_url: link1Url,
@@ -129,11 +139,17 @@ export default async function CalendarPage({
         link_2_url: link2Url,
         link_2_text: link2Text,
       });
+      if (error) {
+        redirect(`/cms/calendar?district=${districtKey}&error=${encodeURIComponent(`Unable to save event: ${error.message}`)}`);
+      }
     } else {
       const recurrenceGroupId = randomUUID();
       const startDate = startAt.slice(0, 10);
       const startTime = startAt.slice(11, 16);
       const endTime = endAt ? endAt.slice(11, 16) : null;
+      if (!recurrenceEndDate) {
+        redirect(`/cms/calendar?district=${districtKey}&error=${encodeURIComponent("Recurring events need an end date.")}`);
+      }
 
       const startDateObj = new Date(`${startDate}T00:00:00`);
       const endDateObj = new Date(
@@ -145,8 +161,8 @@ export default async function CalendarPage({
       const rows: Array<{
         district_key: string;
         title: string;
-        description: string;
-        location: string;
+        description: string | null;
+        location: string | null;
         start_at: string;
         end_at: string | null;
         image_url: string | null;
@@ -168,8 +184,8 @@ export default async function CalendarPage({
         rows.push({
           district_key: districtKey,
           title,
-          description,
-          location,
+          description: description || null,
+          location: location || null,
           start_at: `${dayText}T${startTime}`,
           end_at: endTime ? `${dayText}T${endTime}` : null,
           image_url: imageUrl,
@@ -183,7 +199,12 @@ export default async function CalendarPage({
       }
 
       if (rows.length > 0) {
-        await supabase.from("events").insert(rows);
+        const { error } = await supabase.from("events").insert(rows);
+        if (error) {
+          redirect(`/cms/calendar?district=${districtKey}&error=${encodeURIComponent(`Unable to save recurring events: ${error.message}`)}`);
+        }
+      } else {
+        redirect(`/cms/calendar?district=${districtKey}&error=${encodeURIComponent("No recurring event dates matched the selected days.")}`);
       }
     }
     revalidatePath("/cms/calendar");
@@ -352,6 +373,11 @@ export default async function CalendarPage({
           {savedAtLabel && (
             <p className="text-sm text-neutral-500 md:col-span-2">
               Saved: {savedAtLabel}
+            </p>
+          )}
+          {errorMessage && (
+            <p className="text-sm font-medium text-red-700 md:col-span-2">
+              {errorMessage}
             </p>
           )}
         </form>

@@ -33,15 +33,22 @@ export default async function EditEventPage({ params }: { params: { id: string }
     "use server";
     const supabase = createServerSupabase();
     const nextDistrictKey = String(formData.get("district_key") || event.district_key);
-    await supabase
+    const title = String(formData.get("title") || "").trim();
+    const startAt = String(formData.get("start_at") || "");
+
+    if (!title || !startAt) {
+      redirect(`/cms/calendar?district=${encodeURIComponent(nextDistrictKey)}&error=${encodeURIComponent("Title and start time are required.")}`);
+    }
+
+    const { error } = await supabase
       .from("events")
       .update({
         district_key: nextDistrictKey,
-        title: String(formData.get("title")),
-        description: String(formData.get("description") || ""),
-        location: String(formData.get("location") || ""),
-        start_at: String(formData.get("start_at")),
-        end_at: String(formData.get("end_at") || ""),
+        title,
+        description: String(formData.get("description") || "").trim() || null,
+        location: String(formData.get("location") || "").trim() || null,
+        start_at: startAt,
+        end_at: String(formData.get("end_at") || "") || null,
         image_url: String(formData.get("image_url") || "") || null,
         status: String(formData.get("status") || "published"),
         link_1_url: String(formData.get("link_1_url") || "").trim() || null,
@@ -50,6 +57,9 @@ export default async function EditEventPage({ params }: { params: { id: string }
         link_2_text: String(formData.get("link_2_text") || "").trim() || null,
       })
       .eq("id", params.id);
+    if (error) {
+      redirect(`/cms/calendar?district=${encodeURIComponent(nextDistrictKey)}&error=${encodeURIComponent(`Unable to update event: ${error.message}`)}`);
+    }
     revalidatePath("/cms/calendar");
     revalidatePath("/calendar");
     redirect(`/cms/calendar?district=${encodeURIComponent(nextDistrictKey)}`);
