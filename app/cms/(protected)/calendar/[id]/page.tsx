@@ -3,13 +3,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { DISTRICT_OPTIONS } from "@/lib/districts";
+import { getRequiredEventAddress } from "@/lib/events";
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabase();
   const { data } = await supabase
     .from("events")
     .select(
-      "id, district_key, title, description, location, start_at, end_at, status, image_url, submitter_id, link_1_url, link_1_text, link_2_url, link_2_text"
+      "id, district_key, title, description, location, location_name, address, city, state, zip, start_at, end_at, status, image_url, submitter_id, link_1_url, link_1_text, link_2_url, link_2_text, is_school_sports"
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -35,9 +36,13 @@ export default async function EditEventPage({ params }: { params: { id: string }
     const nextDistrictKey = String(formData.get("district_key") || event.district_key);
     const title = String(formData.get("title") || "").trim();
     const startAt = String(formData.get("start_at") || "");
+    const { error: addressError, addressFields } = getRequiredEventAddress(formData);
 
     if (!title || !startAt) {
       redirect(`/cms/calendar?district=${encodeURIComponent(nextDistrictKey)}&error=${encodeURIComponent("Title and start time are required.")}`);
+    }
+    if (addressError || !addressFields) {
+      redirect(`/cms/calendar?district=${encodeURIComponent(nextDistrictKey)}&error=${encodeURIComponent(addressError || "Event address is required.")}`);
     }
 
     const { error } = await supabase
@@ -46,11 +51,12 @@ export default async function EditEventPage({ params }: { params: { id: string }
         district_key: nextDistrictKey,
         title,
         description: String(formData.get("description") || "").trim() || null,
-        location: String(formData.get("location") || "").trim() || null,
+        ...addressFields,
         start_at: startAt,
         end_at: String(formData.get("end_at") || "") || null,
         image_url: String(formData.get("image_url") || "") || null,
         status: String(formData.get("status") || "published"),
+        is_school_sports: formData.get("is_school_sports") === "on",
         link_1_url: String(formData.get("link_1_url") || "").trim() || null,
         link_1_text: String(formData.get("link_1_text") || "").trim() || null,
         link_2_url: String(formData.get("link_2_url") || "").trim() || null,
@@ -88,7 +94,11 @@ export default async function EditEventPage({ params }: { params: { id: string }
           ))}
         </select>
         <input name="title" defaultValue={event.title} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-        <input name="location" defaultValue={event.location || ""} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+        <input name="location_name" defaultValue={event.location_name || ""} placeholder="Location name" required className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+        <input name="address" defaultValue={event.address || ""} placeholder="Address" required className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+        <input name="city" defaultValue={event.city || ""} placeholder="City" required className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+        <input name="state" defaultValue={event.state || "IA"} placeholder="State" required className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+        <input name="zip" defaultValue={event.zip || ""} placeholder="Zip" required className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <input name="start_at" type="datetime-local" defaultValue={event.start_at?.slice(0, 16)} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <input name="end_at" type="datetime-local" defaultValue={event.end_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <select name="status" defaultValue={event.status} className="rounded border border-neutral-300 px-3 py-2 text-sm">
@@ -96,6 +106,10 @@ export default async function EditEventPage({ params }: { params: { id: string }
           <option value="draft">Draft</option>
           <option value="archived">Archived</option>
         </select>
+        <label className="inline-flex items-center gap-2 rounded border border-neutral-200 px-3 py-2 text-sm">
+          <input name="is_school_sports" type="checkbox" defaultChecked={event.is_school_sports} />
+          School Sports
+        </label>
         <textarea name="description" defaultValue={event.description || ""} className="min-h-[100px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
         <input name="link_1_url" defaultValue={event.link_1_url || ""} placeholder="Link 1" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
         <input name="link_1_text" defaultValue={event.link_1_text || ""} placeholder="Text 1" className="rounded border border-neutral-300 px-3 py-2 text-sm" />

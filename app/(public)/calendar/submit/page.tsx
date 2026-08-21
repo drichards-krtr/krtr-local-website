@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/admin";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 import { getCurrentDistrict } from "@/lib/districtServer";
+import { getRequiredEventAddress } from "@/lib/events";
 
 const fieldClassName =
   "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm";
@@ -61,6 +62,16 @@ export default function SubmitCalendarEventPage() {
     const submitterName = String(formData.get("submitter_name") || "").trim();
     const submitterPhone = String(formData.get("submitter_phone") || "").trim();
     const submitterEmail = String(formData.get("submitter_email") || "").trim();
+    const title = String(formData.get("title") || "").trim();
+    const startAt = String(formData.get("start_at") || "");
+    const { error: addressError, addressFields } = getRequiredEventAddress(formData);
+
+    if (!title || !startAt) {
+      throw new Error("Event title and start time are required.");
+    }
+    if (addressError || !addressFields) {
+      throw new Error(addressError || "Event address is required.");
+    }
 
     const { data: submitter, error: submitterError } = await service
       .from("event_submitters")
@@ -80,10 +91,10 @@ export default function SubmitCalendarEventPage() {
       .from("events")
       .insert({
         district_key: district.key,
-        title: String(formData.get("title") || "").trim(),
+        title,
         description: String(formData.get("description") || "").trim() || null,
-        location: String(formData.get("location") || "").trim() || null,
-        start_at: String(formData.get("start_at") || ""),
+        ...addressFields,
+        start_at: startAt,
         end_at: String(formData.get("end_at") || "").trim() || null,
         image_url: String(formData.get("image_url") || "").trim() || null,
         status: "draft",
@@ -126,8 +137,34 @@ export default function SubmitCalendarEventPage() {
             className={fieldClassName}
           />
           <input
-            name="location"
-            placeholder="Location"
+            name="location_name"
+            placeholder="Location name"
+            required
+            className={fieldClassName}
+          />
+          <input
+            name="address"
+            placeholder="Address"
+            required
+            className={fieldClassName}
+          />
+          <input
+            name="city"
+            placeholder="City"
+            required
+            className={fieldClassName}
+          />
+          <input
+            name="state"
+            placeholder="State"
+            defaultValue="IA"
+            required
+            className={fieldClassName}
+          />
+          <input
+            name="zip"
+            placeholder="Zip"
+            required
             className={fieldClassName}
           />
           <label className="grid gap-1 text-sm font-medium text-neutral-700">

@@ -12,6 +12,7 @@ import {
 } from "@/lib/dates";
 import { randomUUID } from "crypto";
 import { DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
+import { formatEventLocation, getRequiredEventAddress } from "@/lib/events";
 
 const WEEKDAYS = [
   { value: 0, label: "Sun" },
@@ -27,10 +28,16 @@ type EventRow = {
   id: string;
   title: string;
   location: string | null;
+  location_name: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   start_at: string;
   end_at: string | null;
   status: string;
   image_url: string | null;
+  is_school_sports: boolean;
 };
 
 function formatSavedAt(timestamp: string) {
@@ -66,7 +73,7 @@ export default async function CalendarPage({
 
   let query = supabase
     .from("events")
-    .select("id, title, location, start_at, end_at, status, image_url")
+    .select("id, title, location, location_name, address, city, state, zip, start_at, end_at, status, image_url, is_school_sports")
     .eq("district_key", districtKey)
     .order("start_at", { ascending: false });
 
@@ -103,11 +110,12 @@ export default async function CalendarPage({
     const supabase = createServerSupabase();
     const title = String(formData.get("title") || "").trim();
     const description = String(formData.get("description") || "").trim();
-    const location = String(formData.get("location") || "").trim();
+    const { error: addressError, addressFields } = getRequiredEventAddress(formData);
     const startAt = String(formData.get("start_at") || "");
     const endAt = String(formData.get("end_at") || "");
     const imageUrl = String(formData.get("image_url") || "") || null;
     const statusValue = String(formData.get("status") || "published");
+    const isSchoolSports = formData.get("is_school_sports") === "on";
     const link1Url = String(formData.get("link_1_url") || "").trim() || null;
     const link1Text = String(formData.get("link_1_text") || "").trim() || null;
     const link2Url = String(formData.get("link_2_url") || "").trim() || null;
@@ -123,17 +131,21 @@ export default async function CalendarPage({
     if (!title || !startAt) {
       redirect(`/cms/calendar?district=${districtKey}&error=${encodeURIComponent("Title and start time are required.")}`);
     }
+    if (addressError || !addressFields) {
+      redirect(`/cms/calendar?district=${districtKey}&error=${encodeURIComponent(addressError || "Event address is required.")}`);
+    }
 
     if (recurrence !== "weekly") {
       const { error } = await supabase.from("events").insert({
         district_key: districtKey,
         title,
         description: description || null,
-        location: location || null,
+        ...addressFields,
         start_at: startAt,
         end_at: endAt || null,
         image_url: imageUrl,
         status: statusValue,
+        is_school_sports: isSchoolSports,
         link_1_url: link1Url,
         link_1_text: link1Text,
         link_2_url: link2Url,
@@ -163,10 +175,16 @@ export default async function CalendarPage({
         title: string;
         description: string | null;
         location: string | null;
+        location_name: string | null;
+        address: string | null;
+        city: string | null;
+        state: string | null;
+        zip: string | null;
         start_at: string;
         end_at: string | null;
         image_url: string | null;
         status: string;
+        is_school_sports: boolean;
         recurrence_group_id: string;
         link_1_url: string | null;
         link_1_text: string | null;
@@ -185,11 +203,12 @@ export default async function CalendarPage({
           district_key: districtKey,
           title,
           description: description || null,
-          location: location || null,
+          ...addressFields,
           start_at: `${dayText}T${startTime}`,
           end_at: endTime ? `${dayText}T${endTime}` : null,
           image_url: imageUrl,
           status: statusValue,
+          is_school_sports: isSchoolSports,
           recurrence_group_id: recurrenceGroupId,
           link_1_url: link1Url,
           link_1_text: link1Text,
@@ -287,8 +306,34 @@ export default async function CalendarPage({
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <input
-            name="location"
-            placeholder="Location"
+            name="location_name"
+            placeholder="Location name"
+            required
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="address"
+            placeholder="Address"
+            required
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="city"
+            placeholder="City"
+            required
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="state"
+            placeholder="State"
+            defaultValue="IA"
+            required
+            className="rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="zip"
+            placeholder="Zip"
+            required
             className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
           <input
@@ -310,6 +355,10 @@ export default async function CalendarPage({
             <option value="draft">Draft</option>
             <option value="archived">Archived</option>
           </select>
+          <label className="inline-flex items-center gap-2 rounded border border-neutral-200 px-3 py-2 text-sm">
+            <input name="is_school_sports" type="checkbox" />
+            School Sports
+          </label>
           <select
             name="recurrence"
             defaultValue="none"
@@ -325,7 +374,7 @@ export default async function CalendarPage({
           />
           <div className="md:col-span-2">
             <p className="mb-2 text-xs text-neutral-500">
-              Recurrence days (used when "Repeats weekly" is selected, bro.)
+              Recurrence days (used when "Repeats weekly" is selected.)
             </p>
             <div className="flex flex-wrap gap-3">
               {WEEKDAYS.map((day) => (
@@ -384,37 +433,48 @@ export default async function CalendarPage({
       </section>
 
       <section className="rounded border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
+        <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Title</div>
           <div>Location</div>
+          <div>Sports</div>
           <div>Date</div>
           <div>Status</div>
           <div>Actions</div>
         </div>
-        {filteredEvents.map((event) => (
-          <div
-            key={event.id}
-            className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
-          >
-            <div>{event.title}</div>
-            <div className="text-neutral-500">{event.location || "-"}</div>
-            <div className="text-neutral-500">
-              {formatNaiveDate(event.start_at)}
+        {filteredEvents.map((event) => {
+          const locationLines = formatEventLocation(event);
+
+          return (
+            <div
+              key={event.id}
+              className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
+            >
+              <div>{event.title}</div>
+              <div className="text-neutral-500">
+                {locationLines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+                {locationLines.length === 0 && "-"}
+              </div>
+              <div>{event.is_school_sports ? "🏆" : "-"}</div>
+              <div className="text-neutral-500">
+                {formatNaiveDate(event.start_at)}
+              </div>
+              <div className="capitalize">{event.status}</div>
+              <div className="flex gap-3">
+                <a href={`/cms/calendar/${event.id}?district=${districtKey}`} className="text-sm underline">
+                  Edit
+                </a>
+                <form action={unpublishEvent}>
+                  <input type="hidden" name="id" value={event.id} />
+                  <button type="submit" className="text-sm underline">
+                    Unpublish
+                  </button>
+                </form>
+              </div>
             </div>
-            <div className="capitalize">{event.status}</div>
-            <div className="flex gap-3">
-              <a href={`/cms/calendar/${event.id}?district=${districtKey}`} className="text-sm underline">
-                Edit
-              </a>
-              <form action={unpublishEvent}>
-                <input type="hidden" name="id" value={event.id} />
-                <button type="submit" className="text-sm underline">
-                  Unpublish
-                </button>
-              </form>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
     </div>
   );
