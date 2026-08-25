@@ -8,8 +8,12 @@ import {
   type DistrictKey,
 } from "@/lib/districts";
 
+function getHeaderStore() {
+  return headers() as unknown as Awaited<ReturnType<typeof headers>>;
+}
+
 export function getRequestHost() {
-  const headerStore = headers();
+  const headerStore = getHeaderStore();
   return (
     headerStore.get("x-forwarded-host") ||
     headerStore.get("host") ||
@@ -19,7 +23,7 @@ export function getRequestHost() {
 }
 
 export function getCurrentDistrictKey(): DistrictKey {
-  const headerStore = headers();
+  const headerStore = getHeaderStore();
   const explicitDistrict =
     parseDistrictKey(headerStore.get("x-krtr-district")) ||
     parseDistrictKey(headerStore.get("x-district-key"));
@@ -32,7 +36,7 @@ export function getCurrentDistrictKey(): DistrictKey {
 }
 
 export function getCurrentSiteScopeKey(): SiteScopeKey {
-  const headerStore = headers();
+  const headerStore = getHeaderStore();
   const explicitDistrict =
     parseDistrictKey(headerStore.get("x-krtr-district")) ||
     parseDistrictKey(headerStore.get("x-district-key"));
@@ -50,7 +54,7 @@ export function getCurrentDistrict() {
 }
 
 export function getRequestOrigin() {
-  const headerStore = headers();
+  const headerStore = getHeaderStore();
   const host = getRequestHost();
   const proto =
     headerStore.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");

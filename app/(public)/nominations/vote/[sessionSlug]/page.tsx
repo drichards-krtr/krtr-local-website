@@ -88,7 +88,7 @@ export default async function NominationVotingPublicPage({
     if (groupFinalists.length > 0) finalistsByGroup.set(group, groupFinalists);
   }
 
-  const cookieStore = cookies();
+  const cookieStore = cookies() as unknown as Awaited<ReturnType<typeof cookies>>;
   const lockedGroups = new Set(
     Array.from(finalistsByGroup.keys()).filter((group) => cookieStore.get(getVoteCookieName(session.id, group))?.value)
   );
@@ -117,10 +117,11 @@ export default async function NominationVotingPublicPage({
     const finalistById = new Map((validFinalists || []).map((row) => [String(row.id), String(row.voting_group)]));
     const rows: Array<{ session_id: string; finalist_id: string; voting_group: string }> = [];
     const groups = getVotingGroupsForCategory(session.category);
+    const actionCookieStore = cookies() as unknown as Awaited<ReturnType<typeof cookies>>;
 
     for (const group of groups) {
       const cookieName = getVoteCookieName(session.id, group);
-      if (cookies().get(cookieName)?.value) continue;
+      if (actionCookieStore.get(cookieName)?.value) continue;
 
       const finalistId = String(formData.get(`vote_${group}`) || "");
       if (!finalistId || finalistById.get(finalistId) !== group) continue;
@@ -136,7 +137,7 @@ export default async function NominationVotingPublicPage({
       const { error } = await service.from("nomination_votes").insert(rows);
       if (!error) {
         for (const row of rows) {
-          cookies().set({
+          actionCookieStore.set({
             name: getVoteCookieName(session.id, row.voting_group),
             value: "1",
             httpOnly: true,

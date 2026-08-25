@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { CMS_SESSION_COOKIE, isCmsSessionExpired } from "@/lib/cmsSession";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!pathname.startsWith("/cms") || pathname === "/cms/login") {

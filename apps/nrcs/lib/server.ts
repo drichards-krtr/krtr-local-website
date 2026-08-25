@@ -6,26 +6,25 @@ import { getNrcsServiceEnv, getNrcsSupabaseEnv } from "./env";
 export function createNrcsServerClient() {
   const { url, anon } = getNrcsSupabaseEnv();
 
-  type CookieOptions = Omit<
-    Parameters<ReturnType<typeof cookies>["set"]>[0],
-    "name" | "value"
-  >;
+  type CookieStore = Awaited<ReturnType<typeof cookies>>;
+  type CookieOptions = Omit<Parameters<CookieStore["set"]>[0], "name" | "value">;
+  const cookieStore = cookies() as unknown as CookieStore;
 
   return createServerClient(url, anon, {
     cookies: {
       get(name: string) {
-        return cookies().get(name)?.value;
+        return cookieStore.get(name)?.value;
       },
       set(name: string, value: string, options: CookieOptions) {
         try {
-          cookies().set({ name, value, ...options });
+          cookieStore.set({ name, value, ...options });
         } catch {
           // Server Components cannot mutate cookies; ignore and continue.
         }
       },
       remove(name: string, options: CookieOptions) {
         try {
-          cookies().set({ name, value: "", ...options });
+          cookieStore.set({ name, value: "", ...options });
         } catch {
           // Server Components cannot mutate cookies; ignore and continue.
         }
