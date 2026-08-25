@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Nominations", href: "/cms/nominations" },
   { label: "Nomination Voting", href: "/cms/nominations/voting" },
   { label: "Seasonal Pages", href: "/cms/seasonal-pages" },
+  { label: "Districts", href: "/cms/districts" },
   { label: "Users", href: "/cms/users" },
   { label: "Advertise, Terms/Privacy, About, Footer", href: "/cms/settings" },
 ];

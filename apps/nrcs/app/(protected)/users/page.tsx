@@ -15,6 +15,17 @@ type StaffRow = {
   last_seen_at: string | null;
 };
 
+type DistrictRow = {
+  district_key: string;
+  display_name: string;
+  enabled: boolean;
+};
+
+type StaffDistrictRow = {
+  staff_id: string;
+  district_key: string;
+};
+
 type InvitationRow = {
   id: string;
   email: string;
@@ -85,6 +96,10 @@ async function updateStaff(formData: FormData) {
   const id = String(formData.get("id") || "");
   const role = getRole(formData.get("role"));
   const active = formData.get("active") === "on";
+  const districtKeys = formData
+    .getAll("district_key")
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
 
   const service = createNrcsServiceClient();
   const { error } = await service
@@ -94,6 +109,25 @@ async function updateStaff(formData: FormData) {
 
   if (error) {
     redirect(`/users?error=${encodeURIComponent(error.message)}`);
+  }
+
+  const { error: deleteError } = await service.from("nrcs_staff_districts").delete().eq("staff_id", id);
+
+  if (deleteError) {
+    redirect(`/users?error=${encodeURIComponent(deleteError.message)}`);
+  }
+
+  if (districtKeys.length > 0) {
+    const { error: insertError } = await service.from("nrcs_staff_districts").insert(
+      districtKeys.map((districtKey) => ({
+        staff_id: id,
+        district_key: districtKey,
+      }))
+    );
+
+    if (insertError) {
+      redirect(`/users?error=${encodeURIComponent(insertError.message)}`);
+    }
   }
 
   revalidatePath("/users");
@@ -143,7 +177,8 @@ export default async function NrcsUsersPage({
 }) {
   await requireNrcsStaff("admin");
   const service = createNrcsServiceClient();
-  const [{ data: staff }, { data: invitations }] = await Promise.all([
+  const [{ data: staff }, { data: invitations }, { data: districts }, { data: staffDistricts }] =
+    await Promise.all([
     service
       .from("nrcs_staff_profiles")
       .select("id, email, display_name, role, active, created_at, last_seen_at")
@@ -152,11 +187,30 @@ export default async function NrcsUsersPage({
       .from("nrcs_staff_invitations")
       .select("id, email, role, active, created_at, accepted_at")
       .order("created_at", { ascending: false }),
+    service
+      .from("nrcs_districts")
+      .select("district_key, display_name, enabled")
+      .order("display_name", { ascending: true }),
+    service.from("nrcs_staff_districts").select("staff_id, district_key"),
   ]);
 
   const activeStaffEmails = new Set(((staff || []) as StaffRow[]).map((row) => row.email));
   const pendingInvitations = ((invitations || []) as InvitationRow[]).filter(
     (row) => !activeStaffEmails.has(row.email)
+  );
+  const districtRows = ((districts || []) as DistrictRow[]).sort((a, b) => {
+    if (a.district_key === "dlpc") return -1;
+    if (b.district_key === "dlpc") return 1;
+    return a.display_name.localeCompare(b.display_name);
+  });
+  const staffDistrictMap = ((staffDistricts || []) as StaffDistrictRow[]).reduce(
+    (map, row) => {
+      const current = map.get(row.staff_id) || new Set<string>();
+      current.add(row.district_key);
+      map.set(row.staff_id, current);
+      return map;
+    },
+    new Map<string, Set<string>>()
   );
 
   return (
@@ -207,18 +261,21 @@ export default async function NrcsUsersPage({
       </section>
 
       <section className="rounded border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
+        <div className="grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Email</div>
           <div>Name</div>
           <div>Role</div>
+          <div>Districts</div>
           <div>Active</div>
           <div>Actions</div>
         </div>
-        {((staff || []) as StaffRow[]).map((row) => (
+        {((staff || []) as StaffRow[]).map((row) => {
+          const assignedDistricts = staffDistrictMap.get(row.id) || new Set<string>();
+          return (
           <form
             key={row.id}
             action={updateStaff}
-            className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
+            className="grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
           >
             <input type="hidden" name="id" value={row.id} />
             <div>
@@ -229,10 +286,26 @@ export default async function NrcsUsersPage({
             <select name="role" defaultValue={row.role} className="rounded border border-neutral-300 px-2 py-1 text-sm">
               {NRCS_ROLES.map((role) => (
                 <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
+                {role}
+              </option>
+            ))}
             </select>
+            <div className="grid gap-1">
+              {districtRows.map((district) => (
+                <label key={district.district_key} className="inline-flex items-center gap-2">
+                  <input
+                    name="district_key"
+                    type="checkbox"
+                    value={district.district_key}
+                    defaultChecked={assignedDistricts.has(district.district_key)}
+                  />
+                  <span>
+                    {district.display_name}
+                    {!district.enabled ? " (disabled)" : ""}
+                  </span>
+                </label>
+              ))}
+            </div>
             <label className="inline-flex items-center gap-2">
               <input name="active" type="checkbox" defaultChecked={row.active} />
               Active
@@ -244,7 +317,8 @@ export default async function NrcsUsersPage({
               </button>
             </div>
           </form>
-        ))}
+          );
+        })}
       </section>
 
       <section className="rounded border border-neutral-200 bg-white">

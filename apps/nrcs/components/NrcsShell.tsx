@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { NrcsDistrictContext } from "@/lib/districts";
 import type { NrcsStaffProfile } from "@/lib/roles";
 import NrcsLogoutButton from "./NrcsLogoutButton";
 
@@ -10,9 +11,11 @@ const NAV_ITEMS = [
 
 export default function NrcsShell({
   children,
+  districtContext,
   profile,
 }: {
   children: ReactNode;
+  districtContext: NrcsDistrictContext;
   profile: NrcsStaffProfile;
 }) {
   const visibleItems = NAV_ITEMS.filter(
@@ -45,7 +48,10 @@ export default function NrcsShell({
           <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-8 py-4">
             <div>
               <div className="text-sm font-medium">Newsroom Console</div>
-              <div className="text-xs capitalize text-neutral-500">{profile.role}</div>
+              <div className="text-xs text-neutral-500">
+                <span className="capitalize">{profile.role}</span>
+                {districtContext.activeDistrict ? ` · ${districtContext.activeDistrict.display_name}` : ""}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-sm text-neutral-500">{profile.email}</div>
