@@ -23,3 +23,17 @@ export function getNrcsServiceEnv() {
 export function getNrcsSiteUrl() {
   return process.env.NEXT_PUBLIC_NRCS_SITE_URL || "http://localhost:3001";
 }
+
+export function getNrcsCmsApiEnv() {
+  const baseUrl = process.env.NRCS_CMS_API_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
+  const secret = process.env.NRCS_CMS_API_SECRET;
+
+  if (!baseUrl || !secret) {
+    return null;
+  }
+
+  return {
+    baseUrl: baseUrl.replace(/\/$/, ""),
+    secret,
+  };
+}

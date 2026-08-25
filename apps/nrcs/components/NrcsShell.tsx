@@ -6,6 +6,8 @@ import NrcsLogoutButton from "./NrcsLogoutButton";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
+  { label: "Events", href: "/events" },
+  { label: "School Activity Manager", href: "/school-activity-manager", minimumRole: "editor" },
   { label: "Users", href: "/users", minimumRole: "admin" },
 ] as const;
 
@@ -50,7 +52,7 @@ export default function NrcsShell({
               <div className="text-sm font-medium">Newsroom Console</div>
               <div className="text-xs text-neutral-500">
                 <span className="capitalize">{profile.role}</span>
-                {districtContext.activeDistrict ? ` · ${districtContext.activeDistrict.display_name}` : ""}
+                {districtContext.activeDistrict ? ` - ${districtContext.activeDistrict.display_name}` : ""}
               </div>
             </div>
             <div className="flex items-center gap-3">

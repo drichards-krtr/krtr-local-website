@@ -67,3 +67,23 @@ The initial NRCS UI may default to DLPC, but DLPC is only a default selection, n
 ## Phase Boundary
 
 No Event schema, Event migration, Story migration, publication package endpoint, or NRCS editorial object tables are implemented in Phase 1.
+
+## Phase 2 Calendar Start
+
+Phase 2 adds NRCS-owned Community Calendar editing and a protected CMS ingest path for public display.
+The CMS/public app exposes `POST /api/nrcs/events`, protected by `CMS_NRCS_API_SECRET`.
+The NRCS app sends published event display data to that endpoint when `NRCS_CMS_API_BASE_URL` and
+`NRCS_CMS_API_SECRET` are configured.
+
+Event details use TipTap in NRCS and are sanitized server-side with `sanitize-html` before save.
+Allowed rich text formatting is normal text, Heading 1, Heading 2, bold, italic, links, decimal ordered lists,
+bullet unordered lists, and blockquotes.
+
+School Activity Manager terms are district scoped and include three kinds:
+
+- `sport`
+- `extra_curricular`
+- `event_type`
+
+Disabled terms remain visible and filterable on existing assigned events but cannot be assigned to new/edited events.
+Public list view remains the default calendar view and loads 25 items at a time.
