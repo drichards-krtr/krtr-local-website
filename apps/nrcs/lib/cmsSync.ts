@@ -26,18 +26,31 @@ type SyncEventPayload = {
 export async function syncEventToCms(payload: SyncEventPayload) {
   const env = getNrcsCmsApiEnv();
   if (!env) {
-    return { ok: false, skipped: true, error: "CMS sync env vars are not configured." };
+    return {
+      ok: false,
+      skipped: true,
+      error: "CMS sync env vars are missing or NRCS_CMS_API_BASE_URL does not start with http:// or https://.",
+    };
   }
 
-  const response = await fetch(`${env.baseUrl}/api/nrcs/events`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.secret}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${env.baseUrl}/api/nrcs/events`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      skipped: false,
+      error: error instanceof Error ? error.message : "CMS sync request failed.",
+    };
+  }
 
   if (!response.ok) {
     return { ok: false, skipped: false, error: await response.text() };

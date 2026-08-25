@@ -43,9 +43,10 @@ export default async function EditEventPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
   searchParams?: { district?: string; error?: string; success?: string };
 }) {
+  const { id } = await params;
   await requireNrcsStaff("contributor");
   const { allowedDistricts } = await getNrcsDistrictContext();
   const service = createNrcsServiceClient();
@@ -54,7 +55,7 @@ export default async function EditEventPage({
     .select(
       "id, district_key, title, body_html, location_name, address, city, state, zip, start_at, end_at, image_url, status, classification_term_id"
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (error) {
@@ -82,7 +83,7 @@ export default async function EditEventPage({
       <NrcsEventForm
         action={async (formData) => {
           "use server";
-          formData.set("id", params.id);
+          formData.set("id", id);
           await updateEvent(formData);
         }}
         event={event}

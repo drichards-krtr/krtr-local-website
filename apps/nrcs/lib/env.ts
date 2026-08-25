@@ -32,8 +32,13 @@ export function getNrcsCmsApiEnv() {
     return null;
   }
 
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+  if (!/^https?:\/\//i.test(normalizedBaseUrl)) {
+    return null;
+  }
+
   return {
-    baseUrl: baseUrl.replace(/\/$/, ""),
+    baseUrl: normalizedBaseUrl,
     secret,
   };
 }
