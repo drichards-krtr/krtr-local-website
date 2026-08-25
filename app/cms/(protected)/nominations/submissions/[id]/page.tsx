@@ -30,7 +30,7 @@ export default async function EditNominationSubmissionPage({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .from("nomination_submissions")
     .select("id, category, submitter_name, submitter_email, submitter_phone, payload, submitted_at, district_key")
@@ -49,7 +49,7 @@ export default async function EditNominationSubmissionPage({
 
   async function save(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const payloadText = String(formData.get("payload") || "{}").trim();
     let parsedPayload: Record<string, unknown>;

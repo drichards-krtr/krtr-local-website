@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getCurrentDistrict } from "@/lib/districtServer";
 
-export default function manifest(): MetadataRoute.Manifest {
-  const district = getCurrentDistrict();
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const district = await getCurrentDistrict();
 
   return {
     name: district.metadata.siteName,

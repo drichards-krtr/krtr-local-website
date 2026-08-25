@@ -17,7 +17,7 @@ export type NrcsDistrictContext = {
 };
 
 export async function getNrcsDistrictContext(): Promise<NrcsDistrictContext> {
-  const supabase = createNrcsServerClient();
+  const supabase = await createNrcsServerClient();
   const { data, error } = await supabase
     .from("nrcs_districts")
     .select(

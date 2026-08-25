@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export default async function UsersPage() {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data: users } = await supabase
     .from("profiles")
     .select("id, email, display_name, is_admin, created_at")
@@ -11,7 +11,7 @@ export default async function UsersPage() {
 
   async function toggleAdmin(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";
     await supabase.from("profiles").update({ is_admin: next }).eq("id", id);

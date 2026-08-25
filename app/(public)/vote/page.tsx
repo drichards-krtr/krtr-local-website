@@ -18,7 +18,7 @@ type VoteCandidate = {
 };
 
 export default async function VotePage() {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   if (!district.features.vote) {
     return null;
   }

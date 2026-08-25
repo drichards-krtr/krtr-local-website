@@ -10,7 +10,7 @@ function formatDateTime(value: string | null) {
 }
 
 export default async function WeatherPage() {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const weather = await getWeatherPageData(district.key).catch(() => ({
     alerts: [],
     current: null,

@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   const districtKey = resolveDistrictFromHost(
     request.headers.get("x-forwarded-host") || request.headers.get("host")
   );
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

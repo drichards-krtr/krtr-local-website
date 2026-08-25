@@ -21,7 +21,7 @@ export default async function CmsDashboard({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const todayDate = getDateTextInTimeZone();
   const { startIso: todayStartIso, endIso: tomorrowStartIso } = getDayRangeInTimeZone(todayDate);
 

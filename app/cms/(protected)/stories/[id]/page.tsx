@@ -8,7 +8,7 @@ export default async function EditStoryPage({
 }: {
   params: { id: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const [{ data: story }, { data: slotRow }] = await Promise.all([
     supabase
       .from("stories")

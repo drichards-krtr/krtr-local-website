@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const siteUrl = getSiteUrl(district.key);
   const jsonLd = {
     "@context": "https://schema.org",

@@ -2,7 +2,7 @@ import { getCurrentDistrict } from "@/lib/districtServer";
 import { getFooterSettings } from "@/lib/footer";
 
 export default async function Footer() {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const footer = await getFooterSettings(district.key);
   return (
     <footer className="mt-10 border-t border-black/10 bg-white">

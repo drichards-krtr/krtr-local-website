@@ -43,8 +43,8 @@ async function getSeasonalNavItems(
 }
 
 export default async function Header() {
-  const district = getCurrentDistrict();
-  const siteScopeKey = getCurrentSiteScopeKey();
+  const district = await getCurrentDistrict();
+  const siteScopeKey = await getCurrentSiteScopeKey();
   const baseNavItems = [
     { label: "Home", href: "/" },
     ...getTopLevelTags(district.key).map((tag) => ({

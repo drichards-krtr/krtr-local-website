@@ -29,7 +29,7 @@ export async function generateMetadata({
 }: {
   params: { id: string };
 }): Promise<Metadata> {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const story = await getPublishedStoryByIdOrSlug(districtKey, params.id);
 
   if (!story) {
@@ -53,7 +53,7 @@ export async function generateMetadata({
 }
 
 export default async function StoryPage({ params }: { params: { id: string } }) {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const story = await getPublishedStoryByIdOrSlug(districtKey, params.id);
 
   if (!story) {

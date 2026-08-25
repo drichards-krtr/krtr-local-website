@@ -45,7 +45,7 @@ export default async function SeasonalVoteCms({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const [{ data: pageData }, { data: copyData }, { data: candidatesData }] =
     await Promise.all([
       supabase
@@ -79,7 +79,7 @@ export default async function SeasonalVoteCms({
 
   async function saveSettings(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
 
     const pageResult = await service.from("seasonal_pages").upsert(
@@ -114,7 +114,7 @@ export default async function SeasonalVoteCms({
 
   async function addCandidate(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const result = await service.from("vote_candidates").insert({
       district_key: nextDistrictKey,
@@ -141,7 +141,7 @@ export default async function SeasonalVoteCms({
 
   async function updateCandidate(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const result = await service
@@ -170,7 +170,7 @@ export default async function SeasonalVoteCms({
 
   async function deleteCandidate(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const result = await service

@@ -43,7 +43,7 @@ export default async function NominationsPage({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .from("nominations")
     .select("id, category, open_date, close_date, status_override, middle_school_athletes_enabled, created_at")
@@ -58,7 +58,7 @@ export default async function NominationsPage({
 
   async function createNomination(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
 
     const category = String(formData.get("category") || "") as NominationCategory;
@@ -83,7 +83,7 @@ export default async function NominationsPage({
 
   async function quickUpdate(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const statusOverride = String(formData.get("status_override") || "auto");
@@ -104,7 +104,7 @@ export default async function NominationsPage({
 
   async function deleteNomination(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const { error } = await supabase.from("nominations").delete().eq("id", id).eq("district_key", districtKey);

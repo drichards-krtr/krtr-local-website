@@ -52,7 +52,7 @@ export default async function VotingWinnersPage({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
 
   const { data, error } = await supabase
     .from("nomination_voting_winners")

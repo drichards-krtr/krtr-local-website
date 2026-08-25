@@ -23,7 +23,7 @@ function isActiveNowInChicago(alert: AlertRow) {
 
 export default async function AlertBanner() {
   noStore();
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const weather = await getCurrentWeather(district.key).catch(() => null);
   if (weather && weather.alerts.length > 0) {
     return (

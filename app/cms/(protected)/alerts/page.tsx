@@ -13,7 +13,7 @@ export default async function AlertsPage({
 }: {
   searchParams: { active?: string; search?: string; district?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
   // Cleanup: remove alerts that expired more than 7 days ago
   try {
@@ -55,7 +55,7 @@ export default async function AlertsPage({
 
   async function addAlert(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     await supabase.from("alerts").insert({
       district_key: String(formData.get("district_key") || districtKey),
       message: String(formData.get("message")),
@@ -71,7 +71,7 @@ export default async function AlertsPage({
 
   async function toggleAlert(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";
     await supabase.from("alerts").update({ active: next }).eq("id", id);

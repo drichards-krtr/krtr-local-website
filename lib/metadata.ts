@@ -13,8 +13,8 @@ type PageMetadataInput = {
   type?: "website" | "article";
 };
 
-export function getSiteUrl(districtKey?: DistrictKey) {
-  const requestOrigin = getRequestOrigin();
+export async function getSiteUrl(districtKey?: DistrictKey) {
+  const requestOrigin = await getRequestOrigin();
   if (requestOrigin) {
     try {
       return new URL(requestOrigin);
@@ -41,16 +41,16 @@ export function getSiteUrl(districtKey?: DistrictKey) {
     }
   }
 
-  const resolvedDistrictKey = districtKey || getCurrentDistrictKey();
+  const resolvedDistrictKey = districtKey || (await getCurrentDistrictKey());
   return new URL(`https://${getDistrictConfig(resolvedDistrictKey).host}`);
 }
 
-export function getMetadataBase(districtKey?: DistrictKey) {
+export async function getMetadataBase(districtKey?: DistrictKey) {
   return getSiteUrl(districtKey);
 }
 
-export function absoluteUrl(path = "/", districtKey?: DistrictKey) {
-  return new URL(path, getMetadataBase(districtKey)).toString();
+export async function absoluteUrl(path = "/", districtKey?: DistrictKey) {
+  return new URL(path, await getMetadataBase(districtKey)).toString();
 }
 
 const getActiveLogoImage = cache(async function getActiveLogoImage(districtKey: DistrictKey) {
@@ -87,16 +87,16 @@ export async function buildPageMetadata({
   image,
   type = "website",
 }: PageMetadataInput = {}): Promise<Metadata> {
-  const resolvedDistrictKey = districtKey || getCurrentDistrictKey();
+  const resolvedDistrictKey = districtKey || (await getCurrentDistrictKey());
   const district = getDistrictConfig(resolvedDistrictKey);
   const resolvedTitle = title?.trim() || district.metadata.siteName;
   const resolvedDescription =
     description?.trim() || district.metadata.defaultDescription;
   const resolvedImage = image || (await getActiveLogoImage(resolvedDistrictKey));
-  const url = absoluteUrl(path, resolvedDistrictKey);
+  const url = await absoluteUrl(path, resolvedDistrictKey);
 
   return {
-    metadataBase: getMetadataBase(resolvedDistrictKey),
+    metadataBase: await getMetadataBase(resolvedDistrictKey),
     title: resolvedTitle,
     description: resolvedDescription,
     alternates: {

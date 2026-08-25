@@ -8,9 +8,10 @@ export default async function HomePage({
 }: {
   searchParams?: { debug?: string };
 }) {
+  const siteScopeKey = await getCurrentDistrictKey();
   return (
     <HomePageContent
-      siteScopeKey={getCurrentDistrictKey()}
+      siteScopeKey={siteScopeKey}
       debug={searchParams?.debug === "1"}
     />
   );

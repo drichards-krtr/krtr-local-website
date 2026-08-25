@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const next = requestUrl.searchParams.get("next") || "/dashboard";
 
   if (code) {
-    const supabase = createNrcsServerClient();
+    const supabase = await createNrcsServerClient();
     await supabase.auth.exchangeCodeForSession(code);
   }
 

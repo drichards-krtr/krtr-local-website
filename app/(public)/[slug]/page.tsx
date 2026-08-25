@@ -25,7 +25,7 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const daily = await getPublishedDailyBySlug(districtKey, params.slug);
 
   if (!daily) {
@@ -46,7 +46,7 @@ export async function generateMetadata({
 }
 
 export default async function DailyPage({ params }: { params: { slug: string } }) {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const daily = await getPublishedDailyBySlug(districtKey, params.slug);
 
   if (!daily) {

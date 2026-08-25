@@ -10,7 +10,7 @@ export default async function DailysPage({
 }: {
   searchParams: { search?: string; status?: string; district?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
   const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
@@ -125,7 +125,7 @@ export default async function DailysPage({
 async function UnpublishButton({ dailyId, districtKey }: { dailyId: string; districtKey: DistrictKey }) {
   async function unpublish() {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     await supabase
       .from("dailys")
       .update({ status: "archived" })

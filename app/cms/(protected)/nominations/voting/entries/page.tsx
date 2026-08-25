@@ -38,7 +38,7 @@ export default async function VotingNominationEntriesPage({
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const selectedNominationId = String(searchParams?.nomination || "");
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
 
   await supabase.rpc("purge_old_nomination_submissions");
 

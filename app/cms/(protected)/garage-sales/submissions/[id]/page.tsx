@@ -63,7 +63,7 @@ export default async function EditGarageSaleSubmissionPage({
   params: { id: string };
   searchParams?: { district?: string; status?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const statusFilter = searchParams?.status || "draft";
 
@@ -93,7 +93,7 @@ export default async function EditGarageSaleSubmissionPage({
 
   async function updateSubmission(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const selectedDates = formData
       .getAll("sale_date")

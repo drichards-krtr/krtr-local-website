@@ -3,12 +3,12 @@ import { getCurrentDistrictKey } from "@/lib/districtServer";
 import { parseDistrictKey } from "@/lib/districts";
 import { getTagTree } from "@/lib/tags";
 
-export default function NewStoryPage({
+export default async function NewStoryPage({
   searchParams,
 }: {
   searchParams?: { district?: string };
 }) {
-  const districtKey = parseDistrictKey(searchParams?.district) || getCurrentDistrictKey();
+  const districtKey = parseDistrictKey(searchParams?.district) || (await getCurrentDistrictKey());
   return (
     <div>
       <h1 className="mb-4 text-2xl font-semibold">New Story</h1>

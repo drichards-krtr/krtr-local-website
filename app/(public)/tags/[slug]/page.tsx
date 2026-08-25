@@ -22,7 +22,7 @@ type Story = {
 };
 
 export default async function TagPage({ params }: { params: { slug: string } }) {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const districtUcsdTag = districtKey === "dlpc" ? "ucsd" : districtKey === "vs" ? "vscsd" : "bcsd";
   const districtSchoolChildren =
     districtKey === "dlpc"

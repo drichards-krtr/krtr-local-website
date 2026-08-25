@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 import { getCurrentDistrict } from "@/lib/districtServer";
 import { absoluteUrl } from "@/lib/metadata";
 
-export default function robots(): MetadataRoute.Robots {
-  const district = getCurrentDistrict();
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const district = await getCurrentDistrict();
 
   return {
     rules: {
@@ -11,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/cms/", "/api/"],
     },
-    host: absoluteUrl("/", district.key),
-    sitemap: absoluteUrl("/sitemap.xml", district.key),
+    host: await absoluteUrl("/", district.key),
+    sitemap: await absoluteUrl("/sitemap.xml", district.key),
   };
 }

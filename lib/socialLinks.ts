@@ -4,7 +4,6 @@ import {
   getFallbackDistrictKey,
   type SiteScopeKey,
 } from "@/lib/districts";
-import { getCurrentSiteScopeKey } from "@/lib/districtServer";
 import { createPublicClient } from "@/lib/supabase/public";
 
 export type SocialLinkSettings = {
@@ -15,7 +14,7 @@ export type SocialLinkSettings = {
 };
 
 export const getSocialLinkSettings = cache(async function getSocialLinkSettings(
-  siteScopeKey: SiteScopeKey = getCurrentSiteScopeKey()
+  siteScopeKey: SiteScopeKey
 ): Promise<SocialLinkSettings> {
   const fallbackDistrictKey = getFallbackDistrictKey(siteScopeKey);
   const district = getDistrictConfig(fallbackDistrictKey);

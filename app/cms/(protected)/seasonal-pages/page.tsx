@@ -25,7 +25,7 @@ export default async function SeasonalPagesDashboard({
   searchParams?: { district?: string };
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("seasonal_pages")
     .select("slug, nav_label, nav_enabled")

@@ -30,7 +30,7 @@ export default async function NominationCopyPage({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .from("nomination_copy")
     .select("category, title, body_markdown, submit_button_text, success_message")
@@ -45,7 +45,7 @@ export default async function NominationCopyPage({
 
   async function saveCopy(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const payload = NOMINATION_CATEGORIES.map((category) => ({
       district_key: nextDistrictKey,

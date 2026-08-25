@@ -7,7 +7,7 @@ export default async function EditDailyPage({
 }: {
   params: { id: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data: daily } = await supabase
     .from("dailys")
     .select(

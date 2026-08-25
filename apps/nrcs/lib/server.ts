@@ -3,12 +3,12 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { getNrcsServiceEnv, getNrcsSupabaseEnv } from "./env";
 
-export function createNrcsServerClient() {
+export async function createNrcsServerClient() {
   const { url, anon } = getNrcsSupabaseEnv();
 
   type CookieStore = Awaited<ReturnType<typeof cookies>>;
   type CookieOptions = Omit<Parameters<CookieStore["set"]>[0], "name" | "value">;
-  const cookieStore = cookies() as unknown as CookieStore;
+  const cookieStore = await cookies();
 
   return createServerClient(url, anon, {
     cookies: {

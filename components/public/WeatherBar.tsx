@@ -3,7 +3,7 @@ import { getCurrentWeather } from "@/lib/weather";
 import { getCurrentDistrict } from "@/lib/districtServer";
 
 export default async function WeatherBar() {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const weather = await getCurrentWeather(district.key).catch(() => null);
 
   return (

@@ -29,7 +29,7 @@ export default async function LogosPage({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data: logos } = await supabase
     .from("logos")
     .select("id, description, image_url, active, is_default, start_date, end_date")
@@ -40,7 +40,7 @@ export default async function LogosPage({
 
   async function addLogo(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const { isDefault, startDate, endDate } = normalizeLogoDates(formData);
     if (isDefault) {
@@ -65,7 +65,7 @@ export default async function LogosPage({
 
   async function toggleLogo(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;

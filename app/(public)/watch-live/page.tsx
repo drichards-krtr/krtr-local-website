@@ -50,7 +50,7 @@ function formatUpdatedAt(value: string | null, timezone: string) {
 }
 
 export default async function WatchLivePage() {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const supabase = createServiceClient();
   const [{ data: configData, error: configError }, { data: scheduleData, error: scheduleError }] =
     await Promise.all([

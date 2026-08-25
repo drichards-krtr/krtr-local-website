@@ -63,7 +63,7 @@ export default async function CalendarPage({
 }: {
   searchParams: { search?: string; status?: string; range?: string; savedAt?: string; district?: string; error?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
   const range = searchParams.range || "upcoming";
@@ -107,7 +107,7 @@ export default async function CalendarPage({
 
   async function addEvent(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const title = String(formData.get("title") || "").trim();
     const description = String(formData.get("description") || "").trim();
     const { error: addressError, addressFields } = getRequiredEventAddress(formData);
@@ -235,7 +235,7 @@ export default async function CalendarPage({
 
   async function unpublishEvent(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id"));
     await supabase.from("events").update({ status: "archived" }).eq("id", id);
     revalidatePath("/cms/calendar");

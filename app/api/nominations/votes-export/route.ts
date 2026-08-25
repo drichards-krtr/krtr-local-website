@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     resolveDistrictFromHost(request.headers.get("x-forwarded-host") || request.headers.get("host"));
   const sessionId = url.searchParams.get("session") || "";
 
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

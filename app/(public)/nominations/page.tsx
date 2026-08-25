@@ -92,7 +92,7 @@ export default async function NominationsPublicPage({
 }: {
   searchParams: { success?: string };
 }) {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const nomination = await getCurrentOpenNomination(district.key);
 
   if (!nomination) {

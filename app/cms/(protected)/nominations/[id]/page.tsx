@@ -42,7 +42,7 @@ export default async function EditNominationPage({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .from("nominations")
     .select("id, category, open_date, close_date, status_override, middle_school_athletes_enabled")
@@ -61,7 +61,7 @@ export default async function EditNominationPage({
 
   async function saveNomination(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const payload = {
       district_key: nextDistrictKey,

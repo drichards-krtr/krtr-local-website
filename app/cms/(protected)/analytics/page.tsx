@@ -41,7 +41,7 @@ export default async function AnalyticsPage({
 }: {
   searchParams: { day?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const requestedDay = searchParams.day?.trim() || "";
   let selectedDay = isDateInput(requestedDay) ? requestedDay : "";
 

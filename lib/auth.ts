@@ -4,13 +4,13 @@ import { CMS_SESSION_COOKIE, isCmsSessionExpired } from "./cmsSession";
 import { createServerSupabase } from "./supabase/server";
 
 export async function requireAdmin() {
-  const cookieStore = cookies() as unknown as Awaited<ReturnType<typeof cookies>>;
+  const cookieStore = await cookies();
   const cmsSessionValue = cookieStore.get(CMS_SESSION_COOKIE)?.value;
   if (isCmsSessionExpired(cmsSessionValue)) {
     redirect("/cms/login");
   }
 
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

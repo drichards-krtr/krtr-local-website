@@ -4,7 +4,7 @@ import type { NrcsRole, NrcsStaffProfile } from "./roles";
 import { hasNrcsRoleAtLeast } from "./roles";
 
 export async function getCurrentNrcsStaff() {
-  const supabase = createNrcsServerClient();
+  const supabase = await createNrcsServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

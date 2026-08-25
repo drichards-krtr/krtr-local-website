@@ -21,7 +21,7 @@ type FestivalLink = {
 };
 
 export default async function FestivalOfTrailsPage() {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   if (!district.features.festivalOfTrails) {
     notFound();
   }

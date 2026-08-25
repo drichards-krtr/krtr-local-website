@@ -6,7 +6,7 @@ import { getCurrentDistrictKey } from "@/lib/districtServer";
 export default async function AllSiteAdBanner() {
   try {
     const supabase = createServiceClient();
-    const districtKey = getCurrentDistrictKey();
+    const districtKey = await getCurrentDistrictKey();
     const [ad] = await pickAndTrackAdsForPlacement({
       supabase,
       districtKey,

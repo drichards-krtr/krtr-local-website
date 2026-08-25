@@ -191,7 +191,7 @@ export default async function CommunityCalendarPage({
   };
 }) {
   const supabase = createPublicClient();
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const nowText = getDateTimeTextInTimeZone();
   const todayDate = getDateTextInTimeZone();
   const selectedTowns = getParamSet(searchParams.towns);

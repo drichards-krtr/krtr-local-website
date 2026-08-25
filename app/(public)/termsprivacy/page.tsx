@@ -7,7 +7,7 @@ import { getCurrentDistrictKey } from "@/lib/districtServer";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const page = await getSitePage(districtKey, "termsprivacy");
 
   return buildPageMetadata({

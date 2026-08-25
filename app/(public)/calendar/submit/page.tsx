@@ -53,8 +53,8 @@ async function sendSubmissionNotificationEmail(submitterEmail: string, districtL
   console.info("[CalendarSubmission] notification email sent", { to });
 }
 
-export default function SubmitCalendarEventPage() {
-  const district = getCurrentDistrict();
+export default async function SubmitCalendarEventPage() {
+  const district = await getCurrentDistrict();
   async function submitEvent(formData: FormData) {
     "use server";
 

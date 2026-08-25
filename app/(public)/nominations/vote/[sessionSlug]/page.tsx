@@ -44,7 +44,7 @@ export default async function NominationVotingPublicPage({
   params: { sessionSlug: string };
   searchParams?: { success?: string };
 }) {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const supabase = createServiceClient();
   const { data: sessionData, error: sessionError } = await supabase
     .from("nomination_voting_sessions")

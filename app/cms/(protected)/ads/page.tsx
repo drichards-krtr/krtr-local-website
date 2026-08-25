@@ -9,7 +9,7 @@ export default async function AdsPage({
 }: {
   searchParams: { placement?: string; active?: string; search?: string; district?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const placement = searchParams.placement || "all";
   const active = searchParams.active || "all";
   const search = searchParams.search?.trim() || "";
@@ -37,7 +37,7 @@ export default async function AdsPage({
 
   async function addAd(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     await supabase.from("ads").insert({
       district_key: String(formData.get("district_key") || districtKey),
       placement: String(formData.get("placement") || "allsite"),
@@ -57,7 +57,7 @@ export default async function AdsPage({
 
   async function toggleAd(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";
     await supabase.from("ads").update({ active: next }).eq("id", id);

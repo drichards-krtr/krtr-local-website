@@ -6,7 +6,7 @@ import { getAllTagSlugs } from "@/lib/tags";
 import { getOpenGarageSaleSessions } from "@/lib/garage-sales";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const supabase = createPublicClient();
   const now = new Date();
 
@@ -17,16 +17,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const garageSaleSessions = await getOpenGarageSaleSessions(district.key);
   if (garageSaleSessions.length > 0) staticRoutes.push("/garage-sales");
 
-  const entries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
-    url: absoluteUrl(path, district.key),
+  const entries: MetadataRoute.Sitemap = await Promise.all(staticRoutes.map(async (path) => ({
+    url: await absoluteUrl(path, district.key),
     lastModified: now,
     changeFrequency: path === "/" ? "hourly" : "daily",
     priority: path === "/" ? 1 : 0.7,
-  }));
+  })));
 
   for (const slug of getAllTagSlugs(district.key)) {
     entries.push({
-      url: absoluteUrl(`/tags/${slug}`, district.key),
+      url: await absoluteUrl(`/tags/${slug}`, district.key),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.6,
@@ -45,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const story of stories || []) {
     const storyIdOrSlug = story.slug || story.id;
     entries.push({
-      url: absoluteUrl(`/stories/${storyIdOrSlug}`, district.key),
+      url: await absoluteUrl(`/stories/${storyIdOrSlug}`, district.key),
       lastModified: story.updated_at || story.published_at || now,
       changeFrequency: "weekly",
       priority: 0.8,
@@ -64,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const daily of dailys || []) {
     const dailyIdOrSlug = daily.slug || daily.id;
     entries.push({
-      url: absoluteUrl(`/${dailyIdOrSlug}`, district.key),
+      url: await absoluteUrl(`/${dailyIdOrSlug}`, district.key),
       lastModified: daily.updated_at || daily.published_at || now,
       changeFrequency: "daily",
       priority: 0.8,

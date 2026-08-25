@@ -76,7 +76,7 @@ export default async function EditNominationVotingPage({
   searchParams?: { district?: string; error?: string; success?: string };
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
 
   const { data: sessionData, error: sessionError } = await supabase
     .from("nomination_voting_sessions")
@@ -136,7 +136,7 @@ export default async function EditNominationVotingPage({
 
   async function saveSession(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const { error } = await service
       .from("nomination_voting_sessions")
@@ -159,7 +159,7 @@ export default async function EditNominationVotingPage({
 
   async function saveFinalists(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const selectedIds = formData.getAll("finalist").map(String).filter(Boolean);
 
@@ -219,7 +219,7 @@ export default async function EditNominationVotingPage({
 
   async function saveWinners(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const groups = getVotingGroupsForCategory(session.category);
     const rows = groups

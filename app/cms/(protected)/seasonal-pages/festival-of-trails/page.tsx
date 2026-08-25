@@ -47,7 +47,7 @@ export default async function SeasonalFestivalCms({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const [{ data: pageData }, { data: contentData }, { data: linksData }] =
     await Promise.all([
       supabase
@@ -88,7 +88,7 @@ export default async function SeasonalFestivalCms({
 
   async function saveSettings(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
 
     const pageResult = await service.from("seasonal_pages").upsert(
@@ -133,7 +133,7 @@ export default async function SeasonalFestivalCms({
 
   async function addLink(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const priority = Math.max(1, toInt(formData.get("priority"), 1));
     const { data: existing } = await service
@@ -164,7 +164,7 @@ export default async function SeasonalFestivalCms({
 
   async function updateLink(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const priority = Math.max(1, toInt(formData.get("priority"), 1));
@@ -201,7 +201,7 @@ export default async function SeasonalFestivalCms({
 
   async function deleteLink(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const result = await service

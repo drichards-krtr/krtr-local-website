@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { DISTRICT_OPTIONS } from "@/lib/districts";
 
 export default async function EditAdPage({ params }: { params: { id: string } }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("ads")
     .select("id, district_key, placement, description, start_date, end_date, active, image_url, link_url, html, weight")
@@ -20,7 +20,7 @@ export default async function EditAdPage({ params }: { params: { id: string } })
 
   async function updateAd(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = String(formData.get("district_key") || ad.district_key);
     await supabase
       .from("ads")

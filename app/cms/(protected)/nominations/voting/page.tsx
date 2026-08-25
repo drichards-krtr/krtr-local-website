@@ -86,7 +86,7 @@ export default async function NominationVotingPage({
   const selectedCategory = NOMINATION_CATEGORIES.includes(searchParams?.category as NominationCategory)
     ? (searchParams?.category as NominationCategory)
     : "athletes";
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
 
   await supabase.rpc("purge_old_nomination_submissions");
 
@@ -164,7 +164,7 @@ export default async function NominationVotingPage({
 
   async function createSession(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const category = String(formData.get("category") || "") as NominationCategory;
     const nominationId = String(formData.get("nomination_id") || "");
@@ -237,7 +237,7 @@ export default async function NominationVotingPage({
 
   async function quickUpdate(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const statusOverride = String(formData.get("status_override") || "auto");
@@ -264,7 +264,7 @@ export default async function NominationVotingPage({
 
   async function deleteSession(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const { data: session } = await service
@@ -287,7 +287,7 @@ export default async function NominationVotingPage({
 
   async function deleteVotes(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const { error } = await service.from("nomination_votes").delete().eq("session_id", id);

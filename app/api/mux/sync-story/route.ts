@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing storyId" }, { status: 400 });
   }
 
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

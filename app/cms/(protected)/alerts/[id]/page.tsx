@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { DISTRICT_OPTIONS } from "@/lib/districts";
 
 export default async function EditAlertPage({ params }: { params: { id: string } }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("alerts")
     .select("id, district_key, message, link_url, active, start_at, end_at")
@@ -19,7 +19,7 @@ export default async function EditAlertPage({ params }: { params: { id: string }
 
   async function updateAlert(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = String(formData.get("district_key") || alert.district_key);
     await supabase
       .from("alerts")

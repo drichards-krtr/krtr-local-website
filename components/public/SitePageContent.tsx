@@ -3,7 +3,7 @@ import { getSitePage, type SitePageSlug } from "@/lib/site-pages";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
 
 export default async function SitePageContent({ slug }: { slug: SitePageSlug }) {
-  const data = await getSitePage(getCurrentDistrictKey(), slug);
+  const data = await getSitePage(await getCurrentDistrictKey(), slug);
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">

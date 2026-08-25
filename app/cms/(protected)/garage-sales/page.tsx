@@ -88,7 +88,7 @@ export default async function GarageSalesCmsPage({
 }: {
   searchParams?: { district?: string; status?: string; saved?: string; geocode?: string; session?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const status = searchParams?.status || "published";
   const geocodeFilter = searchParams?.geocode || "";
@@ -127,7 +127,7 @@ export default async function GarageSalesCmsPage({
 
   async function createSession(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const name = String(formData.get("name") || "").trim();
     const slug = slugify(String(formData.get("slug") || name));
@@ -157,7 +157,7 @@ export default async function GarageSalesCmsPage({
 
   async function updateSession(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const name = String(formData.get("name") || "").trim();
@@ -191,7 +191,7 @@ export default async function GarageSalesCmsPage({
 
   async function updateSubmissionStatus(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextStatus = String(formData.get("status") || "draft");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;

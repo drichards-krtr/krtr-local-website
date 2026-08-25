@@ -13,7 +13,7 @@ export default async function StoriesPage({
 }: {
   searchParams: { search?: string; status?: string; district?: string };
 }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
   const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
@@ -152,7 +152,7 @@ export default async function StoriesPage({
 async function UnpublishButton({ storyId, districtKey }: { storyId: string; districtKey: DistrictKey }) {
   async function unpublish() {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     await supabase.from("stories").update({ status: "archived" }).eq("id", storyId).eq("district_key", districtKey);
     revalidatePath("/");
     revalidatePath("/cms/stories");
@@ -173,7 +173,7 @@ function renderSlotSelector(slot: string, districtKey: DistrictKey, slots: SlotR
 
   async function updateSlot(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const slotValue = (formData.get("slot") as string) || slot;
     const storyId = (formData.get("storyId") as string) || "";
 

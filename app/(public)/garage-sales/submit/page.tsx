@@ -103,7 +103,7 @@ export default async function SubmitGarageSalePage({
 }: {
   searchParams?: { session?: string };
 }) {
-  const district = getCurrentDistrict();
+  const district = await getCurrentDistrict();
   const sessions = await getOpenGarageSaleSessions(district.key);
   const selectedSession =
     sessions.find((session) => session.slug === searchParams?.session) || sessions[0] || null;

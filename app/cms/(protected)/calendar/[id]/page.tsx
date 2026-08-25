@@ -6,7 +6,7 @@ import { DISTRICT_OPTIONS } from "@/lib/districts";
 import { getRequiredEventAddress } from "@/lib/events";
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("events")
     .select(
@@ -32,7 +32,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
 
   async function updateEvent(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const nextDistrictKey = String(formData.get("district_key") || event.district_key);
     const title = String(formData.get("title") || "").trim();
     const startAt = String(formData.get("start_at") || "");

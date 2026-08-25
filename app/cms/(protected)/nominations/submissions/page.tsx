@@ -41,7 +41,7 @@ export default async function NominationSubmissionsPage({
 }) {
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
 
   await supabase.rpc("purge_old_nomination_submissions");
 
@@ -77,7 +77,7 @@ export default async function NominationSubmissionsPage({
 
   async function deleteSubmission(formData: FormData) {
     "use server";
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
     const id = String(formData.get("id") || "");
     const nextDistrictKey = parseDistrictKey(String(formData.get("district_key") || "")) || districtKey;
     const { error } = await supabase

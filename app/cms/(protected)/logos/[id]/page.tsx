@@ -17,7 +17,7 @@ function normalizeLogoDates(formData: FormData) {
 }
 
 export default async function EditLogoPage({ params }: { params: { id: string } }) {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("logos")
     .select("id, district_key, description, image_url, active, is_default, start_date, end_date")
@@ -32,7 +32,7 @@ export default async function EditLogoPage({ params }: { params: { id: string } 
 
   async function updateLogo(formData: FormData) {
     "use server";
-    const service = createServerSupabase();
+    const service = await createServerSupabase();
     const nextDistrictKey = String(formData.get("district_key") || logo.district_key);
     const { isDefault, startDate, endDate } = normalizeLogoDates(formData);
     if (isDefault) {

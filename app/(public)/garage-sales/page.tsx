@@ -49,7 +49,7 @@ export default async function GarageSalesPage({
 }: {
   searchParams?: { date?: string };
 }) {
-  const districtKey = getCurrentDistrictKey();
+  const districtKey = await getCurrentDistrictKey();
   const selectedDate = String(searchParams?.date || "").trim();
   const sessions = await getOpenGarageSaleSessions(districtKey);
   const submissions = await getPublishedGarageSaleSubmissions(
