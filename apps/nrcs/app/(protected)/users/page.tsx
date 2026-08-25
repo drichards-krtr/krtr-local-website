@@ -34,7 +34,7 @@ function getRole(value: FormDataEntryValue | null): NrcsRole {
 }
 
 function authRedirectUrl() {
-  return `${getNrcsSiteUrl().replace(/\/$/, "")}/api/auth/callback?next=/dashboard`;
+  return `${getNrcsSiteUrl().replace(/\/$/, "")}/set-password`;
 }
 
 async function inviteUser(formData: FormData) {
