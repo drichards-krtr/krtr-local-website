@@ -29,6 +29,25 @@ function isAuthorized(request: Request) {
   return Boolean(expected && supplied && supplied === expected);
 }
 
+function htmlToPlainText(html: string | null) {
+  if (!html) return null;
+
+  const text = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h1|h2|li|blockquote|ol|ul)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return text || null;
+}
+
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,6 +59,7 @@ export async function POST(request: Request) {
   }
 
   const service = createServiceClient();
+  const description = htmlToPlainText(payload.body_html);
   const { data: event, error: eventError } = await service
     .from("events")
     .upsert(
@@ -47,7 +67,7 @@ export async function POST(request: Request) {
         nrcs_source_id: payload.id,
         district_key: payload.district_key,
         title: payload.title,
-        description: null,
+        description,
         body_html: payload.body_html,
         location_name: payload.location_name,
         address: payload.address,
