@@ -80,7 +80,18 @@ export async function syncEventToCms(payload: SyncEventPayload) {
     return { ok: false, skipped: false, error: await response.text() } satisfies CmsSyncResult;
   }
 
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    const body = await response.text().catch(() => "");
+    return {
+      ok: false,
+      skipped: false,
+      error: `CMS sync endpoint returned ${contentType || "non-JSON"} instead of JSON. Check NRCS_CMS_API_BASE_URL. Response preview: ${body.slice(0, 200)}`,
+    } satisfies CmsSyncResult;
+  }
+
   let responseData: {
+    ok?: unknown;
     cms_event_id?: unknown;
     event_id?: unknown;
     cms_supabase_host?: unknown;
@@ -93,6 +104,14 @@ export async function syncEventToCms(payload: SyncEventPayload) {
     responseData = (await response.json()) as typeof responseData;
   } catch {
     responseData = {};
+  }
+
+  if (responseData.ok !== true) {
+    return {
+      ok: false,
+      skipped: false,
+      error: "CMS sync endpoint returned JSON, but did not confirm ok: true. Check NRCS_CMS_API_BASE_URL.",
+    } satisfies CmsSyncResult;
   }
 
   const cmsEventId =
