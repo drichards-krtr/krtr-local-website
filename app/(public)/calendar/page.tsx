@@ -188,6 +188,7 @@ export default async function CommunityCalendarPage({
     offset?: string;
     week_start?: string;
     weeks?: string;
+    selected_event?: string;
   }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
@@ -203,6 +204,7 @@ export default async function CommunityCalendarPage({
   const offset = Math.max(0, Number(resolvedSearchParams.offset || "0") || 0);
   const weeks = resolvedSearchParams.weeks === "4" ? 4 : 1;
   const weekStart = resolvedSearchParams.week_start || startOfCurrentWeekSunday(todayDate);
+  const selectedEventId = String(resolvedSearchParams.selected_event || "");
   const selectColumns =
       "id, title, description, body_html, location, location_name, address, city, state, zip, start_at, end_at, image_url, link_1_url, link_1_text, link_2_url, link_2_text, is_school_sports, event_classification_assignments(event_classification_terms(id, kind, name, enabled))";
 
@@ -254,6 +256,10 @@ export default async function CommunityCalendarPage({
     return date >= calendarStart && date < calendarEnd;
   });
   const calendarDays = Array.from({ length: weeks * 7 }, (_value, index) => addDays(calendarStart, index));
+  const selectedCalendarEvent =
+    view === "calendar" && selectedEventId
+      ? calendarEvents.find((event) => event.id === selectedEventId) || null
+      : null;
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">
@@ -327,14 +333,14 @@ export default async function CommunityCalendarPage({
         </form>
 
         <div className="mb-5 flex flex-wrap gap-3">
-          <a href={withParams(resolvedSearchParams, { view: "list", offset: 0 })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>List</a>
-          <a href={withParams(resolvedSearchParams, { view: "calendar", offset: 0, week_start: calendarStart })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "calendar" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>Calendar</a>
+          <a href={withParams(resolvedSearchParams, { view: "list", offset: 0, selected_event: undefined })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>List</a>
+          <a href={withParams(resolvedSearchParams, { view: "calendar", offset: 0, week_start: calendarStart, selected_event: undefined })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "calendar" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>Calendar</a>
           {view === "calendar" && (
             <>
-              <a href={withParams(resolvedSearchParams, { week_start: addDays(calendarStart, -7) })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Previous</a>
-              <a href={withParams(resolvedSearchParams, { week_start: addDays(calendarStart, 7) })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Next</a>
-              <a href={withParams(resolvedSearchParams, { weeks: 1 })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">1 Week</a>
-              <a href={withParams(resolvedSearchParams, { weeks: 4 })} className="hidden rounded border border-neutral-300 px-3 py-2 text-sm font-semibold md:inline-block">4 Weeks</a>
+              <a href={withParams(resolvedSearchParams, { week_start: addDays(calendarStart, -7), selected_event: undefined })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Previous</a>
+              <a href={withParams(resolvedSearchParams, { week_start: addDays(calendarStart, 7), selected_event: undefined })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Next</a>
+              <a href={withParams(resolvedSearchParams, { weeks: 1, selected_event: undefined })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">1 Week</a>
+              <a href={withParams(resolvedSearchParams, { weeks: 4, selected_event: undefined })} className="hidden rounded border border-neutral-300 px-3 py-2 text-sm font-semibold md:inline-block">4 Weeks</a>
             </>
           )}
         </div>
@@ -356,24 +362,59 @@ export default async function CommunityCalendarPage({
             <p className="text-sm text-neutral-600">No upcoming events are currently listed.</p>
           )
         ) : (
-          <div className={`grid gap-2 ${weeks === 4 ? "md:grid-cols-7" : "grid-cols-1 md:grid-cols-7"}`}>
-            {calendarDays.map((day) => {
-              const dayEvents = calendarEvents.filter((event) => getNaiveDateText(event.start_at) === day);
-              return (
-                <div key={day} className="min-h-[120px] rounded border border-neutral-200 p-3">
-                  <div className="mb-2 text-sm font-semibold">{day}</div>
-                  <div className="grid gap-2">
-                    {dayEvents.map((event) => (
-                      <details key={event.id} className="rounded bg-neutral-50 p-2 text-sm">
-                        <summary className="cursor-pointer font-medium">{formatTime(event.start_at)} {event.title}</summary>
-                        <div className="mt-3">{renderEventDetails(event)}</div>
-                      </details>
-                    ))}
+          <>
+            <div className={`grid gap-2 ${weeks === 4 ? "md:grid-cols-7" : "grid-cols-1 md:grid-cols-7"}`}>
+              {calendarDays.map((day) => {
+                const dayEvents = calendarEvents.filter((event) => getNaiveDateText(event.start_at) === day);
+                return (
+                  <div key={day} className="min-h-[120px] rounded border border-neutral-200 p-3">
+                    <div className="mb-2 text-sm font-semibold">{day}</div>
+                    <div className="grid gap-2">
+                      {dayEvents.map((event) => (
+                        <a
+                          key={event.id}
+                          href={withParams(resolvedSearchParams, {
+                            view: "calendar",
+                            week_start: calendarStart,
+                            selected_event: event.id,
+                          })}
+                          className="rounded bg-neutral-50 p-2 text-sm font-medium hover:bg-neutral-100"
+                        >
+                          {formatTime(event.start_at)} {event.title}
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            {selectedCalendarEvent && (
+              <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4 py-6">
+                <a
+                  href={withParams(resolvedSearchParams, { selected_event: undefined })}
+                  className="absolute inset-0"
+                  aria-label="Close event details"
+                />
+                <article className="relative z-10 max-h-[85vh] w-full max-w-2xl overflow-auto rounded bg-white p-5 shadow-xl">
+                  <header className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-semibold">{selectedCalendarEvent.title}</h2>
+                      <p className="mt-1 text-sm text-neutral-600">
+                        {formatTime(selectedCalendarEvent.start_at)} on {getNaiveDateText(selectedCalendarEvent.start_at)}
+                      </p>
+                    </div>
+                    <a
+                      href={withParams(resolvedSearchParams, { selected_event: undefined })}
+                      className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+                    >
+                      Close
+                    </a>
+                  </header>
+                  {renderEventDetails(selectedCalendarEvent)}
+                </article>
+              </div>
+            )}
+          </>
         )}
       </section>
     </main>
