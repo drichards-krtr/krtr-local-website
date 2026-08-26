@@ -179,7 +179,7 @@ function renderEventDetails(event: EventItem) {
 export default async function CommunityCalendarPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams?: Promise<{
     towns?: string | string[];
     sports?: string | string[];
     activities?: string | string[];
@@ -188,20 +188,21 @@ export default async function CommunityCalendarPage({
     offset?: string;
     week_start?: string;
     weeks?: string;
-  };
+  }>;
 }) {
+  const resolvedSearchParams = (await searchParams) || {};
   const supabase = createPublicClient();
   const districtKey = await getCurrentDistrictKey();
   const nowText = getDateTimeTextInTimeZone();
   const todayDate = getDateTextInTimeZone();
-  const selectedTowns = getParamSet(searchParams.towns);
-  const selectedSports = getParamSet(searchParams.sports);
-  const selectedActivities = getParamSet(searchParams.activities);
-  const selectedEventType = String(searchParams.event_type || "");
-  const view = searchParams.view === "calendar" ? "calendar" : "list";
-  const offset = Math.max(0, Number(searchParams.offset || "0") || 0);
-  const weeks = searchParams.weeks === "4" ? 4 : 1;
-  const weekStart = searchParams.week_start || startOfCurrentWeekSunday(todayDate);
+  const selectedTowns = getParamSet(resolvedSearchParams.towns);
+  const selectedSports = getParamSet(resolvedSearchParams.sports);
+  const selectedActivities = getParamSet(resolvedSearchParams.activities);
+  const selectedEventType = String(resolvedSearchParams.event_type || "");
+  const view = resolvedSearchParams.view === "calendar" ? "calendar" : "list";
+  const offset = Math.max(0, Number(resolvedSearchParams.offset || "0") || 0);
+  const weeks = resolvedSearchParams.weeks === "4" ? 4 : 1;
+  const weekStart = resolvedSearchParams.week_start || startOfCurrentWeekSunday(todayDate);
   const selectColumns =
       "id, title, description, body_html, location, location_name, address, city, state, zip, start_at, end_at, image_url, link_1_url, link_1_text, link_2_url, link_2_text, is_school_sports, event_classification_assignments(event_classification_terms(id, kind, name, enabled))";
 
@@ -326,14 +327,14 @@ export default async function CommunityCalendarPage({
         </form>
 
         <div className="mb-5 flex flex-wrap gap-3">
-          <a href={withParams(searchParams, { view: "list", offset: 0 })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>List</a>
-          <a href={withParams(searchParams, { view: "calendar", week_start: calendarStart })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "calendar" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>Calendar</a>
+          <a href={withParams(resolvedSearchParams, { view: "list", offset: 0 })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "list" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>List</a>
+          <a href={withParams(resolvedSearchParams, { view: "calendar", offset: 0, week_start: calendarStart })} className={`rounded px-3 py-2 text-sm font-semibold ${view === "calendar" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}>Calendar</a>
           {view === "calendar" && (
             <>
-              <a href={withParams(searchParams, { week_start: addDays(calendarStart, -7) })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Previous</a>
-              <a href={withParams(searchParams, { week_start: addDays(calendarStart, 7) })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Next</a>
-              <a href={withParams(searchParams, { weeks: 1 })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">1 Week</a>
-              <a href={withParams(searchParams, { weeks: 4 })} className="hidden rounded border border-neutral-300 px-3 py-2 text-sm font-semibold md:inline-block">4 Weeks</a>
+              <a href={withParams(resolvedSearchParams, { week_start: addDays(calendarStart, -7) })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Previous</a>
+              <a href={withParams(resolvedSearchParams, { week_start: addDays(calendarStart, 7) })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Next</a>
+              <a href={withParams(resolvedSearchParams, { weeks: 1 })} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">1 Week</a>
+              <a href={withParams(resolvedSearchParams, { weeks: 4 })} className="hidden rounded border border-neutral-300 px-3 py-2 text-sm font-semibold md:inline-block">4 Weeks</a>
             </>
           )}
         </div>
@@ -341,14 +342,14 @@ export default async function CommunityCalendarPage({
         {view === "list" ? (
           pageEvents.length > 0 ? (
             <div className="grid gap-4">
-              {pageEvents.map((event) => (
-                <article key={event.id} className="rounded border border-neutral-200 p-4">
+              {pageEvents.map((event, index) => (
+                <article key={event.id} id={`event-${index}`} className="scroll-mt-6 rounded border border-neutral-200 p-4">
                   <h2 className="text-lg font-semibold">{event.title}</h2>
                   {renderEventDetails(event)}
                 </article>
               ))}
               {hasMore && (
-                <a href={withParams(searchParams, { offset: offset + PAGE_SIZE })} className="w-fit rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">Load more</a>
+                <a href={`${withParams(resolvedSearchParams, { view: "list", offset: offset + PAGE_SIZE })}#event-${offset + PAGE_SIZE}`} className="w-fit rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">Load more</a>
               )}
             </div>
           ) : (
