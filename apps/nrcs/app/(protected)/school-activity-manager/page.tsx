@@ -82,13 +82,14 @@ async function updateTerm(formData: FormData) {
 export default async function SchoolActivityManagerPage({
   searchParams,
 }: {
-  searchParams?: { district?: string; error?: string; success?: string };
+  searchParams?: Promise<{ district?: string; error?: string; success?: string }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   await requireNrcsStaff("editor");
   const { activeDistrict, allowedDistricts } = await getNrcsDistrictContext();
   const districtKey =
-    searchParams?.district && allowedDistricts.some((district) => district.district_key === searchParams.district)
-      ? searchParams.district
+    resolvedSearchParams?.district && allowedDistricts.some((district) => district.district_key === resolvedSearchParams.district)
+      ? resolvedSearchParams.district
       : activeDistrict?.district_key || "dlpc";
 
   const service = createNrcsServiceClient();
@@ -110,8 +111,8 @@ export default async function SchoolActivityManagerPage({
         <p className="text-sm text-neutral-500">Manage district sports, extra-curriculars, and other event types.</p>
       </header>
 
-      {searchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>}
-      {searchParams?.success && <p className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
+      {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
+      {resolvedSearchParams?.success && <p className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
 
       <form className="flex flex-wrap gap-3 rounded border border-neutral-200 bg-white p-4">
         <select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { NrcsDistrictContext } from "@/lib/districts";
-import type { NrcsStaffProfile } from "@/lib/roles";
+import { hasNrcsRoleAtLeast, type NrcsStaffProfile } from "@/lib/roles";
 import NrcsLogoutButton from "./NrcsLogoutButton";
 
 const NAV_ITEMS = [
@@ -21,7 +21,7 @@ export default function NrcsShell({
   profile: NrcsStaffProfile;
 }) {
   const visibleItems = NAV_ITEMS.filter(
-    (item) => !("minimumRole" in item) || profile.role === item.minimumRole
+    (item) => !("minimumRole" in item) || hasNrcsRoleAtLeast(profile.role, item.minimumRole)
   );
 
   return (
