@@ -27,6 +27,7 @@ The separate NRCS Vercel application uses:
 - `NEXT_PUBLIC_NRCS_SUPABASE_ANON_KEY`
 - `NRCS_SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_NRCS_SITE_URL`
+- `NRCS_CMS_API_BASE_URL`
 - `NRCS_CMS_API_SECRET`
 
 ## Deployment Boundary
@@ -37,6 +38,23 @@ Use two Vercel applications:
 - NRCS: project root `C:\SITES\KRTR\apps\nrcs`
 
 The applications should have independent environment-variable sets and independent auth middleware/runtime boundaries.
+
+## Async Runtime Rule
+
+Prefer asynchronous APIs whenever the framework, runtime, database client, or integration boundary provides or requires
+an async contract. Do not force async request/runtime APIs into synchronous wrappers with type casts.
+
+For Next.js 16 and later, request-bound APIs such as `cookies()`, `headers()`, `params`, and `searchParams` must be
+handled asynchronously in Server Components, route handlers, metadata handlers, and server actions. Helper functions
+that depend on those APIs should also be async, and call sites should `await` them directly.
+
+At the beginning of each future phase, run an async compatibility check before feature work:
+
+- Search for request-bound APIs being used synchronously: `cookies()`, `headers()`, `params`, and `searchParams`.
+- Search for helper functions that hide those APIs behind sync wrappers or `unknown as Awaited<...>` casts.
+- Run root and NRCS typechecks before implementation starts.
+- Run root and NRCS production builds before deployment handoff.
+- Treat any newly touched legacy CMS route as suspect until its async request API usage is verified.
 
 ## District Ownership
 

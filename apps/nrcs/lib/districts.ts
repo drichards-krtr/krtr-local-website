@@ -1,4 +1,5 @@
 import { createNrcsServerClient } from "./server";
+import { getCmsDistricts } from "./cmsDistricts";
 
 export type NrcsDistrict = {
   id: string;
@@ -30,7 +31,27 @@ export async function getNrcsDistrictContext(): Promise<NrcsDistrictContext> {
     return { activeDistrict: null, allowedDistricts: [] };
   }
 
-  const districts = ((data || []) as NrcsDistrict[]).sort((a, b) => {
+  const localDistricts = (data || []) as NrcsDistrict[];
+  const cmsDistricts = await getCmsDistricts();
+  const cmsDistrictsByKey = new Map(
+    (cmsDistricts || []).map((district) => [district.district_key, district])
+  );
+  const mergedDistricts = localDistricts.map((district) => {
+    const cmsDistrict = cmsDistrictsByKey.get(district.district_key);
+    if (!cmsDistrict) return district;
+
+    return {
+      ...district,
+      subdomain: cmsDistrict.subdomain,
+      display_name: cmsDistrict.display_name,
+      enabled: cmsDistrict.enabled,
+      primary_contact_name: cmsDistrict.primary_contact_name,
+      primary_contact_email: cmsDistrict.primary_contact_email,
+      primary_contact_phone: cmsDistrict.primary_contact_phone,
+    };
+  });
+
+  const districts = mergedDistricts.filter((district) => district.enabled).sort((a, b) => {
     if (a.district_key === "dlpc") return -1;
     if (b.district_key === "dlpc") return 1;
     return a.display_name.localeCompare(b.display_name);
