@@ -1,5 +1,5 @@
 import { createNrcsServiceClient } from "./server";
-import { syncEventToCms } from "./cmsSync";
+import { syncEventToCms, type CmsSyncResult } from "./cmsSync";
 import type { EventClassificationKind } from "./eventClassifications";
 
 type EventWithTerm = {
@@ -31,7 +31,7 @@ type EventWithTerm = {
     | null;
 };
 
-export async function syncNrcsEventById(id: string) {
+export async function syncNrcsEventById(id: string): Promise<CmsSyncResult> {
   const service = createNrcsServiceClient();
   const { data, error } = await service
     .from("nrcs_events")

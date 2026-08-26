@@ -101,5 +101,14 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, event_id: event.id });
+  return NextResponse.json({
+    ok: true,
+    cms_event_id: event.id,
+    nrcs_source_id: payload.id,
+    district_key: payload.district_key,
+    status: payload.status,
+    cms_supabase_host: process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+      : null,
+  });
 }

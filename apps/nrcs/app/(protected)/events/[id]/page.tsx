@@ -10,12 +10,19 @@ import { createNrcsServiceClient } from "@/lib/server";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
   if (syncResult.ok) {
-    return "sync=success";
+    const params = new URLSearchParams({ sync: "success" });
+    if (syncResult.cmsEventId) params.set("cmsEventId", syncResult.cmsEventId);
+    if (syncResult.cmsSupabaseHost) params.set("cmsSupabaseHost", syncResult.cmsSupabaseHost);
+    if (syncResult.cmsStatus) params.set("cmsStatus", syncResult.cmsStatus);
+    if (syncResult.nrcsSourceId) params.set("nrcsSourceId", syncResult.nrcsSourceId);
+    return params.toString();
   }
 
-  return `sync=${syncResult.skipped ? "skipped" : "failed"}&syncMessage=${encodeURIComponent(
-    syncResult.error || "CMS sync failed"
-  )}`;
+  const params = new URLSearchParams({
+    sync: syncResult.skipped ? "skipped" : "failed",
+    syncMessage: syncResult.error || "CMS sync failed",
+  });
+  return params.toString();
 }
 
 async function updateEvent(formData: FormData) {
@@ -53,6 +60,10 @@ export default async function EditEventPage({
     success?: string;
     sync?: "success" | "failed" | "skipped";
     syncMessage?: string;
+    cmsEventId?: string;
+    cmsSupabaseHost?: string;
+    cmsStatus?: string;
+    nrcsSourceId?: string;
   }>;
 }) {
   const { id } = await params;
@@ -99,6 +110,32 @@ export default async function EditEventPage({
         <div className="rounded border border-green-300 bg-green-50 p-4 text-sm text-green-800">
           <p className="text-base font-semibold">CMS sync successful.</p>
           <p className="mt-1">CMS received this event.</p>
+          <dl className="mt-3 grid gap-1 text-xs text-green-900 md:grid-cols-2">
+            {resolvedSearchParams.cmsEventId && (
+              <>
+                <dt className="font-semibold">CMS Event ID</dt>
+                <dd>{resolvedSearchParams.cmsEventId}</dd>
+              </>
+            )}
+            {resolvedSearchParams.cmsSupabaseHost && (
+              <>
+                <dt className="font-semibold">CMS Supabase Host</dt>
+                <dd>{resolvedSearchParams.cmsSupabaseHost}</dd>
+              </>
+            )}
+            {resolvedSearchParams.cmsStatus && (
+              <>
+                <dt className="font-semibold">CMS Status</dt>
+                <dd>{resolvedSearchParams.cmsStatus}</dd>
+              </>
+            )}
+            {resolvedSearchParams.nrcsSourceId && (
+              <>
+                <dt className="font-semibold">NRCS Source ID</dt>
+                <dd>{resolvedSearchParams.nrcsSourceId}</dd>
+              </>
+            )}
+          </dl>
         </div>
       )}
       {(resolvedSearchParams?.sync === "failed" || resolvedSearchParams?.sync === "skipped") && (

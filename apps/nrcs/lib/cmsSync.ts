@@ -23,6 +23,26 @@ type SyncEventPayload = {
   } | null;
 };
 
+export type CmsSyncResult =
+  | {
+      ok: true;
+      skipped: false;
+      error: null;
+      cmsEventId: string | null;
+      cmsSupabaseHost: string | null;
+      cmsStatus: string | null;
+      nrcsSourceId: string | null;
+    }
+  | {
+      ok: false;
+      skipped: boolean;
+      error: string;
+      cmsEventId?: null;
+      cmsSupabaseHost?: null;
+      cmsStatus?: null;
+      nrcsSourceId?: null;
+    };
+
 export async function syncEventToCms(payload: SyncEventPayload) {
   const env = getNrcsCmsApiEnv();
   if (!env) {
@@ -30,7 +50,7 @@ export async function syncEventToCms(payload: SyncEventPayload) {
       ok: false,
       skipped: true,
       error: "CMS sync env vars are missing or NRCS_CMS_API_BASE_URL does not start with http:// or https://.",
-    };
+    } satisfies CmsSyncResult;
   }
 
   let response: Response;
@@ -49,12 +69,34 @@ export async function syncEventToCms(payload: SyncEventPayload) {
       ok: false,
       skipped: false,
       error: error instanceof Error ? error.message : "CMS sync request failed.",
-    };
+    } satisfies CmsSyncResult;
   }
 
   if (!response.ok) {
-    return { ok: false, skipped: false, error: await response.text() };
+    return { ok: false, skipped: false, error: await response.text() } satisfies CmsSyncResult;
   }
 
-  return { ok: true, skipped: false, error: null };
+  let responseData: {
+    cms_event_id?: unknown;
+    cms_supabase_host?: unknown;
+    status?: unknown;
+    nrcs_source_id?: unknown;
+  } = {};
+
+  try {
+    responseData = (await response.json()) as typeof responseData;
+  } catch {
+    responseData = {};
+  }
+
+  return {
+    ok: true,
+    skipped: false,
+    error: null,
+    cmsEventId: typeof responseData.cms_event_id === "string" ? responseData.cms_event_id : null,
+    cmsSupabaseHost:
+      typeof responseData.cms_supabase_host === "string" ? responseData.cms_supabase_host : null,
+    cmsStatus: typeof responseData.status === "string" ? responseData.status : null,
+    nrcsSourceId: typeof responseData.nrcs_source_id === "string" ? responseData.nrcs_source_id : null,
+  } satisfies CmsSyncResult;
 }

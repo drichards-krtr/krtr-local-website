@@ -10,12 +10,19 @@ import { createNrcsServiceClient } from "@/lib/server";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
   if (syncResult.ok) {
-    return "sync=success";
+    const params = new URLSearchParams({ sync: "success" });
+    if (syncResult.cmsEventId) params.set("cmsEventId", syncResult.cmsEventId);
+    if (syncResult.cmsSupabaseHost) params.set("cmsSupabaseHost", syncResult.cmsSupabaseHost);
+    if (syncResult.cmsStatus) params.set("cmsStatus", syncResult.cmsStatus);
+    if (syncResult.nrcsSourceId) params.set("nrcsSourceId", syncResult.nrcsSourceId);
+    return params.toString();
   }
 
-  return `sync=${syncResult.skipped ? "skipped" : "failed"}&syncMessage=${encodeURIComponent(
-    syncResult.error || "CMS sync failed"
-  )}`;
+  const params = new URLSearchParams({
+    sync: syncResult.skipped ? "skipped" : "failed",
+    syncMessage: syncResult.error || "CMS sync failed",
+  });
+  return params.toString();
 }
 
 async function createEvent(formData: FormData) {
