@@ -101,14 +101,27 @@ export async function POST(request: Request) {
     }
   }
 
+  const { data: verifiedEvent, error: verifyError } = await service
+    .from("events")
+    .select("id, nrcs_source_id, district_key, status")
+    .eq("id", event.id)
+    .maybeSingle();
+
+  if (verifyError || !verifiedEvent) {
+    return NextResponse.json(
+      { error: verifyError?.message || "CMS event write could not be verified" },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     table: "events",
-    cms_event_id: event.id,
-    event_id: event.id,
-    nrcs_source_id: payload.id,
-    district_key: payload.district_key,
-    status: payload.status,
+    cms_event_id: verifiedEvent.id,
+    event_id: verifiedEvent.id,
+    nrcs_source_id: verifiedEvent.nrcs_source_id,
+    district_key: verifiedEvent.district_key,
+    status: verifiedEvent.status,
     cms_supabase_host: process.env.NEXT_PUBLIC_SUPABASE_URL
       ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
       : null,

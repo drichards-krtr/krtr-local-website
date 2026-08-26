@@ -129,6 +129,16 @@ export async function syncEventToCms(payload: SyncEventPayload) {
       : typeof responseData.event_id === "string"
         ? responseData.event_id
         : null;
+  const cmsTable = typeof responseData.table === "string" ? responseData.table : null;
+  const cmsApiUrl = `${env.baseUrl}/api/nrcs/events`;
+
+  if (cmsTable !== "events" || !cmsEventId) {
+    return {
+      ok: false,
+      skipped: false,
+      error: `CMS sync endpoint returned ok:true, but did not confirm an events-table write. CMS API URL: ${cmsApiUrl}. Table: ${cmsTable || "missing"}. CMS Event ID: ${cmsEventId || "missing"}.`,
+    } satisfies CmsSyncResult;
+  }
 
   return {
     ok: true,
@@ -139,7 +149,7 @@ export async function syncEventToCms(payload: SyncEventPayload) {
       typeof responseData.cms_supabase_host === "string" ? responseData.cms_supabase_host : null,
     cmsStatus: typeof responseData.status === "string" ? responseData.status : null,
     nrcsSourceId: typeof responseData.nrcs_source_id === "string" ? responseData.nrcs_source_id : null,
-    cmsApiUrl: `${env.baseUrl}/api/nrcs/events`,
-    cmsTable: typeof responseData.table === "string" ? responseData.table : null,
+    cmsApiUrl,
+    cmsTable,
   } satisfies CmsSyncResult;
 }

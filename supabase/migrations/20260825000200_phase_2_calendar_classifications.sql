@@ -29,9 +29,11 @@ create table if not exists public.event_classification_assignments (
 create index if not exists events_district_status_start_id_idx
 on public.events (district_key, status, start_at, id);
 
-create unique index if not exists events_nrcs_source_id_key
-on public.events (nrcs_source_id)
-where nrcs_source_id is not null;
+alter table public.events
+drop constraint if exists events_nrcs_source_id_key;
+
+alter table public.events
+add constraint events_nrcs_source_id_key unique (nrcs_source_id);
 
 create index if not exists event_classification_terms_district_kind_name_idx
 on public.event_classification_terms (district_key, kind, name);
