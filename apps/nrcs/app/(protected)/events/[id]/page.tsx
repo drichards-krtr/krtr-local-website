@@ -15,6 +15,8 @@ function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventByI
     if (syncResult.cmsSupabaseHost) params.set("cmsSupabaseHost", syncResult.cmsSupabaseHost);
     if (syncResult.cmsStatus) params.set("cmsStatus", syncResult.cmsStatus);
     if (syncResult.nrcsSourceId) params.set("nrcsSourceId", syncResult.nrcsSourceId);
+    params.set("cmsApiUrl", syncResult.cmsApiUrl);
+    if (syncResult.cmsTable) params.set("cmsTable", syncResult.cmsTable);
     return params.toString();
   }
 
@@ -64,6 +66,8 @@ export default async function EditEventPage({
     cmsSupabaseHost?: string;
     cmsStatus?: string;
     nrcsSourceId?: string;
+    cmsApiUrl?: string;
+    cmsTable?: string;
   }>;
 }) {
   const { id } = await params;
@@ -117,6 +121,18 @@ export default async function EditEventPage({
                 <dd>{resolvedSearchParams.cmsEventId}</dd>
               </>
             )}
+            {resolvedSearchParams.cmsApiUrl && (
+              <>
+                <dt className="font-semibold">CMS API URL</dt>
+                <dd>{resolvedSearchParams.cmsApiUrl}</dd>
+              </>
+            )}
+            {resolvedSearchParams.cmsTable && (
+              <>
+                <dt className="font-semibold">CMS Table</dt>
+                <dd>{resolvedSearchParams.cmsTable}</dd>
+              </>
+            )}
             {resolvedSearchParams.cmsSupabaseHost && (
               <>
                 <dt className="font-semibold">CMS Supabase Host</dt>
@@ -136,6 +152,11 @@ export default async function EditEventPage({
               </>
             )}
           </dl>
+          {resolvedSearchParams.cmsTable && resolvedSearchParams.cmsTable !== "events" && (
+            <p className="mt-3 rounded border border-amber-300 bg-amber-100 p-2 text-xs text-amber-900">
+              CMS did not report writing to the events table.
+            </p>
+          )}
         </div>
       )}
       {(resolvedSearchParams?.sync === "failed" || resolvedSearchParams?.sync === "skipped") && (

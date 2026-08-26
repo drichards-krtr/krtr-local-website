@@ -32,6 +32,8 @@ export type CmsSyncResult =
       cmsSupabaseHost: string | null;
       cmsStatus: string | null;
       nrcsSourceId: string | null;
+      cmsApiUrl: string;
+      cmsTable: string | null;
     }
   | {
       ok: false;
@@ -41,6 +43,8 @@ export type CmsSyncResult =
       cmsSupabaseHost?: null;
       cmsStatus?: null;
       nrcsSourceId?: null;
+      cmsApiUrl?: string | null;
+      cmsTable?: null;
     };
 
 export async function syncEventToCms(payload: SyncEventPayload) {
@@ -78,9 +82,11 @@ export async function syncEventToCms(payload: SyncEventPayload) {
 
   let responseData: {
     cms_event_id?: unknown;
+    event_id?: unknown;
     cms_supabase_host?: unknown;
     status?: unknown;
     nrcs_source_id?: unknown;
+    table?: unknown;
   } = {};
 
   try {
@@ -89,14 +95,23 @@ export async function syncEventToCms(payload: SyncEventPayload) {
     responseData = {};
   }
 
+  const cmsEventId =
+    typeof responseData.cms_event_id === "string"
+      ? responseData.cms_event_id
+      : typeof responseData.event_id === "string"
+        ? responseData.event_id
+        : null;
+
   return {
     ok: true,
     skipped: false,
     error: null,
-    cmsEventId: typeof responseData.cms_event_id === "string" ? responseData.cms_event_id : null,
+    cmsEventId,
     cmsSupabaseHost:
       typeof responseData.cms_supabase_host === "string" ? responseData.cms_supabase_host : null,
     cmsStatus: typeof responseData.status === "string" ? responseData.status : null,
     nrcsSourceId: typeof responseData.nrcs_source_id === "string" ? responseData.nrcs_source_id : null,
+    cmsApiUrl: `${env.baseUrl}/api/nrcs/events`,
+    cmsTable: typeof responseData.table === "string" ? responseData.table : null,
   } satisfies CmsSyncResult;
 }

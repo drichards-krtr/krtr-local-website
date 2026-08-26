@@ -15,6 +15,8 @@ function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventByI
     if (syncResult.cmsSupabaseHost) params.set("cmsSupabaseHost", syncResult.cmsSupabaseHost);
     if (syncResult.cmsStatus) params.set("cmsStatus", syncResult.cmsStatus);
     if (syncResult.nrcsSourceId) params.set("nrcsSourceId", syncResult.nrcsSourceId);
+    params.set("cmsApiUrl", syncResult.cmsApiUrl);
+    if (syncResult.cmsTable) params.set("cmsTable", syncResult.cmsTable);
     return params.toString();
   }
 

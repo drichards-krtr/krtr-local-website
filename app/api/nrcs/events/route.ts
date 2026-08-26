@@ -103,7 +103,9 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
+    table: "events",
     cms_event_id: event.id,
+    event_id: event.id,
     nrcs_source_id: payload.id,
     district_key: payload.district_key,
     status: payload.status,
