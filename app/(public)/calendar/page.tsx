@@ -61,6 +61,10 @@ function getParamSet(value: string | string[] | undefined) {
   return new Set((Array.isArray(value) ? value : value ? [value] : []).map((item) => item.trim()).filter(Boolean));
 }
 
+function getLastParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[value.length - 1] : value;
+}
+
 function withParams(base: Record<string, string | string[] | undefined>, next: Record<string, string | number | undefined>) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(base)) {
@@ -124,9 +128,12 @@ function eventMatchesFilters(
   selectedTowns: Set<string>,
   selectedSports: Set<string>,
   selectedActivities: Set<string>,
-  selectedEventType: string
+  selectedEventType: string,
+  includeSchoolSports: boolean
 ) {
   const term = getClassification(event);
+  const isSchoolSport = event.is_school_sports || term?.kind === "sport";
+  if (!includeSchoolSports && isSchoolSport) return false;
   if (selectedSports.size > 0 && (!term || term.kind !== "sport" || !selectedSports.has(term.name))) return false;
   if (selectedActivities.size > 0 && (!term || term.kind !== "extra_curricular" || !selectedActivities.has(term.name))) return false;
   if (selectedEventType && (!term || term.kind !== "event_type" || term.name !== selectedEventType)) return false;
@@ -189,6 +196,7 @@ export default async function CommunityCalendarPage({
     week_start?: string;
     weeks?: string;
     selected_event?: string;
+    include_school_sports?: string | string[];
   }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
@@ -200,6 +208,7 @@ export default async function CommunityCalendarPage({
   const selectedSports = getParamSet(resolvedSearchParams.sports);
   const selectedActivities = getParamSet(resolvedSearchParams.activities);
   const selectedEventType = String(resolvedSearchParams.event_type || "");
+  const includeSchoolSports = getLastParam(resolvedSearchParams.include_school_sports) !== "0";
   const view = resolvedSearchParams.view === "calendar" ? "calendar" : "list";
   const offset = Math.max(0, Number(resolvedSearchParams.offset || "0") || 0);
   const weeks = resolvedSearchParams.weeks === "4" ? 4 : 1;
@@ -244,8 +253,19 @@ export default async function CommunityCalendarPage({
   const sportOptions = Array.from(termOptions.sport).sort(compareTermNames);
   const activityOptions = Array.from(termOptions.extra_curricular).sort(compareTermNames);
   const eventTypeOptions = Array.from(termOptions.event_type).sort(compareTermNames);
+  const hasSchoolSports = upcomingEvents.some((event) => {
+    const term = getClassification(event);
+    return event.is_school_sports || term?.kind === "sport";
+  });
   const filteredEvents = upcomingEvents.filter((event) =>
-    eventMatchesFilters(event, selectedTowns, selectedSports, selectedActivities, selectedEventType)
+    eventMatchesFilters(
+      event,
+      selectedTowns,
+      selectedSports,
+      selectedActivities,
+      selectedEventType,
+      includeSchoolSports
+    )
   );
   const pageEvents = view === "list" ? filteredEvents.slice(0, offset + PAGE_SIZE) : filteredEvents;
   const hasMore = view === "list" && filteredEvents.length > offset + PAGE_SIZE;
@@ -323,6 +343,18 @@ export default async function CommunityCalendarPage({
                     <option key={eventType} value={eventType}>{eventType}</option>
                   ))}
                 </select>
+              </label>
+            )}
+            {hasSchoolSports && (
+              <label className="inline-flex items-center gap-2 text-sm font-medium">
+                <input type="hidden" name="include_school_sports" value="0" />
+                <input
+                  type="checkbox"
+                  name="include_school_sports"
+                  value="1"
+                  defaultChecked={includeSchoolSports}
+                />
+                Include school sports
               </label>
             )}
           </div>
