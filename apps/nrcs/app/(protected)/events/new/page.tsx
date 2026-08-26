@@ -8,6 +8,16 @@ import type { EventClassificationTerm } from "@/lib/eventClassifications";
 import { syncNrcsEventById } from "@/lib/eventSyncServer";
 import { createNrcsServiceClient } from "@/lib/server";
 
+function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
+  if (syncResult.ok) {
+    return "sync=success";
+  }
+
+  return `sync=${syncResult.skipped ? "skipped" : "failed"}&syncMessage=${encodeURIComponent(
+    syncResult.error || "CMS sync failed"
+  )}`;
+}
+
 async function createEvent(formData: FormData) {
   "use server";
   await requireNrcsStaff("contributor");
@@ -27,27 +37,21 @@ async function createEvent(formData: FormData) {
   }
 
   const syncResult = await syncNrcsEventById(data.id);
-  if (!syncResult.ok) {
-    redirect(
-      `/events/${data.id}?district=${data.district_key}&error=${encodeURIComponent(
-        `Event saved, but CMS sync failed: ${syncResult.error}`
-      )}`
-    );
-  }
   revalidatePath("/events");
-  redirect(`/events/${data.id}?district=${data.district_key}&success=created`);
+  redirect(`/events/${data.id}?district=${data.district_key}&success=created&${syncSearchParams(syncResult)}`);
 }
 
 export default async function NewEventPage({
   searchParams,
 }: {
-  searchParams?: { district?: string; error?: string };
+  searchParams?: Promise<{ district?: string; error?: string }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   await requireNrcsStaff("contributor");
   const { activeDistrict, allowedDistricts } = await getNrcsDistrictContext();
   const districtKey =
-    searchParams?.district && allowedDistricts.some((district) => district.district_key === searchParams.district)
-      ? searchParams.district
+    resolvedSearchParams?.district && allowedDistricts.some((district) => district.district_key === resolvedSearchParams.district)
+      ? resolvedSearchParams.district
       : activeDistrict?.district_key || "dlpc";
 
   const service = createNrcsServiceClient();
@@ -63,7 +67,7 @@ export default async function NewEventPage({
         <h1 className="text-2xl font-semibold">New Event</h1>
         <p className="text-sm text-neutral-500">Create a draft or published Community Calendar event.</p>
       </header>
-      {searchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>}
+      {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
       <NrcsEventForm
         action={createEvent}
         districtOptions={allowedDistricts.map((district) => ({

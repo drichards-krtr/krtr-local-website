@@ -5,6 +5,7 @@ import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
 import { formatNaiveDateTime } from "@/lib/localDates";
 import { createNrcsServiceClient } from "@/lib/server";
+import { syncNrcsEventById } from "@/lib/eventSyncServer";
 
 type EventRow = {
   id: string;
@@ -16,6 +17,16 @@ type EventRow = {
   city: string;
   nrcs_event_classification_terms: { name: string; kind: string } | Array<{ name: string; kind: string }> | null;
 };
+
+function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
+  if (syncResult.ok) {
+    return "sync=success";
+  }
+
+  return `sync=${syncResult.skipped ? "skipped" : "failed"}&syncMessage=${encodeURIComponent(
+    syncResult.error || "CMS sync failed"
+  )}`;
+}
 
 async function duplicateEvent(formData: FormData) {
   "use server";
@@ -50,7 +61,8 @@ async function duplicateEvent(formData: FormData) {
   }
 
   revalidatePath("/events");
-  redirect(`/events/${copy.id}?district=${copy.district_key}`);
+  const syncResult = await syncNrcsEventById(copy.id);
+  redirect(`/events/${copy.id}?district=${copy.district_key}&success=duplicated&${syncSearchParams(syncResult)}`);
 }
 
 async function archiveEvent(formData: FormData) {
@@ -67,21 +79,30 @@ async function archiveEvent(formData: FormData) {
   }
 
   revalidatePath("/events");
-  redirect(`/events?district=${districtKey}&success=archived`);
+  const syncResult = await syncNrcsEventById(id);
+  redirect(`/events?district=${districtKey}&success=archived&${syncSearchParams(syncResult)}`);
 }
 
 export default async function NrcsEventsPage({
   searchParams,
 }: {
-  searchParams?: { district?: string; status?: string; error?: string; success?: string };
+  searchParams?: Promise<{
+    district?: string;
+    status?: string;
+    error?: string;
+    success?: string;
+    sync?: "success" | "failed" | "skipped";
+    syncMessage?: string;
+  }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   await requireNrcsStaff("contributor");
   const { activeDistrict, allowedDistricts } = await getNrcsDistrictContext();
   const districtKey =
-    searchParams?.district && allowedDistricts.some((district) => district.district_key === searchParams.district)
-      ? searchParams.district
+    resolvedSearchParams?.district && allowedDistricts.some((district) => district.district_key === resolvedSearchParams.district)
+      ? resolvedSearchParams.district
       : activeDistrict?.district_key || "dlpc";
-  const status = searchParams?.status || "upcoming";
+  const status = resolvedSearchParams?.status || "all";
 
   const service = createNrcsServiceClient();
   let query = service
@@ -113,8 +134,26 @@ export default async function NrcsEventsPage({
         </Link>
       </header>
 
-      {searchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>}
-      {searchParams?.success && <p className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
+      {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
+      {resolvedSearchParams?.success && (
+        <div className="rounded border border-green-300 bg-green-50 p-4 text-sm text-green-800">
+          <p className="text-base font-semibold">NRCS update successful.</p>
+        </div>
+      )}
+      {resolvedSearchParams?.sync === "success" && (
+        <div className="rounded border border-green-300 bg-green-50 p-4 text-sm text-green-800">
+          <p className="text-base font-semibold">CMS sync successful.</p>
+          <p className="mt-1">CMS received the latest event state.</p>
+        </div>
+      )}
+      {(resolvedSearchParams?.sync === "failed" || resolvedSearchParams?.sync === "skipped") && (
+        <div className="rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="text-base font-semibold">
+            CMS sync {resolvedSearchParams.sync === "skipped" ? "skipped" : "failed"}.
+          </p>
+          <p className="mt-1">{resolvedSearchParams.syncMessage || "NRCS updated the event, but CMS did not confirm receipt."}</p>
+        </div>
+      )}
 
       <form className="flex flex-wrap gap-3 rounded border border-neutral-200 bg-white p-4">
         <select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">
@@ -125,10 +164,10 @@ export default async function NrcsEventsPage({
           ))}
         </select>
         <select name="status" defaultValue={status} className="rounded border border-neutral-300 px-3 py-2 text-sm">
+          <option value="all">All</option>
           <option value="upcoming">Published</option>
           <option value="draft">Draft</option>
           <option value="archived">Archived</option>
-          <option value="all">All</option>
         </select>
         <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Apply</button>
       </form>

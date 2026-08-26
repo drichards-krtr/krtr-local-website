@@ -8,6 +8,16 @@ import type { EventClassificationTerm } from "@/lib/eventClassifications";
 import { syncNrcsEventById } from "@/lib/eventSyncServer";
 import { createNrcsServiceClient } from "@/lib/server";
 
+function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
+  if (syncResult.ok) {
+    return "sync=success";
+  }
+
+  return `sync=${syncResult.skipped ? "skipped" : "failed"}&syncMessage=${encodeURIComponent(
+    syncResult.error || "CMS sync failed"
+  )}`;
+}
+
 async function updateEvent(formData: FormData) {
   "use server";
   await requireNrcsStaff("contributor");
@@ -28,15 +38,8 @@ async function updateEvent(formData: FormData) {
   }
 
   const syncResult = await syncNrcsEventById(id);
-  if (!syncResult.ok) {
-    redirect(
-      `/events/${id}?district=${payload.district_key}&error=${encodeURIComponent(
-        `Event saved, but CMS sync failed: ${syncResult.error}`
-      )}`
-    );
-  }
   revalidatePath("/events");
-  redirect(`/events/${id}?district=${payload.district_key}&success=updated`);
+  redirect(`/events/${id}?district=${payload.district_key}&success=updated&${syncSearchParams(syncResult)}`);
 }
 
 export default async function EditEventPage({
@@ -44,9 +47,16 @@ export default async function EditEventPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: { district?: string; error?: string; success?: string };
+  searchParams?: Promise<{
+    district?: string;
+    error?: string;
+    success?: string;
+    sync?: "success" | "failed" | "skipped";
+    syncMessage?: string;
+  }>;
 }) {
   const { id } = await params;
+  const resolvedSearchParams = await searchParams;
   await requireNrcsStaff("contributor");
   const { allowedDistricts } = await getNrcsDistrictContext();
   const service = createNrcsServiceClient();
@@ -78,8 +88,27 @@ export default async function EditEventPage({
         <h1 className="text-2xl font-semibold">Edit Event</h1>
         <p className="text-sm text-neutral-500">Update event details, classification, and publication status.</p>
       </header>
-      {searchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>}
-      {searchParams?.success && <p className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
+      {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
+      {resolvedSearchParams?.success && (
+        <div className="rounded border border-green-300 bg-green-50 p-4 text-sm text-green-800">
+          <p className="text-base font-semibold">NRCS save successful.</p>
+          <p className="mt-1 capitalize">Event state: {event.status}.</p>
+        </div>
+      )}
+      {resolvedSearchParams?.sync === "success" && (
+        <div className="rounded border border-green-300 bg-green-50 p-4 text-sm text-green-800">
+          <p className="text-base font-semibold">CMS sync successful.</p>
+          <p className="mt-1">CMS received this event.</p>
+        </div>
+      )}
+      {(resolvedSearchParams?.sync === "failed" || resolvedSearchParams?.sync === "skipped") && (
+        <div className="rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="text-base font-semibold">
+            CMS sync {resolvedSearchParams.sync === "skipped" ? "skipped" : "failed"}.
+          </p>
+          <p className="mt-1">{resolvedSearchParams.syncMessage || "The event was saved in NRCS, but CMS did not confirm receipt."}</p>
+        </div>
+      )}
       <NrcsEventForm
         action={async (formData) => {
           "use server";
