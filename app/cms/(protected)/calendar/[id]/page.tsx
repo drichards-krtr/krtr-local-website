@@ -5,14 +5,15 @@ import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibrary
 import { DISTRICT_OPTIONS } from "@/lib/districts";
 import { getRequiredEventAddress } from "@/lib/events";
 
-export default async function EditEventPage({ params }: { params: { id: string } }) {
+export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("events")
     .select(
       "id, district_key, title, description, location, location_name, address, city, state, zip, start_at, end_at, status, image_url, submitter_id, link_1_url, link_1_text, link_2_url, link_2_text, is_school_sports"
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (!data) {
@@ -62,7 +63,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
         link_2_url: String(formData.get("link_2_url") || "").trim() || null,
         link_2_text: String(formData.get("link_2_text") || "").trim() || null,
       })
-      .eq("id", params.id);
+      .eq("id", id);
     if (error) {
       redirect(`/cms/calendar?district=${encodeURIComponent(nextDistrictKey)}&error=${encodeURIComponent(`Unable to update event: ${error.message}`)}`);
     }

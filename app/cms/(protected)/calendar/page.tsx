@@ -26,6 +26,7 @@ const WEEKDAYS = [
 
 type EventRow = {
   id: string;
+  nrcs_source_id: string | null;
   title: string;
   location: string | null;
   location_name: string | null;
@@ -66,14 +67,14 @@ export default async function CalendarPage({
   const supabase = await createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
-  const range = searchParams.range || "upcoming";
+  const range = searchParams.range || "all";
   const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
   const savedAtLabel = searchParams.savedAt ? formatSavedAt(searchParams.savedAt) : null;
   const errorMessage = getErrorMessage(searchParams.error);
 
   let query = supabase
     .from("events")
-    .select("id, title, location, location_name, address, city, state, zip, start_at, end_at, status, image_url, is_school_sports")
+    .select("id, nrcs_source_id, title, location, location_name, address, city, state, zip, start_at, end_at, status, image_url, is_school_sports")
     .eq("district_key", districtKey)
     .order("start_at", { ascending: false });
 
@@ -95,6 +96,8 @@ export default async function CalendarPage({
     if (range === "upcoming") {
       return effectiveEndDateTime >= nowText;
     }
+
+    if (range === "all") return true;
 
     const daysBack = range === "past_7" ? 7 : range === "past_30" ? 30 : range === "past_90" ? 90 : 0;
     if (!daysBack) return effectiveEndDateTime >= nowText;
@@ -283,6 +286,7 @@ export default async function CalendarPage({
           defaultValue={range}
           className="rounded border border-neutral-300 px-3 py-2 text-sm"
         >
+          <option value="all">All Dates</option>
           <option value="upcoming">Upcoming + Active</option>
           <option value="past_7">Past 7 Days</option>
           <option value="past_30">Past 30 Days</option>
@@ -433,10 +437,11 @@ export default async function CalendarPage({
       </section>
 
       <section className="rounded border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
+        <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Title</div>
           <div>Location</div>
           <div>Sports</div>
+          <div>Source</div>
           <div>Date</div>
           <div>Status</div>
           <div>Actions</div>
@@ -447,7 +452,7 @@ export default async function CalendarPage({
           return (
             <div
               key={event.id}
-              className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
+              className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr_1fr] gap-2 border-b border-neutral-100 px-4 py-3 text-sm"
             >
               <div>{event.title}</div>
               <div className="text-neutral-500">
@@ -457,6 +462,7 @@ export default async function CalendarPage({
                 {locationLines.length === 0 && "-"}
               </div>
               <div>{event.is_school_sports ? "🏆" : "-"}</div>
+              <div>{event.nrcs_source_id ? "NRCS" : "CMS"}</div>
               <div className="text-neutral-500">
                 {formatNaiveDate(event.start_at)}
               </div>
