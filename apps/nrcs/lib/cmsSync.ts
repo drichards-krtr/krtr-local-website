@@ -67,12 +67,21 @@ export async function syncEventToCms(payload: SyncEventPayload) {
       },
       body: JSON.stringify(payload),
       cache: "no-store",
+      redirect: "manual",
     });
   } catch (error) {
     return {
       ok: false,
       skipped: false,
       error: error instanceof Error ? error.message : "CMS sync request failed.",
+    } satisfies CmsSyncResult;
+  }
+
+  if (response.status >= 300 && response.status < 400) {
+    return {
+      ok: false,
+      skipped: false,
+      error: `CMS sync endpoint redirected to ${response.headers.get("location") || "another URL"}. Set NRCS_CMS_API_BASE_URL to the canonical CMS host so the Authorization header is not lost.`,
     } satisfies CmsSyncResult;
   }
 
