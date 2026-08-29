@@ -13,6 +13,10 @@ import {
   type CopyStreamType,
 } from "@/lib/stories";
 import { CopyStreamForms, FactsForm, StoryOverviewForm } from "@/components/NrcsStoryForms";
+import NrcsCloudinaryAssetPicker from "@/components/NrcsCloudinaryAssetPicker";
+import { NrcsMuxLibraryPicker, NrcsMuxUploader } from "@/components/NrcsMuxVideoTools";
+import NrcsStoryTabs from "@/components/NrcsStoryTabs";
+import { getMuxAsset, getMuxUpload, muxStatusFromAsset, muxStatusFromUpload, muxThumbnailUrl } from "@/lib/mux";
 
 type StoryRow = {
   id: string;
@@ -51,6 +55,12 @@ type CopyVersionRow = {
   headline: string | null;
   body_html: string;
   created_at: string;
+};
+
+type TagOption = {
+  id: string;
+  name: string;
+  tag_type: string;
 };
 
 function storyPath(storyId: string, districtKey: string, params = "success=saved") {
@@ -374,18 +384,23 @@ async function addAsset(formData: FormData) {
   const storyId = String(formData.get("story_id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
   const title = String(formData.get("title") || "").trim();
+  const assetType = String(formData.get("asset_type") || "image");
+  const categoryId = String(formData.get("category_id") || "").trim() || null;
   if (!title) redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent("Asset title is required")}`));
+  if (!["image", "graphic"].includes(assetType)) {
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent("Use the source document or video upload flow for this asset type.")}`));
+  }
 
   const supabase = await createNrcsServerClient();
   const { data: asset, error } = await supabase
     .from("nrcs_assets")
     .insert({
-      asset_type: String(formData.get("asset_type") || "image"),
+      asset_type: assetType,
       title,
+      district_key: districtKey,
+      category_id: categoryId,
       cloudinary_url: String(formData.get("cloudinary_url") || "").trim() || null,
       cloudinary_public_id: String(formData.get("cloudinary_public_id") || "").trim() || null,
-      mux_asset_id: String(formData.get("mux_asset_id") || "").trim() || null,
-      mux_playback_id: String(formData.get("mux_playback_id") || "").trim() || null,
       created_by: profile.id,
     })
     .select("id")
@@ -399,6 +414,62 @@ async function addAsset(formData: FormData) {
   });
   revalidatePath(`/stories/${storyId}`);
   redirect(storyPath(storyId, districtKey, "success=asset"));
+}
+
+async function refreshVideoAsset(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("contributor");
+  const storyId = String(formData.get("story_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc");
+  const assetId = String(formData.get("asset_id") || "");
+  const supabase = await createNrcsServerClient();
+  const { data: asset, error } = await supabase
+    .from("nrcs_assets")
+    .select("id, mux_asset_id, mux_upload_id, mux_playback_id, mux_status")
+    .eq("id", assetId)
+    .maybeSingle();
+
+  if (error || !asset) {
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(error?.message || "Video asset not found")}`));
+  }
+
+  let muxAssetId = asset.mux_asset_id as string | null;
+  let muxUploadId = asset.mux_upload_id as string | null;
+  let muxPlaybackId = asset.mux_playback_id as string | null;
+  let muxStatus = (asset.mux_status as string | null) || "none";
+
+  if (muxUploadId && (!muxAssetId || muxStatus !== "ready")) {
+    const upload = await getMuxUpload(muxUploadId);
+    if (upload?.asset_id) muxAssetId = upload.asset_id;
+    muxStatus = muxStatusFromUpload(upload?.status) || muxStatus;
+  }
+
+  if (muxAssetId && (muxStatus !== "ready" || !muxPlaybackId)) {
+    const muxAsset = await getMuxAsset(muxAssetId);
+    if (muxAsset?.id) muxAssetId = muxAsset.id;
+    if (muxAsset?.upload_id) muxUploadId = muxAsset.upload_id;
+    muxPlaybackId = muxAsset?.playback_ids?.[0]?.id || muxPlaybackId;
+    muxStatus = muxStatusFromAsset(muxAsset?.status) || muxStatus;
+  }
+
+  const { error: updateError } = await supabase
+    .from("nrcs_assets")
+    .update({
+      mux_asset_id: muxAssetId,
+      mux_upload_id: muxUploadId,
+      mux_playback_id: muxPlaybackId,
+      mux_status: muxStatus,
+      thumbnail_url: muxThumbnailUrl(muxPlaybackId),
+    })
+    .eq("id", assetId);
+
+  if (updateError) {
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(updateError.message)}`));
+  }
+
+  revalidatePath(`/stories/${storyId}`);
+  redirect(storyPath(storyId, districtKey, "success=mux-refresh"));
 }
 
 async function linkEvent(formData: FormData) {
@@ -484,7 +555,7 @@ export default async function EditStoryPage({
     supabase.from("nrcs_copy_streams").select("id, stream_type, needs_review, review_reason, current_version_id").eq("story_id", id),
     supabase.from("nrcs_review_flags").select("id, reason, status, created_at").eq("story_id", id).eq("status", "open").order("created_at", { ascending: false }),
     supabase.from("nrcs_story_sources").select("interaction_notes, nrcs_sources(id, source_type, name, organization, role_title, email, phone, url)").eq("story_id", id),
-    supabase.from("nrcs_story_assets").select("relationship, nrcs_assets(id, asset_type, title, cloudinary_url, mux_playback_id)").eq("story_id", id),
+    supabase.from("nrcs_story_assets").select("relationship, nrcs_assets(id, asset_type, title, cloudinary_url, mux_playback_id, mux_status, thumbnail_url, category_id, nrcs_categories(name))").eq("story_id", id),
     supabase.from("nrcs_story_events").select("event_id, nrcs_events(id, title, start_at, status)").eq("story_id", id),
     supabase.from("nrcs_related_stories").select("related_story_id, nrcs_stories!nrcs_related_stories_related_story_id_fkey(id, title, lifecycle_state)").eq("story_id", id),
     supabase.from("nrcs_events").select("id, title, start_at, status").eq("district_key", storyRow.district_key).order("start_at", { ascending: false }).limit(100),
@@ -520,6 +591,9 @@ export default async function EditStoryPage({
         .in("source_id", attachedSourceIds)
         .order("created_at", { ascending: false })
     : { data: [] };
+  const categoryOptions = (categories || []) as Array<{ id: string; name: string; enabled: boolean }>;
+  const tagOptions = (allTags || []) as TagOption[];
+  const openFlagCount = (flags || []).length;
 
   return (
     <div className="grid gap-6">
@@ -536,231 +610,301 @@ export default async function EditStoryPage({
       {resolvedSearchParams.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
       {resolvedSearchParams.success && <p className="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">Story update saved.</p>}
 
-      <StoryOverviewForm action={updateOverview} story={storyRow} districtOptions={allowedDistricts} categories={(categories || []) as Array<{ id: string; name: string; enabled: boolean }>} />
-      <FactsForm action={saveFacts} storyId={id} bodyHtml={(facts as { body_html?: string } | null)?.body_html || ""} />
-      <CopyStreamForms action={saveCopyStream} storyId={id} streams={streamsWithVersions} />
-
-      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
-        <h2 className="text-lg font-semibold">Web Output</h2>
-        <form action={saveWebOutput} className="grid gap-3 md:grid-cols-2">
-          <input type="hidden" name="story_id" value={id} />
-          <input type="hidden" name="district_key" value={storyRow.district_key} />
-          <input type="hidden" name="output_id" value={(webOutput as WebOutputRow | null)?.id || ""} />
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Status</span>
-            <select name="status" defaultValue={(webOutput as WebOutputRow | null)?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">
-              <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="published">Published</option>
-              <option value="unpublished">Unpublished</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Exact Web Copy Version</span>
-            <select name="copy_version_id" defaultValue={(webOutput as WebOutputRow | null)?.copy_version_id || ""} className="rounded border border-neutral-300 px-3 py-2">
-              <option value="">None selected</option>
-              {streamsWithVersions
-                .filter((stream) => stream.stream_type === "web" && stream.current_version)
-                .map((stream) => (
-                  <option key={stream.current_version?.id} value={stream.current_version?.id}>
-                    Web Copy v{stream.current_version?.version_number}
-                  </option>
+      <NrcsStoryTabs
+        tabs={[
+          {
+            id: "overview",
+            label: "Overview",
+            children: (
+              <StoryOverviewForm action={updateOverview} story={storyRow} districtOptions={allowedDistricts} categories={categoryOptions} />
+            ),
+          },
+          {
+            id: "facts",
+            label: "Facts",
+            children: <FactsForm action={saveFacts} storyId={id} bodyHtml={(facts as { body_html?: string } | null)?.body_html || ""} />,
+          },
+          {
+            id: "copy",
+            label: "Copy",
+            children: <CopyStreamForms action={saveCopyStream} storyId={id} streams={streamsWithVersions} />,
+          },
+          {
+            id: "web-output",
+            label: "Web Output",
+            children: (
+              <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+                <h2 className="text-lg font-semibold">Web Output</h2>
+                <form action={saveWebOutput} className="grid gap-3 md:grid-cols-2">
+                  <input type="hidden" name="story_id" value={id} />
+                  <input type="hidden" name="district_key" value={storyRow.district_key} />
+                  <input type="hidden" name="output_id" value={(webOutput as WebOutputRow | null)?.id || ""} />
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-medium">Status</span>
+                    <select name="status" defaultValue={(webOutput as WebOutputRow | null)?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">
+                      <option value="draft">Draft</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="published">Published</option>
+                      <option value="unpublished">Unpublished</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-medium">Exact Web Copy Version</span>
+                    <select name="copy_version_id" defaultValue={(webOutput as WebOutputRow | null)?.copy_version_id || ""} className="rounded border border-neutral-300 px-3 py-2">
+                      <option value="">None selected</option>
+                      {streamsWithVersions
+                        .filter((stream) => stream.stream_type === "web" && stream.current_version)
+                        .map((stream) => (
+                          <option key={stream.current_version?.id} value={stream.current_version?.id}>
+                            Web Copy v{stream.current_version?.version_number}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-medium">Slug</span>
+                    <input name="slug" defaultValue={(webOutput as WebOutputRow | null)?.slug || ""} className="rounded border border-neutral-300 px-3 py-2" />
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-medium">Scheduled At</span>
+                    <input name="scheduled_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.scheduled_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-medium">Published At</span>
+                    <input name="published_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.published_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-medium">SEO Title</span>
+                    <input name="seo_title" defaultValue={(webOutput as WebOutputRow | null)?.seo_title || ""} className="rounded border border-neutral-300 px-3 py-2" />
+                  </label>
+                  <label className="grid gap-1 text-sm md:col-span-2">
+                    <span className="font-medium">SEO Description</span>
+                    <textarea name="seo_description" defaultValue={(webOutput as WebOutputRow | null)?.seo_description || ""} className="min-h-[80px] rounded border border-neutral-300 px-3 py-2" />
+                  </label>
+                  <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Save Web Output</button>
+                </form>
+              </section>
+            ),
+          },
+          {
+            id: "tags",
+            label: "Tags",
+            children: (
+              <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+                <h2 className="text-lg font-semibold">Tags</h2>
+                <div className="flex flex-wrap gap-2">
+                  {(storyTags || []).map((link) => {
+                    const tag = Array.isArray(link.nrcs_tags) ? link.nrcs_tags[0] : link.nrcs_tags;
+                    return tag ? (
+                      <form key={tag.id} action={removeStoryTag} className="inline-flex items-center gap-2 rounded border border-neutral-200 px-3 py-1 text-sm">
+                        <input type="hidden" name="story_id" value={id} />
+                        <input type="hidden" name="district_key" value={storyRow.district_key} />
+                        <input type="hidden" name="tag_id" value={tag.id} />
+                        <span>{tag.name}</span>
+                        <button className="font-semibold">Remove</button>
+                      </form>
+                    ) : null;
+                  })}
+                  {(storyTags || []).length === 0 && <p className="text-sm text-neutral-500">No tags attached.</p>}
+                </div>
+                <form action={addStoryTag} className="flex flex-wrap gap-2">
+                  <input type="hidden" name="story_id" value={id} />
+                  <input type="hidden" name="district_key" value={storyRow.district_key} />
+                  <select name="tag_id" className="rounded border border-neutral-300 px-3 py-2 text-sm">
+                    <option value="">Select tag</option>
+                    {tagOptions.map((tag) => (
+                      <option key={tag.id} value={tag.id}>{tag.name} ({tag.tag_type.replace("_", " ")})</option>
+                    ))}
+                  </select>
+                  <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Tag</button>
+                </form>
+              </section>
+            ),
+          },
+          {
+            id: "review-flags",
+            label: "Review Flags",
+            attentionCount: openFlagCount,
+            children: (
+              <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+                <h2 className="text-lg font-semibold">Open Review Flags</h2>
+                {(flags || []).map((flag) => (
+                  <form key={flag.id} action={resolveReviewFlag} className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 text-sm">
+                    <input type="hidden" name="story_id" value={id} />
+                    <input type="hidden" name="district_key" value={storyRow.district_key} />
+                    <input type="hidden" name="flag_id" value={flag.id} />
+                    <span>{flag.reason}</span>
+                    <button className="rounded border border-neutral-300 px-3 py-1 font-semibold">Resolve</button>
+                  </form>
                 ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Slug</span>
-            <input name="slug" defaultValue={(webOutput as WebOutputRow | null)?.slug || ""} className="rounded border border-neutral-300 px-3 py-2" />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Scheduled At</span>
-            <input name="scheduled_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.scheduled_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Published At</span>
-            <input name="published_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.published_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">SEO Title</span>
-            <input name="seo_title" defaultValue={(webOutput as WebOutputRow | null)?.seo_title || ""} className="rounded border border-neutral-300 px-3 py-2" />
-          </label>
-          <label className="grid gap-1 text-sm md:col-span-2">
-            <span className="font-medium">SEO Description</span>
-            <textarea name="seo_description" defaultValue={(webOutput as WebOutputRow | null)?.seo_description || ""} className="min-h-[80px] rounded border border-neutral-300 px-3 py-2" />
-          </label>
-          <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Save Web Output</button>
-        </form>
-      </section>
-
-      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
-        <h2 className="text-lg font-semibold">Tags</h2>
-        <div className="flex flex-wrap gap-2">
-          {(storyTags || []).map((link) => {
-            const tag = Array.isArray(link.nrcs_tags) ? link.nrcs_tags[0] : link.nrcs_tags;
-            return tag ? (
-              <form key={tag.id} action={removeStoryTag} className="inline-flex items-center gap-2 rounded border border-neutral-200 px-3 py-1 text-sm">
-                <input type="hidden" name="story_id" value={id} />
-                <input type="hidden" name="district_key" value={storyRow.district_key} />
-                <input type="hidden" name="tag_id" value={tag.id} />
-                <span>{tag.name}</span>
-                <button className="font-semibold">Remove</button>
-              </form>
-            ) : null;
-          })}
-          {(storyTags || []).length === 0 && <p className="text-sm text-neutral-500">No tags attached.</p>}
-        </div>
-        <form action={addStoryTag} className="flex flex-wrap gap-2">
-          <input type="hidden" name="story_id" value={id} />
-          <input type="hidden" name="district_key" value={storyRow.district_key} />
-          <select name="tag_id" className="rounded border border-neutral-300 px-3 py-2 text-sm">
-            <option value="">Select tag</option>
-            {(allTags || []).map((tag) => (
-              <option key={tag.id} value={tag.id}>{tag.name} ({tag.tag_type.replace("_", " ")})</option>
-            ))}
-          </select>
-          <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Tag</button>
-        </form>
-      </section>
-
-      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
-        <h2 className="text-lg font-semibold">Open Review Flags</h2>
-        {(flags || []).map((flag) => (
-          <form key={flag.id} action={resolveReviewFlag} className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 text-sm">
-            <input type="hidden" name="story_id" value={id} />
-            <input type="hidden" name="district_key" value={storyRow.district_key} />
-            <input type="hidden" name="flag_id" value={flag.id} />
-            <span>{flag.reason}</span>
-            <button className="rounded border border-neutral-300 px-3 py-1 font-semibold">Resolve</button>
-          </form>
-        ))}
-        {(flags || []).length === 0 && <p className="text-sm text-neutral-500">No open review flags.</p>}
-      </section>
-
-      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
-        <h2 className="text-lg font-semibold">Sources</h2>
-        <div className="grid gap-2 text-sm">
-          {(sourceLinks || []).map((link, index) => {
-            const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
-            return <p key={`${source?.id || index}`}>{source?.name || "Source"} {source?.organization ? `- ${source.organization}` : ""}</p>;
-          })}
-          {(sourceLinks || []).length === 0 && <p className="text-neutral-500">No sources attached.</p>}
-        </div>
-        <div className="grid gap-2 text-sm">
-          <h3 className="font-semibold">Private Source Documents</h3>
-          {(sourceDocuments || []).map((document) => (
-            <a key={document.id} href={`/api/source-documents/${document.id}/download`} className="underline">
-              {document.file_name}
-            </a>
-          ))}
-          {(sourceDocuments || []).length === 0 && <p className="text-neutral-500">No source documents uploaded.</p>}
-        </div>
-        <form action={addSource} className="grid gap-3 md:grid-cols-2">
-          <input type="hidden" name="story_id" value={id} />
-          <input type="hidden" name="district_key" value={storyRow.district_key} />
-          <select name="source_type" className="rounded border border-neutral-300 px-3 py-2 text-sm">
-            <option value="person">Person</option>
-            <option value="document">Document</option>
-            <option value="web">Web</option>
-            <option value="other">Other</option>
-          </select>
-          <input name="name" placeholder="Source name/title" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="organization" placeholder="Organization" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="role_title" placeholder="Role/title" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="email" placeholder="Email" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="phone" placeholder="Phone" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="url" placeholder="URL" className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
-          <textarea name="notes" placeholder="General notes" className="min-h-[80px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
-          <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Source</button>
-        </form>
-        {(sourceLinks || []).length > 0 && (
-          <form action={uploadSourceDocument} className="grid gap-3 border-t border-neutral-100 pt-4 md:grid-cols-[1fr_1fr_auto]">
-            <input type="hidden" name="story_id" value={id} />
-            <input type="hidden" name="district_key" value={storyRow.district_key} />
-            <select name="source_id" className="rounded border border-neutral-300 px-3 py-2 text-sm">
-              {(sourceLinks || []).map((link, index) => {
-                const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
-                return source ? <option key={source.id || index} value={source.id}>{source.name}</option> : null;
-              })}
-            </select>
-            <input name="document" type="file" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-            <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Upload Document</button>
-          </form>
-        )}
-      </section>
-
-      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
-        <h2 className="text-lg font-semibold">Assets</h2>
-        <div className="grid gap-2 text-sm">
-          {(assetLinks || []).map((link, index) => {
-            const asset = Array.isArray(link.nrcs_assets) ? link.nrcs_assets[0] : link.nrcs_assets;
-            return <p key={`${asset?.id || index}`}>{asset?.title || "Asset"} {asset?.asset_type ? `(${asset.asset_type})` : ""}</p>;
-          })}
-          {(assetLinks || []).length === 0 && <p className="text-neutral-500">No assets attached.</p>}
-        </div>
-        <form action={addAsset} className="grid gap-3 md:grid-cols-2">
-          <input type="hidden" name="story_id" value={id} />
-          <input type="hidden" name="district_key" value={storyRow.district_key} />
-          <select name="asset_type" className="rounded border border-neutral-300 px-3 py-2 text-sm">
-            <option value="image">Image</option>
-            <option value="graphic">Graphic</option>
-            <option value="video">Video</option>
-            <option value="document">Document</option>
-            <option value="other">Other</option>
-          </select>
-          <input name="title" placeholder="Asset title" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="cloudinary_url" placeholder="Cloudinary URL" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="cloudinary_public_id" placeholder="Cloudinary public ID" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="mux_asset_id" placeholder="Mux asset ID" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <input name="mux_playback_id" placeholder="Mux playback ID" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-          <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Asset</button>
-        </form>
-      </section>
-
-      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
-        <h2 className="text-lg font-semibold">Linked Events & Related Stories</h2>
-        <div className="grid gap-2 text-sm md:grid-cols-2">
-          <div>
-            <h3 className="font-semibold">Events</h3>
-            {(eventLinks || []).map((link, index) => {
-              const event = Array.isArray(link.nrcs_events) ? link.nrcs_events[0] : link.nrcs_events;
-              return <p key={`${event?.id || index}`}>{event?.title || link.event_id}</p>;
-            })}
-            {(eventLinks || []).length === 0 && <p className="text-neutral-500">No events linked.</p>}
-          </div>
-          <div>
-            <h3 className="font-semibold">Related Stories</h3>
-            {(relatedLinks || []).map((link, index) => {
-              const related = Array.isArray(link.nrcs_stories) ? link.nrcs_stories[0] : link.nrcs_stories;
-              return <p key={`${related?.id || index}`}>{related?.title || link.related_story_id}</p>;
-            })}
-            {(relatedLinks || []).length === 0 && <p className="text-neutral-500">No related stories linked.</p>}
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <form action={linkEvent} className="flex gap-2">
-            <input type="hidden" name="story_id" value={id} />
-            <input type="hidden" name="district_key" value={storyRow.district_key} />
-            <select name="event_id" className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm">
-              <option value="">Select event</option>
-              {(eventOptions || []).map((event) => (
-                <option key={event.id} value={event.id}>{event.title}</option>
-              ))}
-            </select>
-            <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Link Event</button>
-          </form>
-          <form action={linkRelatedStory} className="flex gap-2">
-            <input type="hidden" name="story_id" value={id} />
-            <input type="hidden" name="district_key" value={storyRow.district_key} />
-            <select name="related_story_id" className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm">
-              <option value="">Select story</option>
-              {(storyOptions || []).map((option) => (
-                <option key={option.id} value={option.id}>{option.title}</option>
-              ))}
-            </select>
-            <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Link Story</button>
-          </form>
-        </div>
-      </section>
+                {(flags || []).length === 0 && <p className="text-sm text-neutral-500">No open review flags.</p>}
+              </section>
+            ),
+          },
+          {
+            id: "sources",
+            label: "Sources",
+            children: (
+              <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+                <h2 className="text-lg font-semibold">Sources</h2>
+                <div className="grid gap-2 text-sm">
+                  {(sourceLinks || []).map((link, index) => {
+                    const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
+                    return <p key={`${source?.id || index}`}>{source?.name || "Source"} {source?.organization ? `- ${source.organization}` : ""}</p>;
+                  })}
+                  {(sourceLinks || []).length === 0 && <p className="text-neutral-500">No sources attached.</p>}
+                </div>
+                <div className="grid gap-2 text-sm">
+                  <h3 className="font-semibold">Private Source Documents</h3>
+                  {(sourceDocuments || []).map((document) => (
+                    <a key={document.id} href={`/api/source-documents/${document.id}/download`} className="underline">
+                      {document.file_name}
+                    </a>
+                  ))}
+                  {(sourceDocuments || []).length === 0 && <p className="text-neutral-500">No source documents uploaded.</p>}
+                </div>
+                <form action={addSource} className="grid gap-3 md:grid-cols-2">
+                  <input type="hidden" name="story_id" value={id} />
+                  <input type="hidden" name="district_key" value={storyRow.district_key} />
+                  <select name="source_type" className="rounded border border-neutral-300 px-3 py-2 text-sm">
+                    <option value="person">Person</option>
+                    <option value="document">Document</option>
+                    <option value="web">Web</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <input name="name" placeholder="Source name/title" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+                  <input name="organization" placeholder="Organization" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+                  <input name="role_title" placeholder="Role/title" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+                  <input name="email" placeholder="Email" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+                  <input name="phone" placeholder="Phone" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+                  <input name="url" placeholder="URL" className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
+                  <textarea name="notes" placeholder="General notes" className="min-h-[80px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
+                  <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Source</button>
+                </form>
+                {(sourceLinks || []).length > 0 && (
+                  <form action={uploadSourceDocument} className="grid gap-3 border-t border-neutral-100 pt-4 md:grid-cols-[1fr_1fr_auto]">
+                    <input type="hidden" name="story_id" value={id} />
+                    <input type="hidden" name="district_key" value={storyRow.district_key} />
+                    <select name="source_id" className="rounded border border-neutral-300 px-3 py-2 text-sm">
+                      {(sourceLinks || []).map((link, index) => {
+                        const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
+                        return source ? <option key={source.id || index} value={source.id}>{source.name}</option> : null;
+                      })}
+                    </select>
+                    <input name="document" type="file" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+                    <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Upload Document</button>
+                  </form>
+                )}
+              </section>
+            ),
+          },
+          {
+            id: "assets",
+            label: "Assets",
+            children: (
+              <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+                <h2 className="text-lg font-semibold">Assets</h2>
+                <div className="grid gap-3 text-sm">
+                  {(assetLinks || []).map((link, index) => {
+                    const asset = Array.isArray(link.nrcs_assets) ? link.nrcs_assets[0] : link.nrcs_assets;
+                    if (!asset) return null;
+                    const thumbnail = asset.thumbnail_url || muxThumbnailUrl(asset.mux_playback_id);
+                    return (
+                      <div key={`${asset.id || index}`} className="grid gap-3 rounded border border-neutral-100 p-3 md:grid-cols-[120px_1fr_auto]">
+                        <div className="aspect-video bg-neutral-100">
+                          {asset.cloudinary_url ? <img src={asset.cloudinary_url} alt="" className="h-full w-full object-cover" /> : null}
+                          {!asset.cloudinary_url && thumbnail ? <img src={thumbnail} alt="" className="h-full w-full object-cover" /> : null}
+                        </div>
+                        <div>
+                          <div className="font-medium">{asset.title}</div>
+                          <div className="text-xs text-neutral-500">
+                            {asset.asset_type}
+                            {asset.mux_status ? ` - ${asset.mux_status}` : ""}
+                          </div>
+                        </div>
+                        {asset.asset_type === "video" && (
+                          <form action={refreshVideoAsset}>
+                            <input type="hidden" name="story_id" value={id} />
+                            <input type="hidden" name="district_key" value={storyRow.district_key} />
+                            <input type="hidden" name="asset_id" value={asset.id} />
+                            <button className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Refresh Status</button>
+                          </form>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(assetLinks || []).length === 0 && <p className="text-neutral-500">No assets attached.</p>}
+                </div>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <NrcsCloudinaryAssetPicker action={addAsset} storyId={id} districtKey={storyRow.district_key} categoryId={storyRow.category_id} />
+                  <NrcsMuxUploader
+                    storyId={id}
+                    districtKey={storyRow.district_key}
+                    categoryId={storyRow.category_id}
+                    categories={categoryOptions}
+                    tags={tagOptions}
+                  />
+                  <div className="rounded border border-neutral-200 p-4">
+                    <h3 className="mb-3 font-semibold">Mux Library</h3>
+                    <NrcsMuxLibraryPicker storyId={id} districtKey={storyRow.district_key} categories={categoryOptions} tags={tagOptions} />
+                  </div>
+                </div>
+              </section>
+            ),
+          },
+          {
+            id: "links",
+            label: "Links",
+            children: (
+              <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+                <h2 className="text-lg font-semibold">Linked Events & Related Stories</h2>
+                <div className="grid gap-2 text-sm md:grid-cols-2">
+                  <div>
+                    <h3 className="font-semibold">Events</h3>
+                    {(eventLinks || []).map((link, index) => {
+                      const event = Array.isArray(link.nrcs_events) ? link.nrcs_events[0] : link.nrcs_events;
+                      return <p key={`${event?.id || index}`}>{event?.title || link.event_id}</p>;
+                    })}
+                    {(eventLinks || []).length === 0 && <p className="text-neutral-500">No events linked.</p>}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Related Stories</h3>
+                    {(relatedLinks || []).map((link, index) => {
+                      const related = Array.isArray(link.nrcs_stories) ? link.nrcs_stories[0] : link.nrcs_stories;
+                      return <p key={`${related?.id || index}`}>{related?.title || link.related_story_id}</p>;
+                    })}
+                    {(relatedLinks || []).length === 0 && <p className="text-neutral-500">No related stories linked.</p>}
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <form action={linkEvent} className="flex gap-2">
+                    <input type="hidden" name="story_id" value={id} />
+                    <input type="hidden" name="district_key" value={storyRow.district_key} />
+                    <select name="event_id" className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm">
+                      <option value="">Select event</option>
+                      {(eventOptions || []).map((event) => (
+                        <option key={event.id} value={event.id}>{event.title}</option>
+                      ))}
+                    </select>
+                    <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Link Event</button>
+                  </form>
+                  <form action={linkRelatedStory} className="flex gap-2">
+                    <input type="hidden" name="story_id" value={id} />
+                    <input type="hidden" name="district_key" value={storyRow.district_key} />
+                    <select name="related_story_id" className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm">
+                      <option value="">Select story</option>
+                      {(storyOptions || []).map((option) => (
+                        <option key={option.id} value={option.id}>{option.title}</option>
+                      ))}
+                    </select>
+                    <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Link Story</button>
+                  </form>
+                </div>
+              </section>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
