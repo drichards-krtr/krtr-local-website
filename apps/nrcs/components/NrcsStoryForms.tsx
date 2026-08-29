@@ -15,6 +15,12 @@ type Story = {
   category_id: string | null;
 };
 
+type CategoryOption = {
+  id: string;
+  name: string;
+  enabled: boolean;
+};
+
 type CopyStream = {
   id: string;
   stream_type: CopyStreamType;
@@ -81,10 +87,12 @@ export function StoryOverviewForm({
   action,
   story,
   districtOptions,
+  categories,
 }: {
   action: (formData: FormData) => Promise<void>;
   story: Story;
   districtOptions: DistrictOption[];
+  categories: CategoryOption[];
 }) {
   return (
     <form action={action} className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
@@ -115,6 +123,18 @@ export function StoryOverviewForm({
       <label className="grid gap-1 text-sm">
         <span className="font-medium">Title</span>
         <input name="title" defaultValue={story.title} required className="rounded border border-neutral-300 px-3 py-2" />
+      </label>
+      <label className="grid gap-1 text-sm">
+        <span className="font-medium">Category</span>
+        <select name="category_id" defaultValue={story.category_id || ""} className="rounded border border-neutral-300 px-3 py-2">
+          <option value="">None</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id} disabled={!category.enabled && category.id !== story.category_id}>
+              {category.name}
+              {!category.enabled ? " - disabled" : ""}
+            </option>
+          ))}
+        </select>
       </label>
       <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Save Overview</button>
     </form>

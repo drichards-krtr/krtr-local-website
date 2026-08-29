@@ -3,12 +3,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
-import { createNrcsServerClient } from "@/lib/server";
+import { createNrcsServerClient, createNrcsServiceClient } from "@/lib/server";
 import {
   COPY_STREAM_TYPES,
   copyStreamLabel,
   isStoryLifecycleState,
   sanitizeStoryHtml,
+  normalizeSlug,
   type CopyStreamType,
 } from "@/lib/stories";
 import { CopyStreamForms, FactsForm, StoryOverviewForm } from "@/components/NrcsStoryForms";
@@ -20,6 +21,18 @@ type StoryRow = {
   lifecycle_state: string;
   category_id: string | null;
   created_by: string | null;
+};
+
+type WebOutputRow = {
+  id: string;
+  story_id: string;
+  copy_version_id: string | null;
+  status: string;
+  slug: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  scheduled_at: string | null;
+  published_at: string | null;
 };
 
 type CopyStreamRow = {
@@ -44,6 +57,14 @@ function storyPath(storyId: string, districtKey: string, params = "success=saved
   return `/stories/${storyId}?district=${encodeURIComponent(districtKey)}&${params}`;
 }
 
+function storageSafeFileName(value: string) {
+  return value
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120) || "source-document";
+}
+
 async function updateOverview(formData: FormData) {
   "use server";
 
@@ -51,6 +72,7 @@ async function updateOverview(formData: FormData) {
   const id = String(formData.get("id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
   const title = String(formData.get("title") || "").trim();
+  const categoryId = String(formData.get("category_id") || "").trim() || null;
   const lifecycleInput = String(formData.get("lifecycle_state") || "idea");
   const lifecycleState = isStoryLifecycleState(lifecycleInput) ? lifecycleInput : "idea";
 
@@ -63,6 +85,7 @@ async function updateOverview(formData: FormData) {
       district_key: districtKey,
       title,
       lifecycle_state: lifecycleState,
+      category_id: categoryId,
       updated_by: profile.id,
     })
     .eq("id", id);
@@ -70,6 +93,65 @@ async function updateOverview(formData: FormData) {
   if (error) redirect(storyPath(id, districtKey, `error=${encodeURIComponent(error.message)}`));
   revalidatePath(`/stories/${id}`);
   redirect(storyPath(id, districtKey));
+}
+
+async function saveWebOutput(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("contributor");
+  const storyId = String(formData.get("story_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc");
+  const outputId = String(formData.get("output_id") || "");
+  const slugInput = String(formData.get("slug") || "").trim();
+  const slug = slugInput ? normalizeSlug(slugInput) : null;
+  const payload = {
+    story_id: storyId,
+    copy_version_id: String(formData.get("copy_version_id") || "").trim() || null,
+    status: String(formData.get("status") || "draft"),
+    slug,
+    seo_title: String(formData.get("seo_title") || "").trim() || null,
+    seo_description: String(formData.get("seo_description") || "").trim() || null,
+    scheduled_at: String(formData.get("scheduled_at") || "").trim() || null,
+    published_at: String(formData.get("published_at") || "").trim() || null,
+  };
+
+  const supabase = await createNrcsServerClient();
+  const result = outputId
+    ? await supabase.from("nrcs_web_outputs").update(payload).eq("id", outputId)
+    : await supabase.from("nrcs_web_outputs").insert(payload);
+
+  if (result.error) redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(result.error.message)}`));
+  revalidatePath(`/stories/${storyId}`);
+  redirect(storyPath(storyId, districtKey, "success=web-output"));
+}
+
+async function addStoryTag(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("contributor");
+  const storyId = String(formData.get("story_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc");
+  const tagId = String(formData.get("tag_id") || "");
+  if (!tagId) redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent("Tag is required")}`));
+
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase.from("nrcs_story_tags").insert({ story_id: storyId, tag_id: tagId });
+  if (error) redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(error.message)}`));
+  revalidatePath(`/stories/${storyId}`);
+  redirect(storyPath(storyId, districtKey, "success=tag"));
+}
+
+async function removeStoryTag(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("contributor");
+  const storyId = String(formData.get("story_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc");
+  const tagId = String(formData.get("tag_id") || "");
+  const supabase = await createNrcsServerClient();
+  await supabase.from("nrcs_story_tags").delete().eq("story_id", storyId).eq("tag_id", tagId);
+  revalidatePath(`/stories/${storyId}`);
+  redirect(storyPath(storyId, districtKey, "success=tag"));
 }
 
 async function saveFacts(formData: FormData) {
@@ -226,6 +308,65 @@ async function addSource(formData: FormData) {
   redirect(storyPath(storyId, districtKey, "success=source"));
 }
 
+async function uploadSourceDocument(formData: FormData) {
+  "use server";
+
+  const { profile } = await requireNrcsStaff("contributor");
+  const storyId = String(formData.get("story_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc");
+  const sourceId = String(formData.get("source_id") || "");
+  const file = formData.get("document");
+
+  if (!sourceId || !(file instanceof File) || file.size === 0) {
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent("Source and document file are required")}`));
+  }
+
+  const supabase = await createNrcsServerClient();
+  const { data: link } = await supabase
+    .from("nrcs_story_sources")
+    .select("story_id")
+    .eq("story_id", storyId)
+    .eq("source_id", sourceId)
+    .maybeSingle();
+
+  if (!link) {
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent("Source is not attached to this story")}`));
+  }
+
+  const service = createNrcsServiceClient();
+  const fileName = storageSafeFileName(file.name);
+  const storagePath = `${districtKey}/${storyId}/${crypto.randomUUID()}-${fileName}`;
+  const bytes = await file.arrayBuffer();
+  const { error: uploadError } = await service.storage
+    .from("source-documents")
+    .upload(storagePath, bytes, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(uploadError.message)}`));
+  }
+
+  const { error: metadataError } = await supabase.from("nrcs_source_documents").insert({
+    source_id: sourceId,
+    storage_bucket: "source-documents",
+    storage_path: storagePath,
+    file_name: file.name || fileName,
+    mime_type: file.type || null,
+    file_size: file.size,
+    uploaded_by: profile.id,
+  });
+
+  if (metadataError) {
+    await service.storage.from("source-documents").remove([storagePath]);
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(metadataError.message)}`));
+  }
+
+  revalidatePath(`/stories/${storyId}`);
+  redirect(storyPath(storyId, districtKey, "success=document"));
+}
+
 async function addAsset(formData: FormData) {
   "use server";
 
@@ -334,6 +475,10 @@ export default async function EditStoryPage({
     { data: relatedLinks },
     { data: eventOptions },
     { data: storyOptions },
+    { data: categories },
+    { data: allTags },
+    { data: storyTags },
+    { data: webOutput },
   ] = await Promise.all([
     supabase.from("nrcs_story_facts").select("body_html").eq("story_id", id).maybeSingle(),
     supabase.from("nrcs_copy_streams").select("id, stream_type, needs_review, review_reason, current_version_id").eq("story_id", id),
@@ -344,6 +489,10 @@ export default async function EditStoryPage({
     supabase.from("nrcs_related_stories").select("related_story_id, nrcs_stories!nrcs_related_stories_related_story_id_fkey(id, title, lifecycle_state)").eq("story_id", id),
     supabase.from("nrcs_events").select("id, title, start_at, status").eq("district_key", storyRow.district_key).order("start_at", { ascending: false }).limit(100),
     supabase.from("nrcs_stories").select("id, title, lifecycle_state").eq("district_key", storyRow.district_key).neq("id", id).order("updated_at", { ascending: false }).limit(100),
+    supabase.from("nrcs_categories").select("id, name, enabled").eq("district_key", storyRow.district_key).order("name"),
+    supabase.from("nrcs_tags").select("id, name, tag_type").order("name"),
+    supabase.from("nrcs_story_tags").select("tag_id, nrcs_tags(id, name, tag_type)").eq("story_id", id),
+    supabase.from("nrcs_web_outputs").select("id, story_id, copy_version_id, status, slug, seo_title, seo_description, scheduled_at, published_at").eq("story_id", id).limit(1).maybeSingle(),
   ]);
 
   const streamRows = ((streams || []) as CopyStreamRow[]).sort(
@@ -358,6 +507,19 @@ export default async function EditStoryPage({
     ...stream,
     current_version: stream.current_version_id ? versionsById.get(stream.current_version_id) || null : null,
   }));
+  const attachedSourceIds = (sourceLinks || [])
+    .map((link) => {
+      const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
+      return source?.id;
+    })
+    .filter(Boolean) as string[];
+  const { data: sourceDocuments } = attachedSourceIds.length
+    ? await supabase
+        .from("nrcs_source_documents")
+        .select("id, source_id, file_name, mime_type, file_size, created_at")
+        .in("source_id", attachedSourceIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
 
   return (
     <div className="grid gap-6">
@@ -374,9 +536,91 @@ export default async function EditStoryPage({
       {resolvedSearchParams.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
       {resolvedSearchParams.success && <p className="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">Story update saved.</p>}
 
-      <StoryOverviewForm action={updateOverview} story={storyRow} districtOptions={allowedDistricts} />
+      <StoryOverviewForm action={updateOverview} story={storyRow} districtOptions={allowedDistricts} categories={(categories || []) as Array<{ id: string; name: string; enabled: boolean }>} />
       <FactsForm action={saveFacts} storyId={id} bodyHtml={(facts as { body_html?: string } | null)?.body_html || ""} />
       <CopyStreamForms action={saveCopyStream} storyId={id} streams={streamsWithVersions} />
+
+      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+        <h2 className="text-lg font-semibold">Web Output</h2>
+        <form action={saveWebOutput} className="grid gap-3 md:grid-cols-2">
+          <input type="hidden" name="story_id" value={id} />
+          <input type="hidden" name="district_key" value={storyRow.district_key} />
+          <input type="hidden" name="output_id" value={(webOutput as WebOutputRow | null)?.id || ""} />
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Status</span>
+            <select name="status" defaultValue={(webOutput as WebOutputRow | null)?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="published">Published</option>
+              <option value="unpublished">Unpublished</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Exact Web Copy Version</span>
+            <select name="copy_version_id" defaultValue={(webOutput as WebOutputRow | null)?.copy_version_id || ""} className="rounded border border-neutral-300 px-3 py-2">
+              <option value="">None selected</option>
+              {streamsWithVersions
+                .filter((stream) => stream.stream_type === "web" && stream.current_version)
+                .map((stream) => (
+                  <option key={stream.current_version?.id} value={stream.current_version?.id}>
+                    Web Copy v{stream.current_version?.version_number}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Slug</span>
+            <input name="slug" defaultValue={(webOutput as WebOutputRow | null)?.slug || ""} className="rounded border border-neutral-300 px-3 py-2" />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Scheduled At</span>
+            <input name="scheduled_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.scheduled_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Published At</span>
+            <input name="published_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.published_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">SEO Title</span>
+            <input name="seo_title" defaultValue={(webOutput as WebOutputRow | null)?.seo_title || ""} className="rounded border border-neutral-300 px-3 py-2" />
+          </label>
+          <label className="grid gap-1 text-sm md:col-span-2">
+            <span className="font-medium">SEO Description</span>
+            <textarea name="seo_description" defaultValue={(webOutput as WebOutputRow | null)?.seo_description || ""} className="min-h-[80px] rounded border border-neutral-300 px-3 py-2" />
+          </label>
+          <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Save Web Output</button>
+        </form>
+      </section>
+
+      <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+        <h2 className="text-lg font-semibold">Tags</h2>
+        <div className="flex flex-wrap gap-2">
+          {(storyTags || []).map((link) => {
+            const tag = Array.isArray(link.nrcs_tags) ? link.nrcs_tags[0] : link.nrcs_tags;
+            return tag ? (
+              <form key={tag.id} action={removeStoryTag} className="inline-flex items-center gap-2 rounded border border-neutral-200 px-3 py-1 text-sm">
+                <input type="hidden" name="story_id" value={id} />
+                <input type="hidden" name="district_key" value={storyRow.district_key} />
+                <input type="hidden" name="tag_id" value={tag.id} />
+                <span>{tag.name}</span>
+                <button className="font-semibold">Remove</button>
+              </form>
+            ) : null;
+          })}
+          {(storyTags || []).length === 0 && <p className="text-sm text-neutral-500">No tags attached.</p>}
+        </div>
+        <form action={addStoryTag} className="flex flex-wrap gap-2">
+          <input type="hidden" name="story_id" value={id} />
+          <input type="hidden" name="district_key" value={storyRow.district_key} />
+          <select name="tag_id" className="rounded border border-neutral-300 px-3 py-2 text-sm">
+            <option value="">Select tag</option>
+            {(allTags || []).map((tag) => (
+              <option key={tag.id} value={tag.id}>{tag.name} ({tag.tag_type.replace("_", " ")})</option>
+            ))}
+          </select>
+          <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Tag</button>
+        </form>
+      </section>
 
       <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
         <h2 className="text-lg font-semibold">Open Review Flags</h2>
@@ -401,6 +645,15 @@ export default async function EditStoryPage({
           })}
           {(sourceLinks || []).length === 0 && <p className="text-neutral-500">No sources attached.</p>}
         </div>
+        <div className="grid gap-2 text-sm">
+          <h3 className="font-semibold">Private Source Documents</h3>
+          {(sourceDocuments || []).map((document) => (
+            <a key={document.id} href={`/api/source-documents/${document.id}/download`} className="underline">
+              {document.file_name}
+            </a>
+          ))}
+          {(sourceDocuments || []).length === 0 && <p className="text-neutral-500">No source documents uploaded.</p>}
+        </div>
         <form action={addSource} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="story_id" value={id} />
           <input type="hidden" name="district_key" value={storyRow.district_key} />
@@ -419,6 +672,20 @@ export default async function EditStoryPage({
           <textarea name="notes" placeholder="General notes" className="min-h-[80px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
           <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Source</button>
         </form>
+        {(sourceLinks || []).length > 0 && (
+          <form action={uploadSourceDocument} className="grid gap-3 border-t border-neutral-100 pt-4 md:grid-cols-[1fr_1fr_auto]">
+            <input type="hidden" name="story_id" value={id} />
+            <input type="hidden" name="district_key" value={storyRow.district_key} />
+            <select name="source_id" className="rounded border border-neutral-300 px-3 py-2 text-sm">
+              {(sourceLinks || []).map((link, index) => {
+                const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
+                return source ? <option key={source.id || index} value={source.id}>{source.name}</option> : null;
+              })}
+            </select>
+            <input name="document" type="file" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+            <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Upload Document</button>
+          </form>
+        )}
       </section>
 
       <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">

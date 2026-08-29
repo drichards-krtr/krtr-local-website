@@ -17,6 +17,10 @@ This phase completes the Story/editorial foundation that was deferred while the 
 - Web Output records with publication status separate from Story lifecycle.
 - Story-Event many-to-many links.
 - Related Story links.
+- NRCS category/tag management UI.
+- Private source document upload and protected signed-download flow.
+- Story-level category/tag assignment.
+- Web Output editor fields for slug, status, schedule/publish timestamps, SEO fields, and exact Web Copy version selection.
 
 ## Permissions
 
@@ -25,6 +29,9 @@ Stories are district-scoped. Contributors can read/write Stories they created. C
 Editors and Admins retain the established NRCS role hierarchy and can work across accessible district content.
 
 For other existing district-scoped public-facing objects, Contributors should be limited to their own records plus records public under that object's own status model, such as published calendar events.
+
+The Phase 2 contributor visibility migration tightens NRCS Events to that rule: Contributors can read their own events
+and published district events; Editors/Admins can read accessible district events.
 
 ## Current UI
 
@@ -35,6 +42,7 @@ NRCS now exposes:
 - `/stories/[id]`
 
 The Story Editor includes overview, facts/notes, Web/Rundown/Social copy stream saves, review flags, sources, assets, linked events, and related stories.
+The Taxonomy page is available to Editors/Admins at `/taxonomy`.
 
 ## Rich Text Rule
 
@@ -59,3 +67,10 @@ Action: Create a private bucket for source documents.
 Value: Bucket name `source-documents`; public bucket setting disabled/private.
 Return to Codex: No secret required. Tell Codex when the bucket exists.
 Verify: In Supabase Storage, the bucket appears as `source-documents` and is not public.
+
+USER ACTION REQUIRED — NRCS Supabase SQL
+Where: NRCS Supabase project → SQL Editor
+Action: Apply the new Phase 2 migrations.
+Value: `supabase/nrcs/migrations/20260826000300_phase_2_story_foundation.sql` and `supabase/nrcs/migrations/20260826000400_phase_2_contributor_visibility.sql`
+Return to Codex: Tell Codex whether both migrations applied cleanly.
+Verify: NRCS Supabase contains `nrcs_stories`, `nrcs_copy_streams`, `nrcs_copy_versions`, `nrcs_sources`, `nrcs_assets`, `nrcs_web_outputs`, and the `NRCS events role read` policy.
