@@ -11,7 +11,7 @@ type StoryRow = {
   lifecycle_state: string;
   updated_at: string;
   created_at: string;
-  nrcs_staff_profiles: { email: string } | Array<{ email: string }> | null;
+  created_by: string | null;
 };
 
 export default async function NrcsStoriesPage({
@@ -34,7 +34,7 @@ export default async function NrcsStoriesPage({
   const supabase = await createNrcsServerClient();
   let query = supabase
     .from("nrcs_stories")
-    .select("id, district_key, title, lifecycle_state, updated_at, created_at, nrcs_staff_profiles(email)")
+    .select("id, district_key, title, lifecycle_state, updated_at, created_at, created_by")
     .eq("district_key", districtKey)
     .order("updated_at", { ascending: false });
 
@@ -90,21 +90,16 @@ export default async function NrcsStoriesPage({
           <div>Owner</div>
           <div>Updated</div>
         </div>
-        {stories.map((story) => {
-          const profile = Array.isArray(story.nrcs_staff_profiles)
-            ? story.nrcs_staff_profiles[0]
-            : story.nrcs_staff_profiles;
-          return (
-            <div key={story.id} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
-              <Link href={`/stories/${story.id}?district=${districtKey}`} className="font-medium underline">
-                {story.title}
-              </Link>
-              <div className="capitalize">{story.lifecycle_state}</div>
-              <div className="truncate text-neutral-600">{profile?.email || "-"}</div>
-              <div className="text-neutral-600">{new Date(story.updated_at || story.created_at).toLocaleDateString()}</div>
-            </div>
-          );
-        })}
+        {stories.map((story) => (
+          <div key={story.id} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
+            <Link href={`/stories/${story.id}?district=${districtKey}`} className="font-medium underline">
+              {story.title}
+            </Link>
+            <div className="capitalize">{story.lifecycle_state}</div>
+            <div className="truncate text-neutral-600">{story.created_by ? story.created_by.slice(0, 8) : "-"}</div>
+            <div className="text-neutral-600">{new Date(story.updated_at || story.created_at).toLocaleDateString()}</div>
+          </div>
+        ))}
         {stories.length === 0 && <p className="px-4 py-6 text-sm text-neutral-500">No stories match this view.</p>}
       </section>
     </div>
