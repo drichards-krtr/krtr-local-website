@@ -1,6 +1,6 @@
 import sanitizeHtml from "sanitize-html";
 
-export function sanitizeEventHtml(value: string) {
+export function sanitizeRichTextHtml(value: string) {
   return sanitizeHtml(value || "", {
     allowedTags: ["p", "h1", "h2", "strong", "em", "a", "ol", "ul", "li", "blockquote", "br"],
     allowedAttributes: {
@@ -21,11 +21,13 @@ export function sanitizeEventHtml(value: string) {
   }).trim();
 }
 
+export const sanitizeEventHtml = sanitizeRichTextHtml;
+
 export function plainTextToHtml(value: string | null | undefined) {
   const text = String(value || "").trim();
   if (!text) return "";
 
-  return sanitizeEventHtml(
+  return sanitizeRichTextHtml(
     text
       .split(/\n{2,}/)
       .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`)
