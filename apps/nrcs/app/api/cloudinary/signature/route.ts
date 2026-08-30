@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireNrcsStaff } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 function readCloudinaryUrl() {
-  const value = process.env.CLOUDINARY_URL;
+  const value = process.env.CLOUDINARY_URL?.trim();
   if (!value) return {};
 
   try {
@@ -23,14 +25,18 @@ export async function POST(request: Request) {
   const folder = String(body.folder || "krtr").trim() || "krtr";
   const cloudinaryUrl = readCloudinaryUrl();
 
-  const cloudName =
+  const cloudName = (
     process.env.CLOUDINARY_CLOUD_NAME ||
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    cloudinaryUrl.cloudName;
-  const apiKey =
+    cloudinaryUrl.cloudName ||
+    ""
+  ).trim();
+  const apiKey = (
     process.env.CLOUDINARY_API_KEY ||
     process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY ||
-    cloudinaryUrl.apiKey;
+    cloudinaryUrl.apiKey ||
+    ""
+  ).trim();
 
   if (!cloudName) {
     return NextResponse.json(

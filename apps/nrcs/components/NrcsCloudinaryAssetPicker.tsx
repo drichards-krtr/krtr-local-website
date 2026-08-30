@@ -63,6 +63,7 @@ function loadMediaLibraryScript() {
 async function getCloudinaryConfig() {
   const response = await fetch("/api/cloudinary/signature", {
     method: "POST",
+    cache: "no-store",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ folder: "krtr" }),
   });

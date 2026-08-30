@@ -76,6 +76,52 @@ function storageSafeFileName(value: string) {
     .slice(0, 120) || "source-document";
 }
 
+async function saveSourceDocument({
+  supabase,
+  sourceId,
+  storyId,
+  districtKey,
+  file,
+  uploadedBy,
+}: {
+  supabase: Awaited<ReturnType<typeof createNrcsServerClient>>;
+  sourceId: string;
+  storyId: string;
+  districtKey: string;
+  file: File;
+  uploadedBy: string;
+}) {
+  const service = createNrcsServiceClient();
+  const fileName = storageSafeFileName(file.name);
+  const storagePath = `${districtKey}/${storyId}/${crypto.randomUUID()}-${fileName}`;
+  const bytes = await file.arrayBuffer();
+  const { error: uploadError } = await service.storage
+    .from("source-documents")
+    .upload(storagePath, bytes, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+
+  if (uploadError) return uploadError;
+
+  const { error: metadataError } = await supabase.from("nrcs_source_documents").insert({
+    source_id: sourceId,
+    storage_bucket: "source-documents",
+    storage_path: storagePath,
+    file_name: file.name || fileName,
+    mime_type: file.type || null,
+    file_size: file.size,
+    uploaded_by: uploadedBy,
+  });
+
+  if (metadataError) {
+    await service.storage.from("source-documents").remove([storagePath]);
+    return metadataError;
+  }
+
+  return null;
+}
+
 async function updateOverview(formData: FormData) {
   "use server";
 
@@ -315,6 +361,22 @@ async function addSource(formData: FormData) {
     source_id: source.id,
     interaction_notes: String(formData.get("interaction_notes") || "").trim() || null,
   });
+
+  const documentFile = formData.get("document");
+  if (documentFile instanceof File && documentFile.size > 0) {
+    const documentError = await saveSourceDocument({
+      supabase,
+      sourceId: source.id,
+      storyId,
+      districtKey,
+      file: documentFile,
+      uploadedBy: profile.id,
+    });
+    if (documentError) {
+      redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(documentError.message)}`));
+    }
+  }
+
   revalidatePath(`/stories/${storyId}`);
   redirect(storyPath(storyId, districtKey, "success=source"));
 }
@@ -344,34 +406,16 @@ async function uploadSourceDocument(formData: FormData) {
     redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent("Source is not attached to this story")}`));
   }
 
-  const service = createNrcsServiceClient();
-  const fileName = storageSafeFileName(file.name);
-  const storagePath = `${districtKey}/${storyId}/${crypto.randomUUID()}-${fileName}`;
-  const bytes = await file.arrayBuffer();
-  const { error: uploadError } = await service.storage
-    .from("source-documents")
-    .upload(storagePath, bytes, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false,
-    });
-
-  if (uploadError) {
-    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(uploadError.message)}`));
-  }
-
-  const { error: metadataError } = await supabase.from("nrcs_source_documents").insert({
-    source_id: sourceId,
-    storage_bucket: "source-documents",
-    storage_path: storagePath,
-    file_name: file.name || fileName,
-    mime_type: file.type || null,
-    file_size: file.size,
-    uploaded_by: profile.id,
+  const documentError = await saveSourceDocument({
+    supabase,
+    sourceId,
+    storyId,
+    districtKey,
+    file,
+    uploadedBy: profile.id,
   });
-
-  if (metadataError) {
-    await service.storage.from("source-documents").remove([storagePath]);
-    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(metadataError.message)}`));
+  if (documentError) {
+    redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(documentError.message)}`));
   }
 
   revalidatePath(`/stories/${storyId}`);
@@ -775,23 +819,23 @@ export default async function EditStoryPage({
                   <input name="email" placeholder="Email" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
                   <input name="phone" placeholder="Phone" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
                   <input name="url" placeholder="URL" className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
+                  <input name="document" type="file" className="rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
                   <textarea name="notes" placeholder="General notes" className="min-h-[80px] rounded border border-neutral-300 px-3 py-2 text-sm md:col-span-2" />
                   <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Add Source</button>
                 </form>
-                {(sourceLinks || []).length > 0 && (
-                  <form action={uploadSourceDocument} className="grid gap-3 border-t border-neutral-100 pt-4 md:grid-cols-[1fr_1fr_auto]">
-                    <input type="hidden" name="story_id" value={id} />
-                    <input type="hidden" name="district_key" value={storyRow.district_key} />
-                    <select name="source_id" className="rounded border border-neutral-300 px-3 py-2 text-sm">
-                      {(sourceLinks || []).map((link, index) => {
-                        const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
-                        return source ? <option key={source.id || index} value={source.id}>{source.name}</option> : null;
-                      })}
-                    </select>
-                    <input name="document" type="file" className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-                    <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Upload Document</button>
-                  </form>
-                )}
+                <form action={uploadSourceDocument} className="grid gap-3 border-t border-neutral-100 pt-4 md:grid-cols-[1fr_1fr_auto]">
+                  <input type="hidden" name="story_id" value={id} />
+                  <input type="hidden" name="district_key" value={storyRow.district_key} />
+                  <select name="source_id" className="rounded border border-neutral-300 px-3 py-2 text-sm" disabled={(sourceLinks || []).length === 0}>
+                    <option value="">Select source</option>
+                    {(sourceLinks || []).map((link, index) => {
+                      const source = Array.isArray(link.nrcs_sources) ? link.nrcs_sources[0] : link.nrcs_sources;
+                      return source ? <option key={source.id || index} value={source.id}>{source.name}</option> : null;
+                    })}
+                  </select>
+                  <input name="document" type="file" className="rounded border border-neutral-300 px-3 py-2 text-sm" disabled={(sourceLinks || []).length === 0} />
+                  <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300" disabled={(sourceLinks || []).length === 0}>Upload Document</button>
+                </form>
               </section>
             ),
           },
