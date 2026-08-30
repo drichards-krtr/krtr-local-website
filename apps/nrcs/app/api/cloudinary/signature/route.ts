@@ -11,15 +11,15 @@ function cleanEnvValue(value: string | undefined) {
     .trim();
 }
 
-function readCloudinaryUrl() {
-  let value = cleanEnvValue(process.env.CLOUDINARY_URL);
+function parseCloudinaryConfigValue(rawValue: string | undefined, sourceName: string) {
+  let value = cleanEnvValue(rawValue);
   if (!value) return {};
 
-  value = value.replace(/^CLOUDINARY_URL\s*=\s*/i, "").trim();
+  value = value.replace(/^[A-Z0-9_]+\s*=\s*/i, "").trim();
 
   const plainCloudName = value.match(/^[a-zA-Z0-9_-]+$/);
   if (plainCloudName) {
-    return { cloudName: value, source: "CLOUDINARY_URL plain value" };
+    return { cloudName: value, source: `${sourceName} plain value` };
   }
 
   try {
@@ -29,19 +29,19 @@ function readCloudinaryUrl() {
       return {
         cloudName,
         apiKey: undefined,
-        source: "CLOUDINARY_URL delivery URL",
+        source: `${sourceName} delivery URL`,
       };
     }
 
     return {
       cloudName: parsed.hostname || undefined,
       apiKey: parsed.username || undefined,
-      source: "CLOUDINARY_URL",
+      source: sourceName,
     };
   } catch {
     const cloudNameFromAtFormat = value.match(/@([^/?#]+)/)?.[1];
     if (cloudNameFromAtFormat) {
-      return { cloudName: cloudNameFromAtFormat, source: "CLOUDINARY_URL @ fallback" };
+      return { cloudName: cloudNameFromAtFormat, source: `${sourceName} @ fallback` };
     }
 
     return { invalidCloudinaryUrl: true };
@@ -64,19 +64,24 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const folder = String(body.folder || "krtr").trim() || "krtr";
-  const cloudinaryUrl = readCloudinaryUrl();
+  const directCloudConfig = parseCloudinaryConfigValue(process.env.CLOUDINARY_CLOUD_NAME, "CLOUDINARY_CLOUD_NAME");
+  const publicCloudConfig = parseCloudinaryConfigValue(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME");
+  const cloudinaryUrl = parseCloudinaryConfigValue(process.env.CLOUDINARY_URL, "CLOUDINARY_URL");
 
-  const directCloudName = cleanEnvValue(process.env.CLOUDINARY_CLOUD_NAME);
-  const publicCloudName = cleanEnvValue(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
-  const cloudName = directCloudName || publicCloudName || cleanEnvValue(cloudinaryUrl.cloudName);
+  const cloudName =
+    cleanEnvValue(directCloudConfig.cloudName) ||
+    cleanEnvValue(publicCloudConfig.cloudName) ||
+    cleanEnvValue(cloudinaryUrl.cloudName);
   const cloudNameSource =
-    (directCloudName && "CLOUDINARY_CLOUD_NAME") ||
-    (publicCloudName && "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME") ||
+    directCloudConfig.source ||
+    publicCloudConfig.source ||
     cloudinaryUrl.source ||
     null;
   const apiKey =
     cleanEnvValue(process.env.CLOUDINARY_API_KEY) ||
     cleanEnvValue(process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY) ||
+    cleanEnvValue(directCloudConfig.apiKey) ||
+    cleanEnvValue(publicCloudConfig.apiKey) ||
     cleanEnvValue(cloudinaryUrl.apiKey);
 
   if (!cloudName) {
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
           "Cloudinary env missing. Set CLOUDINARY_CLOUD_NAME on the NRCS Vercel project and redeploy.",
         missing: ["CLOUDINARY_CLOUD_NAME"],
         envPresence: cloudinaryEnvPresence(),
-        invalidCloudinaryUrl: Boolean(cloudinaryUrl.invalidCloudinaryUrl),
+        invalidCloudinaryUrl: Boolean(directCloudConfig.invalidCloudinaryUrl || publicCloudConfig.invalidCloudinaryUrl || cloudinaryUrl.invalidCloudinaryUrl),
       },
       { status: 500 }
     );
