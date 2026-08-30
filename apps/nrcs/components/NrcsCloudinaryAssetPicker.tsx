@@ -21,6 +21,15 @@ type MediaLibraryHandle = {
   hide: () => void;
 };
 
+type CloudinaryConfigResponse = {
+  apiKey?: string | null;
+  cloudName?: string;
+  folder?: string;
+  error?: string;
+  envPresence?: Record<string, boolean | string | null>;
+  invalidCloudinaryUrl?: boolean;
+};
+
 declare global {
   interface Window {
     cloudinary?: {
@@ -67,8 +76,13 @@ async function getCloudinaryConfig() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ folder: "krtr" }),
   });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload) throw new Error(payload?.error || "Unable to load Cloudinary configuration.");
+  const payload = (await response.json().catch(() => null)) as CloudinaryConfigResponse | null;
+  if (!response.ok || !payload?.cloudName) {
+    const detail = payload?.envPresence
+      ? ` Env presence: ${JSON.stringify(payload.envPresence)}${payload.invalidCloudinaryUrl ? " CLOUDINARY_URL is present but invalid." : ""}`
+      : "";
+    throw new Error(`${payload?.error || "Unable to load Cloudinary configuration."}${detail}`);
+  }
   return payload as { apiKey?: string | null; cloudName: string; folder: string };
 }
 

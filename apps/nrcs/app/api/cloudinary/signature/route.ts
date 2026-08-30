@@ -14,8 +14,19 @@ function readCloudinaryUrl() {
       apiKey: parsed.username || undefined,
     };
   } catch {
-    return {};
+    return { invalidCloudinaryUrl: true };
   }
+}
+
+function cloudinaryEnvPresence() {
+  return {
+    CLOUDINARY_CLOUD_NAME: Boolean(process.env.CLOUDINARY_CLOUD_NAME?.trim()),
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim()),
+    CLOUDINARY_URL: Boolean(process.env.CLOUDINARY_URL?.trim()),
+    CLOUDINARY_API_KEY: Boolean(process.env.CLOUDINARY_API_KEY?.trim()),
+    NEXT_PUBLIC_CLOUDINARY_API_KEY: Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY?.trim()),
+    VERCEL_ENV: process.env.VERCEL_ENV || null,
+  };
 }
 
 export async function POST(request: Request) {
@@ -44,6 +55,8 @@ export async function POST(request: Request) {
         error:
           "Cloudinary env missing. Set CLOUDINARY_CLOUD_NAME on the NRCS Vercel project and redeploy.",
         missing: ["CLOUDINARY_CLOUD_NAME"],
+        envPresence: cloudinaryEnvPresence(),
+        invalidCloudinaryUrl: Boolean(cloudinaryUrl.invalidCloudinaryUrl),
       },
       { status: 500 }
     );
