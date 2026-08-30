@@ -15,6 +15,7 @@ import {
 import { CopyStreamForms, FactsForm, StoryOverviewForm } from "@/components/NrcsStoryForms";
 import NrcsCloudinaryAssetPicker from "@/components/NrcsCloudinaryAssetPicker";
 import { NrcsMuxLibraryPicker, NrcsMuxUploader } from "@/components/NrcsMuxVideoTools";
+import NrcsRelationPicker from "@/components/NrcsRelationPicker";
 import NrcsStoryTabs from "@/components/NrcsStoryTabs";
 import { getMuxAsset, getMuxUpload, muxStatusFromAsset, muxStatusFromUpload, muxThumbnailUrl } from "@/lib/mux";
 
@@ -544,8 +545,6 @@ export default async function EditStoryPage({
     { data: assetLinks },
     { data: eventLinks },
     { data: relatedLinks },
-    { data: eventOptions },
-    { data: storyOptions },
     { data: categories },
     { data: allTags },
     { data: storyTags },
@@ -558,8 +557,6 @@ export default async function EditStoryPage({
     supabase.from("nrcs_story_assets").select("relationship, nrcs_assets(id, asset_type, title, cloudinary_url, mux_playback_id, mux_status, thumbnail_url, category_id, nrcs_categories(name))").eq("story_id", id),
     supabase.from("nrcs_story_events").select("event_id, nrcs_events(id, title, start_at, status)").eq("story_id", id),
     supabase.from("nrcs_related_stories").select("related_story_id, nrcs_stories!nrcs_related_stories_related_story_id_fkey(id, title, lifecycle_state)").eq("story_id", id),
-    supabase.from("nrcs_events").select("id, title, start_at, status").eq("district_key", storyRow.district_key).order("start_at", { ascending: false }).limit(100),
-    supabase.from("nrcs_stories").select("id, title, lifecycle_state").eq("district_key", storyRow.district_key).neq("id", id).order("updated_at", { ascending: false }).limit(100),
     supabase.from("nrcs_categories").select("id, name, enabled").eq("district_key", storyRow.district_key).order("name"),
     supabase.from("nrcs_tags").select("id, name, tag_type").order("name"),
     supabase.from("nrcs_story_tags").select("tag_id, nrcs_tags(id, name, tag_type)").eq("story_id", id),
@@ -876,29 +873,22 @@ export default async function EditStoryPage({
                     {(relatedLinks || []).length === 0 && <p className="text-neutral-500">No related stories linked.</p>}
                   </div>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <form action={linkEvent} className="flex gap-2">
-                    <input type="hidden" name="story_id" value={id} />
-                    <input type="hidden" name="district_key" value={storyRow.district_key} />
-                    <select name="event_id" className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm">
-                      <option value="">Select event</option>
-                      {(eventOptions || []).map((event) => (
-                        <option key={event.id} value={event.id}>{event.title}</option>
-                      ))}
-                    </select>
-                    <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Link Event</button>
-                  </form>
-                  <form action={linkRelatedStory} className="flex gap-2">
-                    <input type="hidden" name="story_id" value={id} />
-                    <input type="hidden" name="district_key" value={storyRow.district_key} />
-                    <select name="related_story_id" className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm">
-                      <option value="">Select story</option>
-                      {(storyOptions || []).map((option) => (
-                        <option key={option.id} value={option.id}>{option.title}</option>
-                      ))}
-                    </select>
-                    <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Link Story</button>
-                  </form>
+                <div className="flex flex-wrap gap-3">
+                  <NrcsRelationPicker
+                    kind="event"
+                    storyId={id}
+                    districtKey={storyRow.district_key}
+                    fieldName="event_id"
+                    action={linkEvent}
+                  />
+                  <NrcsRelationPicker
+                    kind="story"
+                    storyId={id}
+                    districtKey={storyRow.district_key}
+                    fieldName="related_story_id"
+                    action={linkRelatedStory}
+                    excludeId={id}
+                  />
                 </div>
               </section>
             ),
