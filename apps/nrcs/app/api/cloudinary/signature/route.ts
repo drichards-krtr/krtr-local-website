@@ -3,13 +3,23 @@ import { requireNrcsStaff } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function cleanEnvValue(value: string | undefined) {
+  return (value || "")
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/^\[|\]$/g, "")
+    .trim();
+}
+
 function readCloudinaryUrl() {
-  const value = process.env.CLOUDINARY_URL?.trim();
+  let value = cleanEnvValue(process.env.CLOUDINARY_URL);
   if (!value) return {};
+
+  value = value.replace(/^CLOUDINARY_URL\s*=\s*/i, "").trim();
 
   const plainCloudName = value.match(/^[a-zA-Z0-9_-]+$/);
   if (plainCloudName) {
-    return { cloudName: value };
+    return { cloudName: value, source: "CLOUDINARY_URL plain value" };
   }
 
   try {
@@ -19,17 +29,19 @@ function readCloudinaryUrl() {
       return {
         cloudName,
         apiKey: undefined,
+        source: "CLOUDINARY_URL delivery URL",
       };
     }
 
     return {
       cloudName: parsed.hostname || undefined,
       apiKey: parsed.username || undefined,
+      source: "CLOUDINARY_URL",
     };
   } catch {
     const cloudNameFromAtFormat = value.match(/@([^/?#]+)/)?.[1];
     if (cloudNameFromAtFormat) {
-      return { cloudName: cloudNameFromAtFormat };
+      return { cloudName: cloudNameFromAtFormat, source: "CLOUDINARY_URL @ fallback" };
     }
 
     return { invalidCloudinaryUrl: true };
@@ -54,18 +66,18 @@ export async function POST(request: Request) {
   const folder = String(body.folder || "krtr").trim() || "krtr";
   const cloudinaryUrl = readCloudinaryUrl();
 
-  const cloudName = (
-    process.env.CLOUDINARY_CLOUD_NAME ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    cloudinaryUrl.cloudName ||
-    ""
-  ).trim();
-  const apiKey = (
-    process.env.CLOUDINARY_API_KEY ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY ||
-    cloudinaryUrl.apiKey ||
-    ""
-  ).trim();
+  const directCloudName = cleanEnvValue(process.env.CLOUDINARY_CLOUD_NAME);
+  const publicCloudName = cleanEnvValue(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+  const cloudName = directCloudName || publicCloudName || cleanEnvValue(cloudinaryUrl.cloudName);
+  const cloudNameSource =
+    (directCloudName && "CLOUDINARY_CLOUD_NAME") ||
+    (publicCloudName && "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME") ||
+    cloudinaryUrl.source ||
+    null;
+  const apiKey =
+    cleanEnvValue(process.env.CLOUDINARY_API_KEY) ||
+    cleanEnvValue(process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY) ||
+    cleanEnvValue(cloudinaryUrl.apiKey);
 
   if (!cloudName) {
     return NextResponse.json(
@@ -83,6 +95,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     apiKey: apiKey || null,
     cloudName,
+    cloudNameSource,
     folder,
   });
 }

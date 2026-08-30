@@ -24,6 +24,7 @@ type MediaLibraryHandle = {
 type CloudinaryConfigResponse = {
   apiKey?: string | null;
   cloudName?: string;
+  cloudNameSource?: string | null;
   folder?: string;
   error?: string;
   envPresence?: Record<string, boolean | string | null>;
@@ -83,7 +84,7 @@ async function getCloudinaryConfig() {
       : "";
     throw new Error(`${payload?.error || "Unable to load Cloudinary configuration."}${detail}`);
   }
-  return payload as { apiKey?: string | null; cloudName: string; folder: string };
+  return payload as { apiKey?: string | null; cloudName: string; cloudNameSource?: string | null; folder: string };
 }
 
 function getAssetUrl(asset: MediaLibraryAsset) {
@@ -105,6 +106,7 @@ export default function NrcsCloudinaryAssetPicker({
   label?: string;
 }) {
   const [selected, setSelected] = useState<MediaLibraryAsset | null>(null);
+  const [config, setConfig] = useState<{ cloudName: string; cloudNameSource?: string | null; hasApiKey: boolean } | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mediaLibraryRef = useRef<MediaLibraryHandle | null>(null);
@@ -116,6 +118,11 @@ export default function NrcsCloudinaryAssetPicker({
       .then(([, config]) => {
         if (!active) return;
         configRef.current = config;
+        setConfig({
+          cloudName: config.cloudName,
+          cloudNameSource: config.cloudNameSource,
+          hasApiKey: Boolean(config.apiKey),
+        });
         setReady(true);
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Unable to load Cloudinary."));
@@ -192,6 +199,11 @@ export default function NrcsCloudinaryAssetPicker({
       </div>
       {!ready && !error && <p className="text-xs text-neutral-500">Loading Cloudinary Media Library...</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
+      {config && (
+        <p className="text-xs text-neutral-500">
+          Cloudinary cloud: {config.cloudName} ({config.cloudNameSource || "unknown source"}; API key {config.hasApiKey ? "present" : "not present"})
+        </p>
+      )}
       {url && <img src={url} alt="" className="max-h-48 w-fit rounded border border-neutral-200 object-contain" />}
     </form>
   );
