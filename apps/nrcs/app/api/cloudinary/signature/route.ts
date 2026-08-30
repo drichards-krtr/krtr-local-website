@@ -7,13 +7,31 @@ function readCloudinaryUrl() {
   const value = process.env.CLOUDINARY_URL?.trim();
   if (!value) return {};
 
+  const plainCloudName = value.match(/^[a-zA-Z0-9_-]+$/);
+  if (plainCloudName) {
+    return { cloudName: value };
+  }
+
   try {
     const parsed = new URL(value);
+    if (parsed.hostname === "res.cloudinary.com") {
+      const cloudName = parsed.pathname.split("/").filter(Boolean)[0];
+      return {
+        cloudName,
+        apiKey: undefined,
+      };
+    }
+
     return {
       cloudName: parsed.hostname || undefined,
       apiKey: parsed.username || undefined,
     };
   } catch {
+    const cloudNameFromAtFormat = value.match(/@([^/?#]+)/)?.[1];
+    if (cloudNameFromAtFormat) {
+      return { cloudName: cloudNameFromAtFormat };
+    }
+
     return { invalidCloudinaryUrl: true };
   }
 }
