@@ -91,7 +91,7 @@ function itemTypeLabel(value: string) {
   return "Production Note";
 }
 
-const SEGMENT_KINDS = ["Intro", "Weather", "Sports Scores", "Upcoming Sports", "Break", "Outro"];
+const SEGMENT_KINDS = ["Intro", "News", "Events", "Weather", "Sports Scores", "Upcoming Sports", "Break", "Outro"];
 
 export default async function NrcsEditionPage({ params, searchParams }: PageProps) {
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
