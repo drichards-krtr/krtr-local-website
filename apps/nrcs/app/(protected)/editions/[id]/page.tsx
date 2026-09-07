@@ -42,23 +42,21 @@ type RundownItemRow = {
   story_id: string | null;
   copy_version_id: string | null;
   is_checked: boolean;
-  nrcs_copy_versions:
-    | {
-        id: string;
-        version_number: number;
-        headline: string | null;
-        body_html: string;
-        nrcs_copy_streams: { stream_type: string } | Array<{ stream_type: string }> | null;
-      }
-    | Array<{
-        id: string;
-        version_number: number;
-        headline: string | null;
-        body_html: string;
-        nrcs_copy_streams: { stream_type: string } | Array<{ stream_type: string }> | null;
-      }>
-    | null;
-  nrcs_stories: { id: string; title: string; district_key: string } | Array<{ id: string; title: string; district_key: string }> | null;
+  copy_version?: CopyVersionForItem | null;
+  story?: StoryForItem | null;
+};
+
+type CopyVersionForItem = {
+  id: string;
+  version_number: number;
+  headline: string | null;
+  body_html: string;
+};
+
+type StoryForItem = {
+  id: string;
+  title: string;
+  district_key: string;
 };
 
 type CopyOptionRow = {
@@ -93,7 +91,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
   await requireNrcsStaff("editor");
   const supabase = await createNrcsServerClient();
 
-  const [{ data: edition }, { data: rundownItems }] = await Promise.all([
+  const [{ data: edition, error: editionError }, { data: rundownItems, error: rundownError }] = await Promise.all([
     supabase
       .from("nrcs_editions")
       .select("id, district_key, title, air_at, recording_at, status, nrcs_programs(id, name)")
@@ -101,18 +99,37 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
       .maybeSingle(),
     supabase
       .from("nrcs_rundown_items")
-      .select(
-        "id, item_type, sort_order, title, body_html, segment_kind, story_id, copy_version_id, is_checked, nrcs_copy_versions(id, version_number, headline, body_html, nrcs_copy_streams(stream_type)), nrcs_stories(id, title, district_key)"
-      )
+      .select("id, item_type, sort_order, title, body_html, segment_kind, story_id, copy_version_id, is_checked")
       .eq("edition_id", id)
       .order("sort_order", { ascending: true }),
   ]);
 
+  if (editionError) throw new Error(`Unable to load edition: ${editionError.message}`);
+  if (rundownError) throw new Error(`Unable to load rundown items: ${rundownError.message}`);
   if (!edition) notFound();
 
   const editionRow = edition as unknown as EditionRow;
   const program = one(editionRow.nrcs_programs);
-  const items = (rundownItems || []) as unknown as RundownItemRow[];
+  const itemRows = (rundownItems || []) as unknown as RundownItemRow[];
+  const copyVersionIds = itemRows.map((item) => item.copy_version_id).filter(Boolean) as string[];
+  const storyIds = itemRows.map((item) => item.story_id).filter(Boolean) as string[];
+  const [{ data: itemCopyVersions, error: itemCopyVersionsError }, { data: itemStories, error: itemStoriesError }] = await Promise.all([
+    copyVersionIds.length
+      ? supabase.from("nrcs_copy_versions").select("id, version_number, headline, body_html").in("id", copyVersionIds)
+      : Promise.resolve({ data: [] as CopyVersionForItem[], error: null }),
+    storyIds.length
+      ? supabase.from("nrcs_stories").select("id, title, district_key").in("id", storyIds)
+      : Promise.resolve({ data: [] as StoryForItem[], error: null }),
+  ]);
+  if (itemCopyVersionsError) throw new Error(`Unable to load rundown copy: ${itemCopyVersionsError.message}`);
+  if (itemStoriesError) throw new Error(`Unable to load rundown stories: ${itemStoriesError.message}`);
+  const itemCopyVersionsById = new Map(((itemCopyVersions || []) as CopyVersionForItem[]).map((version) => [version.id, version]));
+  const itemStoriesById = new Map(((itemStories || []) as StoryForItem[]).map((story) => [story.id, story]));
+  const items = itemRows.map((item) => ({
+    ...item,
+    copy_version: item.copy_version_id ? itemCopyVersionsById.get(item.copy_version_id) || null : null,
+    story: item.story_id ? itemStoriesById.get(item.story_id) || null : null,
+  }));
   const { data: copyStreams } = await supabase
     .from("nrcs_copy_streams")
     .select("id, story_id, current_version_id, nrcs_stories!inner(title, district_key)")
@@ -179,7 +196,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
           {items
             .filter((item) => item.item_type !== "production_note")
             .map((item) => {
-              const copyVersion = one(item.nrcs_copy_versions);
+              const copyVersion = item.copy_version || null;
               const body = item.item_type === "story" ? copyVersion?.body_html || "" : item.body_html || "";
               return (
                 <article key={item.id} className="border-b border-neutral-100 pb-5">
@@ -289,8 +306,8 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
           <section className="grid gap-4">
             <h2 className="text-lg font-semibold">Rundown</h2>
             {items.map((item, index) => {
-              const copyVersion = one(item.nrcs_copy_versions);
-              const story = one(item.nrcs_stories);
+              const copyVersion = item.copy_version || null;
+              const story = item.story || null;
               return (
                 <article key={item.id} className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
