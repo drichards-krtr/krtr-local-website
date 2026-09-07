@@ -44,6 +44,10 @@ export function scriptTextFromHtml(value: string | null | undefined) {
     .trim();
 }
 
+function withQueryParam(path: string, key: string, value: string) {
+  return `${path}${path.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
+}
+
 async function nextSortOrder(editionId: string) {
   const supabase = await createNrcsServerClient();
   const { data } = await supabase
@@ -143,7 +147,7 @@ export async function updateEdition(formData: FormData) {
   const status = String(formData.get("status") || "draft");
   const airAt = String(formData.get("air_at") || "").trim();
   const recordingAt = String(formData.get("recording_at") || "").trim() || null;
-  const title = String(formData.get("title") || "").trim();
+  let title = String(formData.get("title") || "").trim();
   const payload = {
     title,
     air_at: airAt,
@@ -164,13 +168,13 @@ export async function addRundownItem(formData: FormData) {
   const { profile } = await requireNrcsStaff("editor");
   const editionId = String(formData.get("edition_id") || "");
   const itemType = String(formData.get("item_type") || "script") as RundownItemType;
-  const title = String(formData.get("title") || "").trim();
+  let title = String(formData.get("title") || "").trim();
   const bodyHtml = sanitizeRichTextHtml(String(formData.get("body_html") || "")) || plainTextToHtml("");
   const copyVersionId = String(formData.get("copy_version_id") || "").trim();
   const supabase = await createNrcsServerClient();
 
-  if (!RUNDOWN_ITEM_TYPES.includes(itemType) || !title) {
-    redirect(`/editions/${editionId}?error=${encodeURIComponent("Item type and title are required.")}`);
+  if (!RUNDOWN_ITEM_TYPES.includes(itemType)) {
+    redirect(`/editions/${editionId}?error=${encodeURIComponent("Item type is required.")}`);
   }
 
   let storyId: string | null = null;
@@ -180,16 +184,25 @@ export async function addRundownItem(formData: FormData) {
       supabase.from("nrcs_editions").select("district_key").eq("id", editionId).maybeSingle(),
       supabase
         .from("nrcs_copy_versions")
-        .select("id, nrcs_copy_streams(story_id, stream_type, nrcs_stories(district_key))")
-      .eq("id", copyVersionId)
+        .select("id, stream_id, headline")
+        .eq("id", copyVersionId)
         .maybeSingle(),
     ]);
-    const stream = Array.isArray(version?.nrcs_copy_streams) ? version?.nrcs_copy_streams[0] : version?.nrcs_copy_streams;
+    const { data: stream } = version?.stream_id
+      ? await supabase
+          .from("nrcs_copy_streams")
+          .select("story_id, stream_type, nrcs_stories(district_key, title)")
+          .eq("id", version.stream_id)
+          .maybeSingle()
+      : { data: null };
     const story = Array.isArray(stream?.nrcs_stories) ? stream?.nrcs_stories[0] : stream?.nrcs_stories;
     if (!stream || stream.stream_type !== "rundown" || story?.district_key !== edition?.district_key) {
       redirect(`/editions/${editionId}?error=${encodeURIComponent("Only Rundown Copy versions can be added as Story Items.")}`);
     }
     storyId = stream.story_id;
+    title = title || version?.headline || story?.title || "Story Item";
+  } else if (!title) {
+    redirect(`/editions/${editionId}?error=${encodeURIComponent("Title is required.")}`);
   }
 
   const { error } = await supabase.from("nrcs_rundown_items").insert({
@@ -208,6 +221,61 @@ export async function addRundownItem(formData: FormData) {
   if (error) redirect(`/editions/${editionId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/editions/${editionId}`);
   redirect(`/editions/${editionId}?success=item`);
+}
+
+export async function addStoryToRundown(formData: FormData) {
+  "use server";
+
+  const { profile } = await requireNrcsStaff("editor");
+  const editionId = String(formData.get("edition_id") || "");
+  const storyId = String(formData.get("story_id") || "");
+  const copyVersionId = String(formData.get("copy_version_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc");
+  let title = String(formData.get("title") || "").trim();
+  const returnTo = String(formData.get("return_to") || `/stories/${storyId}?district=${districtKey}`);
+  const supabase = await createNrcsServerClient();
+
+  if (!editionId || !storyId || !copyVersionId) {
+    redirect(withQueryParam(returnTo, "error", "Edition, Story, and Rundown Copy are required."));
+  }
+
+  const [{ data: edition }, { data: version }] = await Promise.all([
+    supabase.from("nrcs_editions").select("id, district_key").eq("id", editionId).maybeSingle(),
+    supabase
+      .from("nrcs_copy_versions")
+      .select("id, stream_id, headline")
+      .eq("id", copyVersionId)
+      .maybeSingle(),
+  ]);
+  const { data: stream } = version?.stream_id
+    ? await supabase
+        .from("nrcs_copy_streams")
+        .select("story_id, stream_type, nrcs_stories(district_key, title)")
+        .eq("id", version.stream_id)
+        .maybeSingle()
+    : { data: null };
+  const story = Array.isArray(stream?.nrcs_stories) ? stream?.nrcs_stories[0] : stream?.nrcs_stories;
+
+  if (!edition || stream?.stream_type !== "rundown" || stream?.story_id !== storyId || story?.district_key !== edition.district_key) {
+    redirect(withQueryParam(returnTo, "error", "This Story Rundown Copy cannot be added to that Edition."));
+  }
+  title = title || version?.headline || story?.title || "Story Item";
+
+  const { error } = await supabase.from("nrcs_rundown_items").insert({
+    edition_id: editionId,
+    item_type: "story",
+    sort_order: await nextSortOrder(editionId),
+    title,
+    story_id: storyId,
+    copy_version_id: copyVersionId,
+    created_by: profile.id,
+    updated_by: profile.id,
+  });
+
+  if (error) redirect(withQueryParam(returnTo, "error", error.message));
+  revalidatePath(`/editions/${editionId}`);
+  revalidatePath(`/stories/${storyId}`);
+  redirect(withQueryParam(returnTo, "success", "rundown"));
 }
 
 export async function updateRundownItem(formData: FormData) {

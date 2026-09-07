@@ -12,6 +12,8 @@ import {
   normalizeSlug,
   type CopyStreamType,
 } from "@/lib/stories";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
+import { addStoryToRundown, formatProgramDateTime } from "@/lib/programs";
 import { CopyStreamForms, FactsForm, StoryOverviewForm } from "@/components/NrcsStoryForms";
 import NrcsCloudinaryAssetPicker from "@/components/NrcsCloudinaryAssetPicker";
 import { NrcsMuxLibraryPicker, NrcsMuxUploader } from "@/components/NrcsMuxVideoTools";
@@ -70,6 +72,14 @@ type TagOption = {
   id: string;
   name: string;
   tag_type: string;
+};
+
+type EditionOptionRow = {
+  id: string;
+  title: string;
+  air_at: string;
+  status: string;
+  nrcs_programs: { name: string } | Array<{ name: string }> | null;
 };
 
 function storyPath(storyId: string, districtKey: string, params = "success=saved") {
@@ -578,6 +588,7 @@ export default async function EditStoryPage({
   const { profile } = await requireNrcsStaff("contributor");
   const { allowedDistricts } = await getNrcsDistrictContext();
   const supabase = await createNrcsServerClient();
+  const canManageProduction = hasNrcsRoleAtLeast(profile.role, "editor");
 
   const { data: story, error: storyError } = await supabase
     .from("nrcs_stories")
@@ -603,6 +614,7 @@ export default async function EditStoryPage({
     { data: webOutput },
     { data: followUps },
     { data: activeWake },
+    upcomingEditionsResult,
   ] = await Promise.all([
     supabase.from("nrcs_story_facts").select("body_html").eq("story_id", id).maybeSingle(),
     supabase.from("nrcs_copy_streams").select("id, stream_type, needs_review, review_reason, current_version_id").eq("story_id", id),
@@ -622,6 +634,15 @@ export default async function EditStoryPage({
       .eq("context_id", id)
       .order("due_at", { ascending: true }),
     supabase.from("nrcs_story_wakes").select("id, story_id, wake_at, reason, status").eq("story_id", id).eq("status", "active").maybeSingle(),
+    canManageProduction
+      ? supabase
+          .from("nrcs_editions")
+          .select("id, title, air_at, status, nrcs_programs(name)")
+          .eq("district_key", storyRow.district_key)
+          .gte("air_at", new Date().toISOString())
+          .order("air_at", { ascending: true })
+          .limit(50)
+      : Promise.resolve({ data: [] as EditionOptionRow[], error: null }),
   ]);
 
   const streamRows = ((streams || []) as CopyStreamRow[]).sort(
@@ -654,6 +675,9 @@ export default async function EditStoryPage({
   const openFlagCount = (flags || []).length;
   const storyFollowUps = (followUps || []) as FollowUpRow[];
   const storyWake = (activeWake || null) as StoryWakeRow | null;
+  const rundownStream = streamsWithVersions.find((stream) => stream.stream_type === "rundown");
+  const rundownVersion = rundownStream?.current_version || null;
+  const upcomingEditions = (upcomingEditionsResult.data || []) as unknown as EditionOptionRow[];
   await recordRecentItem({
     districtKey: storyRow.district_key,
     href: `/stories/${id}?district=${storyRow.district_key}`,
@@ -699,6 +723,70 @@ export default async function EditStoryPage({
             label: "Copy",
             children: <CopyStreamForms action={saveCopyStream} storyId={id} streams={streamsWithVersions} />,
           },
+          ...(canManageProduction
+            ? [
+                {
+                  id: "production",
+                  label: "Production",
+                  children: (
+                    <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
+                      <div>
+                        <h2 className="text-lg font-semibold">Add Story To Rundown</h2>
+                        <p className="text-sm text-neutral-500">
+                          Save Rundown Copy first, then attach that exact version to an upcoming Edition.
+                        </p>
+                      </div>
+                      {rundownVersion ? (
+                        <form action={addStoryToRundown} className="grid gap-3">
+                          <input type="hidden" name="story_id" value={id} />
+                          <input type="hidden" name="district_key" value={storyRow.district_key} />
+                          <input type="hidden" name="copy_version_id" value={rundownVersion.id} />
+                          <input type="hidden" name="return_to" value={`/stories/${id}?district=${storyRow.district_key}`} />
+                          <div className="rounded border border-neutral-100 bg-neutral-50 p-3 text-sm">
+                            <div className="font-semibold">Current Rundown Copy v{rundownVersion.version_number}</div>
+                            <div className="mt-1 text-neutral-600">{rundownVersion.headline || storyRow.title}</div>
+                          </div>
+                          <label className="grid gap-1 text-sm">
+                            <span className="font-medium">Rundown Item Title</span>
+                            <input name="title" defaultValue={rundownVersion.headline || storyRow.title} required className="rounded border border-neutral-300 px-3 py-2" />
+                          </label>
+                          <label className="grid gap-1 text-sm">
+                            <span className="font-medium">Edition</span>
+                            <select name="edition_id" required className="rounded border border-neutral-300 px-3 py-2">
+                              <option value="">Select upcoming Edition</option>
+                              {upcomingEditions.map((edition) => {
+                                const program = Array.isArray(edition.nrcs_programs) ? edition.nrcs_programs[0] : edition.nrcs_programs;
+                                return (
+                                  <option key={edition.id} value={edition.id}>
+                                    {program?.name || "Program"} - {edition.title} - {formatProgramDateTime(edition.air_at)}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white" disabled={upcomingEditions.length === 0}>
+                              Add To Rundown
+                            </button>
+                            <Link href="/programs" className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">
+                              Manage Editions
+                            </Link>
+                          </div>
+                          {upcomingEditions.length === 0 && (
+                            <p className="text-sm text-neutral-500">No upcoming Editions exist for this district.</p>
+                          )}
+                        </form>
+                      ) : (
+                        <div className="rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                          <p className="font-semibold">No Rundown Copy version exists yet.</p>
+                          <p className="mt-1">Open the Copy tab and save a Rundown Copy version before adding this Story to a rundown.</p>
+                        </div>
+                      )}
+                    </section>
+                  ),
+                },
+              ]
+            : []),
           {
             id: "workflow",
             label: "Workflow",

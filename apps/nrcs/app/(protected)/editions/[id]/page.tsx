@@ -63,21 +63,16 @@ type RundownItemRow = {
 
 type CopyOptionRow = {
   id: string;
+  story_id: string;
+  current_version_id: string;
+  nrcs_stories: { title: string; district_key: string } | Array<{ title: string; district_key: string }> | null;
+};
+
+type CopyOption = {
+  copy_version_id: string;
   version_number: number;
   headline: string | null;
-  body_html: string;
-  nrcs_copy_streams:
-    | {
-        story_id: string;
-        stream_type: string;
-        nrcs_stories: { title: string; district_key: string } | Array<{ title: string; district_key: string }> | null;
-      }
-    | Array<{
-        story_id: string;
-        stream_type: string;
-        nrcs_stories: { title: string; district_key: string } | Array<{ title: string; district_key: string }> | null;
-      }>
-    | null;
+  story_title: string;
 };
 
 function one<T>(value: T | T[] | null | undefined) {
@@ -98,7 +93,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
   await requireNrcsStaff("editor");
   const supabase = await createNrcsServerClient();
 
-  const [{ data: edition }, { data: rundownItems }, { data: copyOptions }] = await Promise.all([
+  const [{ data: edition }, { data: rundownItems }] = await Promise.all([
     supabase
       .from("nrcs_editions")
       .select("id, district_key, title, air_at, recording_at, status, nrcs_programs(id, name)")
@@ -111,12 +106,6 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
       )
       .eq("edition_id", id)
       .order("sort_order", { ascending: true }),
-    supabase
-      .from("nrcs_copy_versions")
-      .select("id, version_number, headline, body_html, nrcs_copy_streams!inner(story_id, stream_type, nrcs_stories(title, district_key))")
-      .eq("nrcs_copy_streams.stream_type", "rundown")
-      .order("created_at", { ascending: false })
-      .limit(100),
   ]);
 
   if (!edition) notFound();
@@ -124,11 +113,36 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
   const editionRow = edition as unknown as EditionRow;
   const program = one(editionRow.nrcs_programs);
   const items = (rundownItems || []) as unknown as RundownItemRow[];
-  const options = ((copyOptions || []) as unknown as CopyOptionRow[]).filter((option) => {
-    const stream = one(option.nrcs_copy_streams);
-    const story = one(stream?.nrcs_stories);
-    return story?.district_key === editionRow.district_key;
-  });
+  const { data: copyStreams } = await supabase
+    .from("nrcs_copy_streams")
+    .select("id, story_id, current_version_id, nrcs_stories!inner(title, district_key)")
+    .eq("stream_type", "rundown")
+    .eq("nrcs_stories.district_key", editionRow.district_key)
+    .not("current_version_id", "is", null)
+    .limit(100);
+  const optionStreams = (copyStreams || []) as unknown as CopyOptionRow[];
+  const optionVersionIds = optionStreams.map((stream) => stream.current_version_id).filter(Boolean);
+  const { data: optionVersions } = optionVersionIds.length
+    ? await supabase
+        .from("nrcs_copy_versions")
+        .select("id, version_number, headline")
+        .in("id", optionVersionIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const versionsById = new Map(((optionVersions || []) as Array<{ id: string; version_number: number; headline: string | null }>).map((version) => [version.id, version]));
+  const options = optionStreams
+    .map((stream) => {
+      const version = versionsById.get(stream.current_version_id);
+      const story = one(stream.nrcs_stories);
+      if (!version || !story) return null;
+      return {
+        copy_version_id: version.id,
+        version_number: version.version_number,
+        headline: version.headline,
+        story_title: story.title,
+      };
+    })
+    .filter(Boolean) as CopyOption[];
   const scriptMode = resolvedSearchParams?.mode === "script";
 
   return (
@@ -209,14 +223,43 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
           </section>
 
           <section className="rounded border border-neutral-200 bg-white p-5">
-            <h2 className="text-lg font-semibold">Add Rundown Item</h2>
+            <h2 className="text-lg font-semibold">Add Story</h2>
+            <form action={addRundownItem} className="mt-4 grid gap-3">
+              <input type="hidden" name="edition_id" value={editionRow.id} />
+              <input type="hidden" name="item_type" value="story" />
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Story Rundown Copy</span>
+                <select name="copy_version_id" required className="rounded border border-neutral-300 px-3 py-2">
+                  <option value="">Select Story Rundown Copy</option>
+                  {options.map((option) => {
+                    return (
+                      <option key={option.copy_version_id} value={option.copy_version_id}>
+                        {option.story_title} - v{option.version_number}{option.headline ? ` - ${option.headline}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Rundown Item Title</span>
+                <input name="title" placeholder="Defaults to the Rundown Copy headline or Story title" className="rounded border border-neutral-300 px-3 py-2" />
+              </label>
+              <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white" disabled={options.length === 0}>
+                Add Story To Rundown
+              </button>
+              {options.length === 0 && <p className="text-sm text-neutral-500">No Story Rundown Copy versions exist for this district.</p>}
+            </form>
+          </section>
+
+          <section className="rounded border border-neutral-200 bg-white p-5">
+            <h2 className="text-lg font-semibold">Add Segment, Script, or Note</h2>
             <form action={addRundownItem} className="mt-4 grid gap-3">
               <input type="hidden" name="edition_id" value={editionRow.id} />
               <div className="grid gap-3 md:grid-cols-3">
                 <label className="grid gap-1 text-sm">
                   <span className="font-medium">Type</span>
                   <select name="item_type" defaultValue="script" className="rounded border border-neutral-300 px-3 py-2">
-                    {RUNDOWN_ITEM_TYPES.map((type) => (
+                    {RUNDOWN_ITEM_TYPES.filter((type) => type !== "story").map((type) => (
                       <option key={type} value={type}>{itemTypeLabel(type)}</option>
                     ))}
                   </select>
@@ -235,21 +278,6 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
                   </select>
                 </label>
               </div>
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Story Rundown Copy</span>
-                <select name="copy_version_id" className="rounded border border-neutral-300 px-3 py-2">
-                  <option value="">Only required for Story Item</option>
-                  {options.map((option) => {
-                    const stream = one(option.nrcs_copy_streams);
-                    const story = one(stream?.nrcs_stories);
-                    return (
-                      <option key={option.id} value={option.id}>
-                        {story?.title || "Story"} - v{option.version_number}{option.headline ? ` - ${option.headline}` : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
               <div className="grid gap-1 text-sm">
                 <span className="font-medium">Body</span>
                 <RichTextEditor name="body_html" />
