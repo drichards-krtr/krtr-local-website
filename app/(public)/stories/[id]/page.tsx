@@ -27,16 +27,17 @@ function getStoryPreviewImage(story: {
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
+  const { id } = await params;
   const districtKey = await getCurrentDistrictKey();
-  const story = await getPublishedStoryByIdOrSlug(districtKey, params.id);
+  const story = await getPublishedStoryByIdOrSlug(districtKey, id);
 
   if (!story) {
     return buildPageMetadata({
       districtKey,
       title: "Story not found",
-      path: `/stories/${params.id}`,
+      path: `/stories/${id}`,
     });
   }
 
@@ -52,9 +53,10 @@ export async function generateMetadata({
   });
 }
 
-export default async function StoryPage({ params }: { params: { id: string } }) {
+export default async function StoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const districtKey = await getCurrentDistrictKey();
-  const story = await getPublishedStoryByIdOrSlug(districtKey, params.id);
+  const story = await getPublishedStoryByIdOrSlug(districtKey, id);
 
   if (!story) {
     return (
@@ -64,7 +66,7 @@ export default async function StoryPage({ params }: { params: { id: string } }) 
     );
   }
 
-  if (story.slug && params.id !== story.slug) {
+  if (story.slug && id !== story.slug) {
     redirect(`/stories/${story.slug}`);
   }
 

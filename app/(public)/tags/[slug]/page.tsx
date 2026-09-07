@@ -21,7 +21,8 @@ type Story = {
   published_at: string | null;
 };
 
-export default async function TagPage({ params }: { params: { slug: string } }) {
+export default async function TagPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const districtKey = await getCurrentDistrictKey();
   const districtUcsdTag = districtKey === "dlpc" ? "ucsd" : districtKey === "vs" ? "vscsd" : "bcsd";
   const districtSchoolChildren =
@@ -36,15 +37,15 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
             "bc-middle-school",
             "bc-high-school",
           ];
-  const tag = getTagBySlug(districtKey, params.slug);
+  const tag = getTagBySlug(districtKey, slug);
   if (!tag) notFound();
-  const isDistrictSchoolChildTag = districtSchoolChildren.includes(params.slug);
+  const isDistrictSchoolChildTag = districtSchoolChildren.includes(slug);
 
   const supabase = createPublicClient();
   const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
-  const tagFilters = isTopLevelTag(districtKey, params.slug)
-    ? getDescendantSlugs(districtKey, params.slug)
-    : [params.slug];
+  const tagFilters = isTopLevelTag(districtKey, slug)
+    ? getDescendantSlugs(districtKey, slug)
+    : [slug];
 
   const { data, error } = await supabase
     .from("stories")
@@ -57,13 +58,13 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
     .limit(30);
 
   if (error) {
-    console.error("[TagPage] story query failed", { tag: params.slug, error });
+    console.error("[TagPage] story query failed", { tag: slug, error });
     throw new Error(`[TagPage] ${error.message}`);
   }
 
   const stories = (data || []) as Story[];
-  const childTags = isTopLevelTag(districtKey, params.slug)
-    ? getChildTags(districtKey, params.slug)
+  const childTags = isTopLevelTag(districtKey, slug)
+    ? getChildTags(districtKey, slug)
     : isDistrictSchoolChildTag
       ? getChildTags(districtKey, districtUcsdTag)
       : [];
@@ -73,7 +74,7 @@ export default async function TagPage({ params }: { params: { slug: string } }) 
       {childTags.length > 0 && (
         <section className="mb-6 rounded-lg bg-white p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
-            {params.slug === districtUcsdTag
+            {slug === districtUcsdTag
               ? "Dive into YOUR school..."
               : isDistrictSchoolChildTag
                 ? "Switch Schools..."

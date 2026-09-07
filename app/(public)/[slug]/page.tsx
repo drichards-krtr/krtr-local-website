@@ -23,16 +23,17 @@ function getDailyPreviewImage(daily: {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
+  const { slug } = await params;
   const districtKey = await getCurrentDistrictKey();
-  const daily = await getPublishedDailyBySlug(districtKey, params.slug);
+  const daily = await getPublishedDailyBySlug(districtKey, slug);
 
   if (!daily) {
     return buildPageMetadata({
       districtKey,
       title: "Not found",
-      path: `/${params.slug}`,
+      path: `/${slug}`,
     });
   }
 
@@ -45,9 +46,10 @@ export async function generateMetadata({
   });
 }
 
-export default async function DailyPage({ params }: { params: { slug: string } }) {
+export default async function DailyPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const districtKey = await getCurrentDistrictKey();
-  const daily = await getPublishedDailyBySlug(districtKey, params.slug);
+  const daily = await getPublishedDailyBySlug(districtKey, slug);
 
   if (!daily) {
     notFound();

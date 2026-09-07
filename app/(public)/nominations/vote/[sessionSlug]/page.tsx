@@ -41,16 +41,18 @@ export default async function NominationVotingPublicPage({
   params,
   searchParams,
 }: {
-  params: { sessionSlug: string };
-  searchParams?: { success?: string };
+  params: Promise<{ sessionSlug: string }>;
+  searchParams?: Promise<{ success?: string }>;
 }) {
+  const { sessionSlug } = await params;
+  const resolvedSearchParams = (await searchParams) || {};
   const district = await getCurrentDistrict();
   const supabase = createServiceClient();
   const { data: sessionData, error: sessionError } = await supabase
     .from("nomination_voting_sessions")
     .select("id, district_key, nomination_id, category, slug, title, open_date, close_date, status_override, created_at")
     .eq("district_key", district.key)
-    .eq("slug", params.sessionSlug)
+    .eq("slug", sessionSlug)
     .maybeSingle();
 
   if (sessionError) throw new Error(`[NominationVotingPublicPage] ${sessionError.message}`);
@@ -165,7 +167,7 @@ export default async function NominationVotingPublicPage({
           <h1 className="mt-2 text-2xl font-semibold">{session.title}</h1>
         </header>
 
-        {searchParams?.success && (
+        {resolvedSearchParams.success && (
           <p className="mb-5 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             Your vote has been recorded.
           </p>
