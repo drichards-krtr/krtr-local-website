@@ -19,7 +19,7 @@ import { createNrcsServerClient } from "@/lib/server";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ mode?: string; error?: string; success?: string }>;
+  searchParams?: Promise<{ mode?: string; error?: string; success?: string; itemId?: string }>;
 };
 
 type EditionRow = {
@@ -170,6 +170,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
           <p className="text-sm text-neutral-500">
             {program?.name || "Program"} - Airs {formatProgramDateTime(editionRow.air_at)}
           </p>
+          <p className="mt-1 text-xs text-neutral-400">Edition ID: {editionRow.id}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/programs" className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">
@@ -185,7 +186,11 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
       </header>
 
       {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
-      {resolvedSearchParams?.success && <p className="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">Edition update saved.</p>}
+      {resolvedSearchParams?.success && (
+        <p className="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+          Edition update saved.{resolvedSearchParams.itemId ? ` Rundown item ${resolvedSearchParams.itemId} was created.` : ""}
+        </p>
+      )}
 
       {scriptMode ? (
         <section className="grid gap-5 rounded border border-neutral-200 bg-white p-6">
@@ -304,7 +309,14 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
           </section>
 
           <section className="grid gap-4">
-            <h2 className="text-lg font-semibold">Rundown</h2>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Rundown</h2>
+                <p className="text-xs text-neutral-500">
+                  Showing {items.length} item{items.length === 1 ? "" : "s"} for Edition {editionRow.id}.
+                </p>
+              </div>
+            </div>
             {items.map((item, index) => {
               const copyVersion = item.copy_version || null;
               const story = item.story || null;
@@ -403,7 +415,11 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
                 </article>
               );
             })}
-            {items.length === 0 && <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-500">No rundown items exist yet.</p>}
+            {items.length === 0 && (
+              <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
+                No rundown items exist yet for Edition {editionRow.id}.
+              </p>
+            )}
           </section>
         </>
       )}

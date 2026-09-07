@@ -205,7 +205,7 @@ export async function addRundownItem(formData: FormData) {
     redirect(`/editions/${editionId}?error=${encodeURIComponent("Title is required.")}`);
   }
 
-  const { error } = await supabase.from("nrcs_rundown_items").insert({
+  const { data: insertedItem, error } = await supabase.from("nrcs_rundown_items").insert({
     edition_id: editionId,
     item_type: itemType,
     sort_order: await nextSortOrder(editionId),
@@ -216,11 +216,11 @@ export async function addRundownItem(formData: FormData) {
     copy_version_id: itemType === "story" ? copyVersionId : null,
     created_by: profile.id,
     updated_by: profile.id,
-  });
+  }).select("id").single();
 
   if (error) redirect(`/editions/${editionId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/editions/${editionId}`);
-  redirect(`/editions/${editionId}?success=item`);
+  redirect(`/editions/${editionId}?success=item${insertedItem?.id ? `&itemId=${insertedItem.id}` : ""}`);
 }
 
 export async function addStoryToRundown(formData: FormData) {
@@ -261,7 +261,7 @@ export async function addStoryToRundown(formData: FormData) {
   }
   title = title || version?.headline || story?.title || "Story Item";
 
-  const { error } = await supabase.from("nrcs_rundown_items").insert({
+  const { data: insertedItem, error } = await supabase.from("nrcs_rundown_items").insert({
     edition_id: editionId,
     item_type: "story",
     sort_order: await nextSortOrder(editionId),
@@ -270,12 +270,12 @@ export async function addStoryToRundown(formData: FormData) {
     copy_version_id: copyVersionId,
     created_by: profile.id,
     updated_by: profile.id,
-  });
+  }).select("id").single();
 
   if (error) redirect(withQueryParam(returnTo, "error", error.message));
   revalidatePath(`/editions/${editionId}`);
   revalidatePath(`/stories/${storyId}`);
-  redirect(withQueryParam(returnTo, "success", "rundown"));
+  redirect(withQueryParam(returnTo, "success", insertedItem?.id ? `rundown:${insertedItem.id}` : "rundown"));
 }
 
 export async function updateRundownItem(formData: FormData) {
