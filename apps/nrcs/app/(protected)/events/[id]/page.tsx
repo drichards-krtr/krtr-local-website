@@ -6,7 +6,9 @@ import { getNrcsDistrictContext } from "@/lib/districts";
 import { getEventPayloadFromForm } from "@/lib/eventForms";
 import type { EventClassificationTerm } from "@/lib/eventClassifications";
 import { syncNrcsEventById } from "@/lib/eventSyncServer";
-import { createNrcsServiceClient } from "@/lib/server";
+import { createNrcsServerClient, createNrcsServiceClient } from "@/lib/server";
+import { FollowUpCreateForm, FollowUpList, type FollowUpRow } from "@/components/NrcsWorkflowPanels";
+import { recordRecentItem } from "@/lib/workflow";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
   if (syncResult.ok) {
@@ -29,7 +31,7 @@ function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventByI
 
 async function updateEvent(formData: FormData) {
   "use server";
-  await requireNrcsStaff("contributor");
+  const { profile } = await requireNrcsStaff("contributor");
 
   const id = String(formData.get("id") || "");
   const fallbackDistrictKey = String(formData.get("district_key") || "dlpc");
@@ -72,9 +74,10 @@ export default async function EditEventPage({
 }) {
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
-  await requireNrcsStaff("contributor");
+  const { profile } = await requireNrcsStaff("contributor");
   const { allowedDistricts } = await getNrcsDistrictContext();
   const service = createNrcsServiceClient();
+  const supabase = await createNrcsServerClient();
   const { data, error } = await service
     .from("nrcs_events")
     .select(
@@ -92,10 +95,26 @@ export default async function EditEventPage({
   }
 
   const event = data as NrcsEventFormValue;
-  const { data: terms } = await service
-    .from("nrcs_event_classification_terms")
-    .select("id, district_key, kind, name, enabled")
-    .eq("district_key", event.district_key);
+  const [{ data: terms }, { data: followUps }] = await Promise.all([
+    service
+      .from("nrcs_event_classification_terms")
+      .select("id, district_key, kind, name, enabled")
+      .eq("district_key", event.district_key),
+    supabase
+      .from("nrcs_follow_ups")
+      .select("id, district_key, title, description, due_at, status, context_label, context_type, context_id")
+      .eq("context_type", "event")
+      .eq("context_id", id)
+      .order("due_at", { ascending: true }),
+  ]);
+  const eventFollowUps = (followUps || []) as FollowUpRow[];
+  await recordRecentItem({
+    districtKey: event.district_key,
+    href: `/events/${id}?district=${event.district_key}`,
+    objectId: id,
+    objectType: "event",
+    title: event.title,
+  });
 
   return (
     <div className="grid gap-6">
@@ -182,6 +201,23 @@ export default async function EditEventPage({
         terms={(terms || []) as EventClassificationTerm[]}
         submitLabel="Save Changes"
       />
+      <section className="grid gap-4">
+        <h2 className="text-lg font-semibold">Workflow</h2>
+        <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+          <FollowUpCreateForm
+            contextId={id}
+            contextLabel={event.title}
+            contextType="event"
+            districtKey={event.district_key}
+            returnTo={`/events/${id}?district=${event.district_key}`}
+          />
+          <FollowUpList
+            followUps={eventFollowUps}
+            profile={profile}
+            returnTo={`/events/${id}?district=${event.district_key}`}
+          />
+        </div>
+      </section>
     </div>
   );
 }

@@ -18,6 +18,14 @@ import { NrcsMuxLibraryPicker, NrcsMuxUploader } from "@/components/NrcsMuxVideo
 import NrcsRelationPicker from "@/components/NrcsRelationPicker";
 import NrcsStoryTabs from "@/components/NrcsStoryTabs";
 import { getMuxAsset, getMuxUpload, muxStatusFromAsset, muxStatusFromUpload, muxThumbnailUrl } from "@/lib/mux";
+import {
+  FollowUpCreateForm,
+  FollowUpList,
+  StoryWakePanel,
+  type FollowUpRow,
+  type StoryWakeRow,
+} from "@/components/NrcsWorkflowPanels";
+import { recordRecentItem } from "@/lib/workflow";
 
 type StoryRow = {
   id: string;
@@ -155,7 +163,7 @@ async function updateOverview(formData: FormData) {
 async function saveWebOutput(formData: FormData) {
   "use server";
 
-  await requireNrcsStaff("contributor");
+  const { profile } = await requireNrcsStaff("contributor");
   const storyId = String(formData.get("story_id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
   const outputId = String(formData.get("output_id") || "");
@@ -185,7 +193,7 @@ async function saveWebOutput(formData: FormData) {
 async function addStoryTag(formData: FormData) {
   "use server";
 
-  await requireNrcsStaff("contributor");
+  const { profile } = await requireNrcsStaff("contributor");
   const storyId = String(formData.get("story_id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
   const tagId = String(formData.get("tag_id") || "");
@@ -464,7 +472,7 @@ async function addAsset(formData: FormData) {
 async function refreshVideoAsset(formData: FormData) {
   "use server";
 
-  await requireNrcsStaff("contributor");
+  const { profile } = await requireNrcsStaff("contributor");
   const storyId = String(formData.get("story_id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
   const assetId = String(formData.get("asset_id") || "");
@@ -567,7 +575,7 @@ export default async function EditStoryPage({
 }) {
   const { id } = await params;
   const resolvedSearchParams = (await searchParams) || {};
-  await requireNrcsStaff("contributor");
+  const { profile } = await requireNrcsStaff("contributor");
   const { allowedDistricts } = await getNrcsDistrictContext();
   const supabase = await createNrcsServerClient();
 
@@ -593,6 +601,8 @@ export default async function EditStoryPage({
     { data: allTags },
     { data: storyTags },
     { data: webOutput },
+    { data: followUps },
+    { data: activeWake },
   ] = await Promise.all([
     supabase.from("nrcs_story_facts").select("body_html").eq("story_id", id).maybeSingle(),
     supabase.from("nrcs_copy_streams").select("id, stream_type, needs_review, review_reason, current_version_id").eq("story_id", id),
@@ -605,6 +615,13 @@ export default async function EditStoryPage({
     supabase.from("nrcs_tags").select("id, name, tag_type").order("name"),
     supabase.from("nrcs_story_tags").select("tag_id, nrcs_tags(id, name, tag_type)").eq("story_id", id),
     supabase.from("nrcs_web_outputs").select("id, story_id, copy_version_id, status, slug, seo_title, seo_description, scheduled_at, published_at").eq("story_id", id).limit(1).maybeSingle(),
+    supabase
+      .from("nrcs_follow_ups")
+      .select("id, district_key, title, description, due_at, status, context_label, context_type, context_id")
+      .eq("context_type", "story")
+      .eq("context_id", id)
+      .order("due_at", { ascending: true }),
+    supabase.from("nrcs_story_wakes").select("id, story_id, wake_at, reason, status").eq("story_id", id).eq("status", "active").maybeSingle(),
   ]);
 
   const streamRows = ((streams || []) as CopyStreamRow[]).sort(
@@ -635,13 +652,25 @@ export default async function EditStoryPage({
   const categoryOptions = (categories || []) as Array<{ id: string; name: string; enabled: boolean }>;
   const tagOptions = (allTags || []) as TagOption[];
   const openFlagCount = (flags || []).length;
+  const storyFollowUps = (followUps || []) as FollowUpRow[];
+  const storyWake = (activeWake || null) as StoryWakeRow | null;
+  await recordRecentItem({
+    districtKey: storyRow.district_key,
+    href: `/stories/${id}?district=${storyRow.district_key}`,
+    objectId: id,
+    objectType: "story",
+    title: storyRow.title,
+  });
 
   return (
     <div className="grid gap-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{storyRow.title}</h1>
-          <p className="text-sm text-neutral-500">Story lifecycle: {storyRow.lifecycle_state}</p>
+          <p className="text-sm text-neutral-500">
+            Story lifecycle: {storyRow.lifecycle_state}
+            {storyWake ? ` - Wake scheduled ${new Date(storyWake.wake_at).toLocaleString()}` : ""}
+          </p>
         </div>
         <Link href={`/stories?district=${storyRow.district_key}`} className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">
           Back to Stories
@@ -669,6 +698,35 @@ export default async function EditStoryPage({
             id: "copy",
             label: "Copy",
             children: <CopyStreamForms action={saveCopyStream} storyId={id} streams={streamsWithVersions} />,
+          },
+          {
+            id: "workflow",
+            label: "Workflow",
+            attentionCount: storyWake && new Date(storyWake.wake_at) <= new Date() ? 1 : undefined,
+            children: (
+              <section className="grid gap-4">
+                <StoryWakePanel
+                  activeWake={storyWake}
+                  districtKey={storyRow.district_key}
+                  returnTo={`/stories/${id}?district=${storyRow.district_key}`}
+                  storyId={id}
+                />
+                <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+                  <FollowUpCreateForm
+                    contextId={id}
+                    contextLabel={storyRow.title}
+                    contextType="story"
+                    districtKey={storyRow.district_key}
+                    returnTo={`/stories/${id}?district=${storyRow.district_key}`}
+                  />
+                  <FollowUpList
+                    followUps={storyFollowUps}
+                    profile={profile}
+                    returnTo={`/stories/${id}?district=${storyRow.district_key}`}
+                  />
+                </div>
+              </section>
+            ),
           },
           {
             id: "web-output",
