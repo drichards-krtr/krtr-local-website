@@ -153,17 +153,17 @@ on public.nrcs_intake_items (district_key, status, created_at desc);
 drop trigger if exists nrcs_follow_ups_set_updated_at on public.nrcs_follow_ups;
 create trigger nrcs_follow_ups_set_updated_at
 before update on public.nrcs_follow_ups
-for each row execute function public.set_updated_at();
+for each row execute procedure public.nrcs_set_updated_at();
 
 drop trigger if exists nrcs_story_wakes_set_updated_at on public.nrcs_story_wakes;
 create trigger nrcs_story_wakes_set_updated_at
 before update on public.nrcs_story_wakes
-for each row execute function public.set_updated_at();
+for each row execute procedure public.nrcs_set_updated_at();
 
 drop trigger if exists nrcs_intake_items_set_updated_at on public.nrcs_intake_items;
 create trigger nrcs_intake_items_set_updated_at
 before update on public.nrcs_intake_items
-for each row execute function public.set_updated_at();
+for each row execute procedure public.nrcs_set_updated_at();
 
 alter table public.nrcs_follow_ups enable row level security;
 alter table public.nrcs_follow_up_activity_logs enable row level security;
