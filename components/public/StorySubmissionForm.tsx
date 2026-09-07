@@ -50,7 +50,7 @@ export default function StorySubmissionForm() {
       throw new Error(payload?.error || "Unable to create Mux upload.");
     }
 
-    const { uploadUrl, uploadId } = await response.json();
+    const { uploadUrl, uploadId, passthrough } = await response.json();
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       body: file,
@@ -59,7 +59,7 @@ export default function StorySubmissionForm() {
       throw new Error("Video upload failed.");
     }
     setStatus("Video uploaded. Processing will continue in the background.");
-    return { muxUploadId: String(uploadId || ""), muxStatus: "uploading" };
+    return { muxUploadId: String(uploadId || ""), muxStatus: "uploading", muxPassthrough: String(passthrough || "") };
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -79,6 +79,7 @@ export default function StorySubmissionForm() {
           image_url: imageUrl || null,
           mux_upload_id: videoUpload?.muxUploadId || null,
           mux_status: videoUpload?.muxStatus || null,
+          mux_passthrough: videoUpload?.muxPassthrough || null,
           submitter_name: submitterName,
           submitter_phone: submitterPhone,
           submitter_email: submitterEmail,

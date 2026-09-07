@@ -66,6 +66,7 @@ export async function POST(request: Request) {
   const imageUrl = String(body?.image_url || "").trim() || null;
   const muxUploadId = String(body?.mux_upload_id || "").trim() || null;
   const muxStatus = String(body?.mux_status || "").trim() || null;
+  const muxPassthrough = String(body?.mux_passthrough || "").trim() || null;
   const submitterName = String(body?.submitter_name || "").trim();
   const submitterPhone = String(body?.submitter_phone || "").trim();
   const submitterEmail = String(body?.submitter_email || "").trim();
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
       image_url: imageUrl,
       mux_upload_id: muxUploadId,
       mux_status: muxStatus,
+      mux_passthrough: muxPassthrough,
     },
   });
 

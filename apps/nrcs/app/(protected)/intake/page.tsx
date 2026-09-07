@@ -106,6 +106,7 @@ async function convertIntake(formData: FormData) {
           cloudinary_url: imageUrl,
           metadata: {
             intake_id: intake.id,
+            mux_passthrough: String(intake.payload?.mux_passthrough || "") || null,
             source: "public_story_tip",
           },
           created_by: profile.id,
@@ -115,6 +116,40 @@ async function convertIntake(formData: FormData) {
 
       if (assetError || !asset) {
         redirect(`/intake?district=${districtKey}&error=${encodeURIComponent(assetError?.message || "Unable to attach submitted image.")}`);
+      }
+
+      const { error: linkError } = await supabase.from("nrcs_story_assets").insert({
+        story_id: story.id,
+        asset_id: asset.id,
+        relationship: "submitted",
+      });
+
+      if (linkError) {
+        redirect(`/intake?district=${districtKey}&error=${encodeURIComponent(linkError.message)}`);
+      }
+    }
+
+    const muxUploadId = String(intake.payload?.mux_upload_id || "").trim();
+    if (muxUploadId) {
+      const { data: asset, error: assetError } = await supabase
+        .from("nrcs_assets")
+        .insert({
+          asset_type: "video",
+          title: `${intake.title} submitted video`,
+          district_key: intake.district_key,
+          mux_upload_id: muxUploadId,
+          mux_status: String(intake.payload?.mux_status || "uploading"),
+          metadata: {
+            intake_id: intake.id,
+            source: "public_story_tip",
+          },
+          created_by: profile.id,
+        })
+        .select("id")
+        .single();
+
+      if (assetError || !asset) {
+        redirect(`/intake?district=${districtKey}&error=${encodeURIComponent(assetError?.message || "Unable to attach submitted video.")}`);
       }
 
       const { error: linkError } = await supabase.from("nrcs_story_assets").insert({
@@ -261,6 +296,16 @@ export default async function IntakePage({
                 alt=""
                 className="max-h-64 w-fit rounded border border-neutral-200 object-contain"
               />
+            )}
+            {typeof item.payload?.mux_upload_id === "string" && item.payload.mux_upload_id && (
+              <div className="rounded border border-neutral-200 bg-neutral-50 p-3 text-xs">
+                <div className="font-semibold">Submitted Video</div>
+                <div className="mt-1 break-words">Mux Upload ID: {item.payload.mux_upload_id}</div>
+                {typeof item.payload?.mux_passthrough === "string" && item.payload.mux_passthrough && (
+                  <div className="mt-1 break-words">Mux Passthrough: {item.payload.mux_passthrough}</div>
+                )}
+                <div className="mt-1">Status: {String(item.payload.mux_status || "uploading")}</div>
+              </div>
             )}
             <dl className="grid gap-1 rounded bg-neutral-50 p-3 text-xs md:grid-cols-[140px_1fr]">
               <dt className="font-semibold">Submitter</dt>
