@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { createServiceClient } from "@/lib/supabase/admin";
 import ImageUploadField from "@/components/shared/ImageUploadField";
 import { getCurrentDistrict } from "@/lib/districtServer";
 import { getRequiredEventAddress } from "@/lib/events";
+import { sendIntakeToNrcs } from "@/lib/nrcsIntake";
 
 const fieldClassName =
   "min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm";
@@ -58,7 +58,6 @@ export default async function SubmitCalendarEventPage() {
   async function submitEvent(formData: FormData) {
     "use server";
 
-    const service = createServiceClient();
     const submitterName = String(formData.get("submitter_name") || "").trim();
     const submitterPhone = String(formData.get("submitter_phone") || "").trim();
     const submitterEmail = String(formData.get("submitter_email") || "").trim();
@@ -73,46 +72,29 @@ export default async function SubmitCalendarEventPage() {
       throw new Error(addressError || "Event address is required.");
     }
 
-    const { data: submitter, error: submitterError } = await service
-      .from("event_submitters")
-      .insert({
-        name: submitterName,
-        phone: submitterPhone,
-        email: submitterEmail,
-      })
-      .select("id")
-      .single();
-
-    if (submitterError) {
-      throw new Error(`Unable to save submitter contact: ${submitterError.message}`);
-    }
-
-    const { data: event, error: eventError } = await service
-      .from("events")
-      .insert({
-        district_key: district.key,
-        title,
-        description: String(formData.get("description") || "").trim() || null,
+    const description = String(formData.get("description") || "").trim() || null;
+    const endAt = String(formData.get("end_at") || "").trim() || null;
+    const imageUrl = String(formData.get("image_url") || "").trim() || null;
+    const intakeResult = await sendIntakeToNrcs({
+      intake_type: "calendar_submission",
+      district_key: district.key,
+      title,
+      summary: description,
+      body: description,
+      submitter_name: submitterName,
+      submitter_phone: submitterPhone,
+      submitter_email: submitterEmail,
+      external_source_id: crypto.randomUUID(),
+      payload: {
         ...addressFields,
         start_at: startAt,
-        end_at: String(formData.get("end_at") || "").trim() || null,
-        image_url: String(formData.get("image_url") || "").trim() || null,
-        status: "draft",
-        submitter_id: submitter.id,
-      })
-      .select("id")
-      .single();
+        end_at: endAt,
+        image_url: imageUrl,
+      },
+    });
 
-    if (eventError) {
-      throw new Error(`Unable to save event submission: ${eventError.message}`);
-    }
-
-    const { error: linkError } = await service
-      .from("event_submitters")
-      .update({ submitted_event_id: event.id })
-      .eq("id", submitter.id);
-    if (linkError) {
-      throw new Error(`Unable to link submitter to event: ${linkError.message}`);
+    if (!intakeResult.ok) {
+      throw new Error(`Unable to send submission to NRCS intake: ${intakeResult.error}`);
     }
 
     await sendSubmissionNotificationEmail(submitterEmail, district.name);
@@ -221,7 +203,7 @@ export default async function SubmitCalendarEventPage() {
           </div>
           <div className="md:col-span-2">
             <p className="mb-2 text-xs text-neutral-600">
-              Submission status is automatically set to draft for review.
+              Submission is sent to the newsroom intake queue for review.
             </p>
             <button
               type="submit"

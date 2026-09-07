@@ -37,19 +37,20 @@ export default function StorySubmissionForm() {
     setStatus("Image upload complete.");
   }
 
-  async function uploadVideo(storyId: string, file: File) {
+  async function uploadVideo(file: File) {
     setStatus("Uploading video...");
-    const response = await fetch("/api/mux/create-upload", {
+    const externalId = crypto.randomUUID();
+    const response = await fetch("/api/mux/create-intake-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ storyId }),
+      body: JSON.stringify({ externalId }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload?.error || "Unable to create Mux upload.");
     }
 
-    const { uploadUrl } = await response.json();
+    const { uploadUrl, uploadId } = await response.json();
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       body: file,
@@ -58,6 +59,7 @@ export default function StorySubmissionForm() {
       throw new Error("Video upload failed.");
     }
     setStatus("Video uploaded. Processing will continue in the background.");
+    return { muxUploadId: String(uploadId || ""), muxStatus: "uploading" };
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -66,6 +68,7 @@ export default function StorySubmissionForm() {
     setError(null);
     setStatus("Submitting...");
     try {
+      const videoUpload = videoFile ? await uploadVideo(videoFile) : null;
       const response = await fetch("/api/story-submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,6 +77,8 @@ export default function StorySubmissionForm() {
           tease,
           body_markdown: bodyMarkdown,
           image_url: imageUrl || null,
+          mux_upload_id: videoUpload?.muxUploadId || null,
+          mux_status: videoUpload?.muxStatus || null,
           submitter_name: submitterName,
           submitter_phone: submitterPhone,
           submitter_email: submitterEmail,
@@ -81,12 +86,8 @@ export default function StorySubmissionForm() {
       });
 
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.storyId) {
+      if (!response.ok || !payload?.intakeId) {
         throw new Error(payload?.error || "Unable to submit story.");
-      }
-
-      if (videoFile) {
-        await uploadVideo(payload.storyId, videoFile);
       }
 
       router.push("/submit-story/thanks");
@@ -201,7 +202,7 @@ export default function StorySubmissionForm() {
 
       <div className="md:col-span-2">
         <p className="mb-2 text-xs text-neutral-600">
-          Submission status is automatically set to draft.
+          Submission will be sent to the newsroom intake queue.
         </p>
         <button
           type="submit"

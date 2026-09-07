@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/admin";
 import { getDistrictConfig, resolveDistrictFromHost } from "@/lib/districts";
+import { sendIntakeToNrcs } from "@/lib/nrcsIntake";
 
 async function sendSubmissionNotificationEmail(submitterEmail: string, districtName: string) {
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -64,6 +64,8 @@ export async function POST(request: Request) {
   const tease = String(body?.tease || "").trim();
   const bodyMarkdown = String(body?.body_markdown || "").trim();
   const imageUrl = String(body?.image_url || "").trim() || null;
+  const muxUploadId = String(body?.mux_upload_id || "").trim() || null;
+  const muxStatus = String(body?.mux_status || "").trim() || null;
   const submitterName = String(body?.submitter_name || "").trim();
   const submitterPhone = String(body?.submitter_phone || "").trim();
   const submitterEmail = String(body?.submitter_email || "").trim();
@@ -72,52 +74,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }
 
-  const service = createServiceClient();
-
-  const { data: submitter, error: submitterError } = await service
-    .from("story_submitters")
-    .insert({
-      name: submitterName,
-      phone: submitterPhone,
-      email: submitterEmail,
-    })
-    .select("id")
-    .single();
-  if (submitterError) {
-    return NextResponse.json(
-      { error: `submitter_insert_failed: ${submitterError.message}` },
-      { status: 500 }
-    );
-  }
-
-  const { data: story, error: storyError } = await service
-    .from("stories")
-    .insert({
-      district_key: districtKey,
-      title,
+  const externalId = crypto.randomUUID();
+  const intakeResult = await sendIntakeToNrcs({
+    intake_type: "story_tip",
+    district_key: districtKey,
+    title,
+    summary: tease || null,
+    body: bodyMarkdown,
+    submitter_name: submitterName,
+    submitter_phone: submitterPhone,
+    submitter_email: submitterEmail,
+    external_source_id: externalId,
+    payload: {
       tease: tease || null,
       body_markdown: bodyMarkdown,
-      status: "draft",
       image_url: imageUrl,
-      submitter_id: submitter.id,
-      mux_status: "none",
-    })
-    .select("id")
-    .single();
+      mux_upload_id: muxUploadId,
+      mux_status: muxStatus,
+    },
+  });
 
-  if (storyError) {
+  if (!intakeResult.ok) {
     return NextResponse.json(
-      { error: `story_insert_failed: ${storyError.message}` },
-      { status: 500 }
+      { error: `nrcs_intake_failed: ${intakeResult.error}` },
+      { status: 502 }
     );
   }
-
-  await service
-    .from("story_submitters")
-    .update({ submitted_story_id: story.id })
-    .eq("id", submitter.id);
 
   await sendSubmissionNotificationEmail(submitterEmail, district.name);
 
-  return NextResponse.json({ ok: true, storyId: story.id });
+  return NextResponse.json({ ok: true, intakeId: intakeResult.intakeId });
 }
