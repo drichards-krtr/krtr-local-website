@@ -95,6 +95,39 @@ async function convertIntake(formData: FormData) {
       });
     }
 
+    const imageUrl = String(intake.payload?.image_url || "").trim();
+    if (imageUrl) {
+      const { data: asset, error: assetError } = await supabase
+        .from("nrcs_assets")
+        .insert({
+          asset_type: "image",
+          title: `${intake.title} submitted image`,
+          district_key: intake.district_key,
+          cloudinary_url: imageUrl,
+          metadata: {
+            intake_id: intake.id,
+            source: "public_story_tip",
+          },
+          created_by: profile.id,
+        })
+        .select("id")
+        .single();
+
+      if (assetError || !asset) {
+        redirect(`/intake?district=${districtKey}&error=${encodeURIComponent(assetError?.message || "Unable to attach submitted image.")}`);
+      }
+
+      const { error: linkError } = await supabase.from("nrcs_story_assets").insert({
+        story_id: story.id,
+        asset_id: asset.id,
+        relationship: "submitted",
+      });
+
+      if (linkError) {
+        redirect(`/intake?district=${districtKey}&error=${encodeURIComponent(linkError.message)}`);
+      }
+    }
+
     await supabase
       .from("nrcs_intake_items")
       .update({ status: "converted", reviewed_by: profile.id, reviewed_at: new Date().toISOString() })
@@ -222,6 +255,13 @@ export default async function IntakePage({
             </div>
             {item.summary && <p className="text-neutral-700">{item.summary}</p>}
             {item.body && <p className="whitespace-pre-wrap text-neutral-700">{item.body}</p>}
+            {typeof item.payload?.image_url === "string" && item.payload.image_url && (
+              <img
+                src={item.payload.image_url}
+                alt=""
+                className="max-h-64 w-fit rounded border border-neutral-200 object-contain"
+              />
+            )}
             <dl className="grid gap-1 rounded bg-neutral-50 p-3 text-xs md:grid-cols-[140px_1fr]">
               <dt className="font-semibold">Submitter</dt>
               <dd>{[item.submitter_name, item.submitter_email, item.submitter_phone].filter(Boolean).join(" / ") || "-"}</dd>

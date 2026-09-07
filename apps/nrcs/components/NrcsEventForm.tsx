@@ -1,5 +1,6 @@
 import Link from "next/link";
 import RichTextEditor from "./RichTextEditor";
+import NrcsCloudinaryImageField from "./NrcsCloudinaryImageField";
 import { sortClassificationTerms, type EventClassificationTerm } from "@/lib/eventClassifications";
 
 export type NrcsEventFormValue = {
@@ -126,10 +127,7 @@ export default function NrcsEventForm({
         </label>
       </div>
 
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Image URL</span>
-        <input name="image_url" defaultValue={event?.image_url || ""} className="rounded border border-neutral-300 px-3 py-2" />
-      </label>
+      <NrcsCloudinaryImageField name="image_url" label="Event Image" initialUrl={event?.image_url} />
 
       <label className="grid gap-1 text-sm">
         <span className="font-medium">Details</span>
