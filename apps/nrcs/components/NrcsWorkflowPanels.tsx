@@ -59,7 +59,7 @@ export function FollowUpCreateForm({
         "use server";
         await createFollowUpFromForm(formData, returnTo);
       }}
-      className="grid gap-3 rounded border border-neutral-200 bg-white p-4"
+      className="grid h-fit gap-3 rounded border border-neutral-200 bg-white p-4"
     >
       <input type="hidden" name="district_key" value={districtKey} />
       <input type="hidden" name="context_type" value={contextType || ""} />
@@ -99,7 +99,7 @@ export function FollowUpList({
   const canBackdate = hasNrcsRoleAtLeast(profile.role, "editor");
 
   return (
-    <div className="grid gap-3">
+    <div className="grid h-fit content-start gap-3">
       {followUps.map((followUp) => {
         const isDone = followUp.status === "completed" || followUp.status === "canceled";
         return (
@@ -147,7 +147,7 @@ export function FollowUpList({
           </article>
         );
       })}
-      {followUps.length === 0 && <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-500">No Follow-Ups match this view.</p>}
+      {followUps.length === 0 && <p className="h-fit rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-500">No Follow-Ups match this view.</p>}
     </div>
   );
 }

@@ -154,9 +154,12 @@ export default async function NrcsDashboardPage() {
         </dl>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <section className="grid gap-4">
-          <h2 className="text-lg font-semibold">Needs Attention</h2>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
+        <section className="grid content-start gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold">Needs Attention</h2>
+            <Link href="/follow-ups" className="text-sm font-semibold underline">View Follow-Ups</Link>
+          </div>
           {wakes.length > 0 && (
             <div className="grid gap-3">
               {wakes.map((wake) => {
@@ -200,7 +203,7 @@ export default async function NrcsDashboardPage() {
           <FollowUpList followUps={dashboardFollowUps} profile={profile} returnTo="/dashboard" />
         </section>
 
-        <section className="grid gap-4">
+        <section className="grid content-start gap-3">
           <h2 className="text-lg font-semibold">Quick Follow-Up</h2>
           <FollowUpCreateForm districtKey={districtKey} returnTo="/dashboard" />
         </section>
@@ -208,7 +211,7 @@ export default async function NrcsDashboardPage() {
 
       {canManageIntake && (
         <section className="grid gap-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-semibold">Intake</h2>
             <Link href="/intake" className="text-sm font-semibold underline">View Queue</Link>
           </div>
@@ -260,7 +263,7 @@ export default async function NrcsDashboardPage() {
         </section>
 
         <section className="grid gap-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-semibold">Recently Opened</h2>
             <Link href="/search" className="text-sm font-semibold underline">Search</Link>
           </div>
