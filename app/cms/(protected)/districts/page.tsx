@@ -11,6 +11,7 @@ type DistrictRow = {
   primary_contact_name: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
+  timezone: string;
   created_at: string;
 };
 
@@ -30,6 +31,10 @@ function normalizeSubdomain(value: FormDataEntryValue | null) {
 function normalizeEmail(value: FormDataEntryValue | null) {
   const text = String(value || "").trim().toLowerCase();
   return text.length > 0 ? text : null;
+}
+
+function normalizeTimezone(value: FormDataEntryValue | null) {
+  return String(value || "America/Chicago").trim() || "America/Chicago";
 }
 
 function revalidateDistrictConfiguration() {
@@ -54,6 +59,7 @@ async function createDistrict(formData: FormData) {
     subdomain,
     display_name: displayName,
     enabled: formData.get("enabled") === "on",
+    timezone: normalizeTimezone(formData.get("timezone")),
     primary_contact_name: cleanText(formData.get("primary_contact_name")),
     primary_contact_email: normalizeEmail(formData.get("primary_contact_email")),
     primary_contact_phone: cleanText(formData.get("primary_contact_phone")),
@@ -85,6 +91,7 @@ async function updateDistrict(formData: FormData) {
       subdomain,
       display_name: displayName,
       enabled: formData.get("enabled") === "on",
+      timezone: normalizeTimezone(formData.get("timezone")),
       primary_contact_name: cleanText(formData.get("primary_contact_name")),
       primary_contact_email: normalizeEmail(formData.get("primary_contact_email")),
       primary_contact_phone: cleanText(formData.get("primary_contact_phone")),
@@ -108,7 +115,7 @@ export default async function DistrictConfigurationPage({
   const { data, error } = await service
     .from("districts")
     .select(
-      "id, district_key, subdomain, display_name, enabled, primary_contact_name, primary_contact_email, primary_contact_phone, created_at"
+      "id, district_key, subdomain, display_name, enabled, primary_contact_name, primary_contact_email, primary_contact_phone, timezone, created_at"
     )
     .order("display_name", { ascending: true });
 
@@ -181,6 +188,10 @@ export default async function DistrictConfigurationPage({
             <span className="font-medium">Primary Contact Phone</span>
             <input name="primary_contact_phone" className="rounded border border-neutral-300 px-3 py-2" />
           </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Timezone</span>
+            <input name="timezone" defaultValue="America/Chicago" required className="rounded border border-neutral-300 px-3 py-2" />
+          </label>
           <label className="inline-flex items-center gap-2 text-sm">
             <input name="enabled" type="checkbox" />
             Enabled
@@ -192,17 +203,18 @@ export default async function DistrictConfigurationPage({
       </section>
 
       <section className="rounded border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[120px_1fr_1fr_100px] gap-3 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
+        <div className="grid grid-cols-[120px_1fr_1fr_140px_100px] gap-3 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Key</div>
           <div>District</div>
           <div>Primary Contact</div>
+          <div>Timezone</div>
           <div>Status</div>
         </div>
         {districts.map((district) => (
           <form
             key={district.id}
             action={updateDistrict}
-            className="grid gap-3 border-b border-neutral-100 px-4 py-4 text-sm lg:grid-cols-[120px_1fr_1fr_100px]"
+            className="grid gap-3 border-b border-neutral-100 px-4 py-4 text-sm lg:grid-cols-[120px_1fr_1fr_140px_100px]"
           >
             <input type="hidden" name="id" value={district.id} />
             <div>
@@ -241,6 +253,14 @@ export default async function DistrictConfigurationPage({
                 name="primary_contact_phone"
                 defaultValue={district.primary_contact_phone || ""}
                 placeholder="Phone"
+                className="rounded border border-neutral-300 px-3 py-2"
+              />
+            </div>
+            <div className="grid content-start gap-2">
+              <input
+                name="timezone"
+                defaultValue={district.timezone || "America/Chicago"}
+                required
                 className="rounded border border-neutral-300 px-3 py-2"
               />
             </div>

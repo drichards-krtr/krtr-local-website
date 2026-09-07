@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const { data, error } = await service
     .from("districts")
     .select(
-      "district_key, subdomain, display_name, enabled, primary_contact_name, primary_contact_email, primary_contact_phone"
+      "district_key, subdomain, display_name, enabled, primary_contact_name, primary_contact_email, primary_contact_phone, timezone"
     )
     .order("display_name", { ascending: true });
 

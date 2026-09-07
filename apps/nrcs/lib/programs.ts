@@ -1,6 +1,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireNrcsStaff } from "./auth";
+import { getCmsDistricts } from "./cmsDistricts";
+import {
+  formatDateTimeForInput,
+  formatDateTimeInTimeZone,
+  getDateTextInTimeZone,
+  localDateTimeInputToUtcIso,
+} from "./localDates";
 import { plainTextToHtml, sanitizeRichTextHtml } from "./richText";
 import { createNrcsServerClient } from "./server";
 
@@ -10,22 +17,16 @@ export const RUNDOWN_ITEM_TYPES = ["story", "segment", "script", "production_not
 export type EditionStatus = (typeof EDITION_STATUSES)[number];
 export type RundownItemType = (typeof RUNDOWN_ITEM_TYPES)[number];
 
-export function formatDateTimeLocal(value: string | null | undefined) {
-  return value ? value.slice(0, 16) : "";
+export function formatDateTimeLocal(value: string | null | undefined, timeZone = "America/Chicago") {
+  return formatDateTimeForInput(value, timeZone);
 }
 
-export function formatProgramDateTime(value: string | null | undefined) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(date);
+export function formatProgramDateTime(value: string | null | undefined, timeZone = "America/Chicago") {
+  return formatDateTimeInTimeZone(value, timeZone);
 }
 
-export function defaultEditionTitle(programName: string, airAt: string) {
-  const date = new Date(airAt);
-  const label = Number.isNaN(date.getTime())
-    ? airAt
-    : new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
+export function defaultEditionTitle(programName: string, airAt: string, timeZone = "America/Chicago") {
+  const label = getDateTextInTimeZone(airAt, timeZone) || airAt;
   return `${programName} - ${label}`;
 }
 
@@ -66,12 +67,13 @@ export async function createEdition(formData: FormData) {
   const { profile } = await requireNrcsStaff("editor");
   const programId = String(formData.get("program_id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
-  const airAt = String(formData.get("air_at") || "").trim();
-  const recordingAt = String(formData.get("recording_at") || "").trim() || null;
+  const airAtInput = String(formData.get("air_at") || "").trim();
+  const recordingAtInput = String(formData.get("recording_at") || "").trim() || null;
+  const templateId = String(formData.get("template_id") || "").trim();
   const suppliedTitle = String(formData.get("title") || "").trim();
   const supabase = await createNrcsServerClient();
 
-  if (!programId || !airAt) {
+  if (!programId || !airAtInput) {
     redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Program and air date/time are required.")}`);
   }
 
@@ -84,7 +86,14 @@ export async function createEdition(formData: FormData) {
     redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(programError?.message || "Program not found.")}`);
   }
 
-  const title = suppliedTitle || defaultEditionTitle(program.name, airAt);
+  const timezone = await getDistrictTimeZone(program.district_key);
+  const airAt = localDateTimeInputToUtcIso(airAtInput, timezone);
+  const recordingAt = recordingAtInput ? localDateTimeInputToUtcIso(recordingAtInput, timezone) : null;
+  if (!airAt || (recordingAtInput && !recordingAt)) {
+    redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Invalid air or recording date/time.")}`);
+  }
+
+  const title = suppliedTitle || defaultEditionTitle(program.name, airAt, timezone);
   const { data: edition, error } = await supabase
     .from("nrcs_editions")
     .insert({
@@ -103,14 +112,16 @@ export async function createEdition(formData: FormData) {
     redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error?.message || "Unable to create Edition.")}`);
   }
 
-  const { data: template } = await supabase
-    .from("nrcs_program_templates")
-    .select("id")
-    .eq("program_id", program.id)
-    .eq("enabled", true)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const { data: template } = templateId
+    ? await supabase.from("nrcs_program_templates").select("id").eq("id", templateId).eq("program_id", program.id).maybeSingle()
+    : await supabase
+        .from("nrcs_program_templates")
+        .select("id")
+        .eq("program_id", program.id)
+        .eq("enabled", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
   if (template) {
     const { data: templateItems } = await supabase
@@ -145,9 +156,16 @@ export async function updateEdition(formData: FormData) {
   const { profile } = await requireNrcsStaff("editor");
   const id = String(formData.get("edition_id") || "");
   const status = String(formData.get("status") || "draft");
-  const airAt = String(formData.get("air_at") || "").trim();
-  const recordingAt = String(formData.get("recording_at") || "").trim() || null;
+  const airAtInput = String(formData.get("air_at") || "").trim();
+  const recordingAtInput = String(formData.get("recording_at") || "").trim() || null;
   let title = String(formData.get("title") || "").trim();
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const timezone = await getDistrictTimeZone(districtKey);
+  const airAt = localDateTimeInputToUtcIso(airAtInput, timezone);
+  const recordingAt = recordingAtInput ? localDateTimeInputToUtcIso(recordingAtInput, timezone) : null;
+  if (!airAt || (recordingAtInput && !recordingAt) || !title) {
+    redirect(`/editions/${id}?error=${encodeURIComponent("Title and valid air date/time are required.")}`);
+  }
   const payload = {
     title,
     air_at: airAt,
@@ -221,6 +239,171 @@ export async function addRundownItem(formData: FormData) {
   if (error) redirect(`/editions/${editionId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/editions/${editionId}`);
   redirect(`/editions/${editionId}?success=item${insertedItem?.id ? `&itemId=${insertedItem.id}` : ""}`);
+}
+
+async function getDistrictTimeZone(districtKey: string) {
+  const cmsDistricts = await getCmsDistricts();
+  const cmsDistrict = cmsDistricts?.find((district) => district.district_key === districtKey);
+  if (cmsDistrict?.timezone) return cmsDistrict.timezone;
+
+  const supabase = await createNrcsServerClient();
+  const { data } = await supabase.from("nrcs_districts").select("timezone").eq("district_key", districtKey).maybeSingle();
+  return data?.timezone || "America/Chicago";
+}
+
+async function nextTemplateSortOrder(templateId: string) {
+  const supabase = await createNrcsServerClient();
+  const { data } = await supabase
+    .from("nrcs_program_template_items")
+    .select("sort_order")
+    .eq("template_id", templateId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return Number(data?.sort_order || 0) + 10;
+}
+
+export async function createProgram(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("editor");
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const name = String(formData.get("name") || "").trim();
+  if (!name) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Program name is required.")}`);
+
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase.from("nrcs_programs").insert({
+    district_key: districtKey,
+    name,
+    enabled: formData.get("enabled") === "on",
+  });
+  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/programs");
+  redirect(`/programs?district=${districtKey}&success=program`);
+}
+
+export async function updateProgram(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("editor");
+  const id = String(formData.get("program_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const name = String(formData.get("name") || "").trim();
+  if (!id || !name) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Program and name are required.")}`);
+
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase
+    .from("nrcs_programs")
+    .update({ name, enabled: formData.get("enabled") === "on" })
+    .eq("id", id);
+  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/programs");
+  redirect(`/programs?district=${districtKey}&success=program`);
+}
+
+export async function createProgramTemplate(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("editor");
+  const programId = String(formData.get("program_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const name = String(formData.get("name") || "").trim();
+  if (!programId || !name) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template name is required.")}`);
+
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase.from("nrcs_program_templates").insert({
+    program_id: programId,
+    name,
+    enabled: formData.get("enabled") === "on",
+  });
+  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/programs");
+  redirect(`/programs?district=${districtKey}&success=template`);
+}
+
+export async function updateProgramTemplate(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("editor");
+  const templateId = String(formData.get("template_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const name = String(formData.get("name") || "").trim();
+  if (!templateId || !name) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template and name are required.")}`);
+
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase
+    .from("nrcs_program_templates")
+    .update({ name, enabled: formData.get("enabled") === "on" })
+    .eq("id", templateId);
+  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/programs");
+  redirect(`/programs?district=${districtKey}&success=template`);
+}
+
+export async function addTemplateItem(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("editor");
+  const templateId = String(formData.get("template_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const itemType = String(formData.get("item_type") || "script") as RundownItemType;
+  const title = String(formData.get("title") || "").trim();
+  if (!templateId || !title || itemType === "story" || !RUNDOWN_ITEM_TYPES.includes(itemType)) {
+    redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template item requires a non-story type and title.")}`);
+  }
+
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase.from("nrcs_program_template_items").insert({
+    template_id: templateId,
+    item_type: itemType,
+    title,
+    body_html: sanitizeRichTextHtml(String(formData.get("body_html") || "")) || plainTextToHtml(""),
+    segment_kind: itemType === "segment" ? String(formData.get("segment_kind") || "").trim() || null : null,
+    sort_order: await nextTemplateSortOrder(templateId),
+  });
+  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/programs");
+  redirect(`/programs?district=${districtKey}&success=template-item`);
+}
+
+export async function updateTemplateItem(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("editor");
+  const itemId = String(formData.get("template_item_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const itemType = String(formData.get("item_type") || "script") as RundownItemType;
+  const title = String(formData.get("title") || "").trim();
+  if (!itemId || !title || itemType === "story" || !RUNDOWN_ITEM_TYPES.includes(itemType)) {
+    redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template item requires a non-story type and title.")}`);
+  }
+
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase
+    .from("nrcs_program_template_items")
+    .update({
+      item_type: itemType,
+      title,
+      body_html: sanitizeRichTextHtml(String(formData.get("body_html") || "")) || plainTextToHtml(""),
+      segment_kind: itemType === "segment" ? String(formData.get("segment_kind") || "").trim() || null : null,
+    })
+    .eq("id", itemId);
+  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/programs");
+  redirect(`/programs?district=${districtKey}&success=template-item`);
+}
+
+export async function deleteTemplateItem(formData: FormData) {
+  "use server";
+
+  await requireNrcsStaff("editor");
+  const itemId = String(formData.get("template_item_id") || "");
+  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
+  const supabase = await createNrcsServerClient();
+  const { error } = await supabase.from("nrcs_program_template_items").delete().eq("id", itemId);
+  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/programs");
+  redirect(`/programs?district=${districtKey}&success=template-item`);
 }
 
 export async function addStoryToRundown(formData: FormData) {

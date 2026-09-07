@@ -675,6 +675,8 @@ export default async function EditStoryPage({
   const openFlagCount = (flags || []).length;
   const storyFollowUps = (followUps || []) as FollowUpRow[];
   const storyWake = (activeWake || null) as StoryWakeRow | null;
+  const storyDistrict = allowedDistricts.find((district) => district.district_key === storyRow.district_key);
+  const storyTimezone = storyDistrict?.timezone || "America/Chicago";
   const rundownStream = streamsWithVersions.find((stream) => stream.stream_type === "rundown");
   const rundownVersion = rundownStream?.current_version || null;
   const upcomingEditions = (upcomingEditionsResult.data || []) as unknown as EditionOptionRow[];
@@ -758,7 +760,7 @@ export default async function EditStoryPage({
                                 const program = Array.isArray(edition.nrcs_programs) ? edition.nrcs_programs[0] : edition.nrcs_programs;
                                 return (
                                   <option key={edition.id} value={edition.id}>
-                                    {program?.name || "Program"} - {edition.title} - {formatProgramDateTime(edition.air_at)}
+                                    {program?.name || "Program"} - {edition.title} - {formatProgramDateTime(edition.air_at, storyTimezone)}
                                   </option>
                                 );
                               })}

@@ -8,6 +8,7 @@ export type CmsDistrict = {
   primary_contact_name: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
+  timezone?: string | null;
 };
 
 export async function getCmsDistricts(): Promise<CmsDistrict[] | null> {

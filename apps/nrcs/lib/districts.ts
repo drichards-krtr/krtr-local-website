@@ -10,6 +10,7 @@ export type NrcsDistrict = {
   primary_contact_name: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
+  timezone: string;
 };
 
 export type NrcsDistrictContext = {
@@ -22,7 +23,7 @@ export async function getNrcsDistrictContext(): Promise<NrcsDistrictContext> {
   const { data, error } = await supabase
     .from("nrcs_districts")
     .select(
-      "id, district_key, subdomain, display_name, enabled, primary_contact_name, primary_contact_email, primary_contact_phone"
+      "id, district_key, subdomain, display_name, enabled, primary_contact_name, primary_contact_email, primary_contact_phone, timezone"
     )
     .eq("enabled", true)
     .order("display_name", { ascending: true });
@@ -48,6 +49,7 @@ export async function getNrcsDistrictContext(): Promise<NrcsDistrictContext> {
       primary_contact_name: cmsDistrict.primary_contact_name,
       primary_contact_email: cmsDistrict.primary_contact_email,
       primary_contact_phone: cmsDistrict.primary_contact_phone,
+      timezone: cmsDistrict.timezone || district.timezone || "America/Chicago",
     };
   });
 
