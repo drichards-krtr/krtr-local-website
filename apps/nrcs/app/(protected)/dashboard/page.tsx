@@ -36,6 +36,15 @@ type RecentRow = {
   viewed_at: string;
 };
 
+type EditionRow = {
+  id: string;
+  program_id: string;
+  title: string;
+  air_at: string;
+  status: string;
+  nrcs_programs: { name: string } | Array<{ name: string }> | null;
+};
+
 export default async function NrcsDashboardPage() {
   const { profile } = await requireNrcsStaff();
   const { activeDistrict, allowedDistricts } = await getNrcsDistrictContext();
@@ -57,6 +66,7 @@ export default async function NrcsDashboardPage() {
     { data: upcomingEvents },
     { data: recentStories },
     { data: recentItems },
+    { data: upcomingEditions },
     intakeResult,
   ] = await Promise.all([
     supabase
@@ -103,6 +113,15 @@ export default async function NrcsDashboardPage() {
       .limit(8),
     canManageIntake
       ? supabase
+          .from("nrcs_editions")
+          .select("id, program_id, title, air_at, status, nrcs_programs(name)")
+          .eq("district_key", districtKey)
+          .gte("air_at", now.toISOString())
+          .order("air_at", { ascending: true })
+          .limit(30)
+      : Promise.resolve({ data: [] as EditionRow[], error: null }),
+    canManageIntake
+      ? supabase
           .from("nrcs_intake_items")
           .select("id, intake_type, title, status, created_at")
           .eq("district_key", districtKey)
@@ -115,6 +134,9 @@ export default async function NrcsDashboardPage() {
   const dashboardFollowUps = (followUps || []) as FollowUpRow[];
   const wakes = (triggeredWakes || []) as Array<StoryWakeRow & { nrcs_stories?: { id: string; title: string; district_key: string } | Array<{ id: string; title: string; district_key: string }> | null }>;
   const intake = (intakeResult.data || []) as IntakeRow[];
+  const nextEditionRows = ((upcomingEditions || []) as unknown as EditionRow[]).filter((edition, index, editions) => {
+    return editions.findIndex((candidate) => candidate.program_id === edition.program_id) === index;
+  });
 
   return (
     <div className="grid gap-6">
@@ -223,6 +245,28 @@ export default async function NrcsDashboardPage() {
               </Link>
             ))}
             {intake.length === 0 && <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-500">No active intake items.</p>}
+          </div>
+        </section>
+      )}
+
+      {canManageIntake && nextEditionRows.length > 0 && (
+        <section className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold">Upcoming Editions</h2>
+            <Link href="/programs" className="text-sm font-semibold underline">Programs</Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {nextEditionRows.map((edition) => {
+              const program = Array.isArray(edition.nrcs_programs) ? edition.nrcs_programs[0] : edition.nrcs_programs;
+              return (
+                <Link key={edition.id} href={`/editions/${edition.id}`} className="rounded border border-neutral-200 bg-white p-4 text-sm">
+                  <div className="font-semibold">{program?.name || "Program"}</div>
+                  <div className="mt-1">{edition.title}</div>
+                  <div className="mt-1 text-neutral-500">{formatLocalDateTime(edition.air_at)}</div>
+                  <div className="mt-1 capitalize text-neutral-500">{edition.status}</div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
