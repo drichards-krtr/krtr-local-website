@@ -6,16 +6,28 @@ import {
   formatDateTimeForInput,
   formatDateTimeInTimeZone,
   getDateTextInTimeZone,
+  getDayRangeInTimeZone,
   localDateTimeInputToUtcIso,
 } from "./localDates";
 import { plainTextToHtml, sanitizeRichTextHtml } from "./richText";
 import { createNrcsServerClient } from "./server";
 
 export const EDITION_STATUSES = ["draft", "ready", "recorded", "aired", "archived"] as const;
+export const EDITION_PRODUCTION_MODES = ["live", "recorded"] as const;
 export const RUNDOWN_ITEM_TYPES = ["story", "segment", "script", "production_note"] as const;
 
 export type EditionStatus = (typeof EDITION_STATUSES)[number];
+export type EditionProductionMode = (typeof EDITION_PRODUCTION_MODES)[number];
 export type RundownItemType = (typeof RUNDOWN_ITEM_TYPES)[number];
+
+export type NextLiveEditionToday = {
+  id: string;
+  title: string;
+  air_at: string;
+  status: string;
+  production_mode: EditionProductionMode;
+  nrcs_programs: { name: string } | Array<{ name: string }> | null;
+};
 
 export function formatDateTimeLocal(value: string | null | undefined, timeZone = "America/Chicago") {
   return formatDateTimeForInput(value, timeZone);
@@ -71,6 +83,7 @@ export async function createEdition(formData: FormData) {
   const recordingAtInput = String(formData.get("recording_at") || "").trim() || null;
   const templateId = String(formData.get("template_id") || "").trim();
   const suppliedTitle = String(formData.get("title") || "").trim();
+  const productionMode = String(formData.get("production_mode") || "recorded") === "live" ? "live" : "recorded";
   const supabase = await createNrcsServerClient();
 
   if (!programId || !airAtInput) {
@@ -100,6 +113,7 @@ export async function createEdition(formData: FormData) {
       program_id: program.id,
       district_key: program.district_key,
       title,
+      production_mode: productionMode,
       air_at: airAt,
       recording_at: recordingAt,
       created_by: profile.id,
@@ -156,6 +170,7 @@ export async function updateEdition(formData: FormData) {
   const { profile } = await requireNrcsStaff("editor");
   const id = String(formData.get("edition_id") || "");
   const status = String(formData.get("status") || "draft");
+  const productionMode = String(formData.get("production_mode") || "recorded");
   const airAtInput = String(formData.get("air_at") || "").trim();
   const recordingAtInput = String(formData.get("recording_at") || "").trim() || null;
   let title = String(formData.get("title") || "").trim();
@@ -171,6 +186,7 @@ export async function updateEdition(formData: FormData) {
     air_at: airAt,
     recording_at: recordingAt,
     status: EDITION_STATUSES.includes(status as EditionStatus) ? status : "draft",
+    production_mode: EDITION_PRODUCTION_MODES.includes(productionMode as EditionProductionMode) ? productionMode : "recorded",
     updated_by: profile.id,
   };
   const supabase = await createNrcsServerClient();
@@ -249,6 +265,25 @@ async function getDistrictTimeZone(districtKey: string) {
   const supabase = await createNrcsServerClient();
   const { data } = await supabase.from("nrcs_districts").select("timezone").eq("district_key", districtKey).maybeSingle();
   return data?.timezone || "America/Chicago";
+}
+
+export async function getNextLiveEditionToday(districtKey: string, timeZone = "America/Chicago") {
+  const today = getDateTextInTimeZone(new Date(), timeZone);
+  const range = getDayRangeInTimeZone(today, timeZone);
+  const supabase = await createNrcsServerClient();
+  const { data, error } = await supabase
+    .from("nrcs_editions")
+    .select("id, title, air_at, status, production_mode, nrcs_programs(name)")
+    .eq("district_key", districtKey)
+    .eq("production_mode", "live")
+    .gte("air_at", new Date().toISOString())
+    .lt("air_at", range.endIso)
+    .order("air_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(`Unable to load next live rundown: ${error.message}`);
+  return (data || null) as NextLiveEditionToday | null;
 }
 
 async function nextTemplateSortOrder(templateId: string) {

@@ -16,6 +16,7 @@ Phase 4 adds NRCS-only program production surfaces. CMS and public KRTRLocal.TV 
   - Break
   - Outro
 - Editions require a scheduled air date/time and support an optional recording date/time.
+- Editions have a Live/Recorded production mode. Existing and newly-created Editions default to Recorded unless Live is selected.
 - Default edition titles use `{Program Name} - {Local Date}` when no title is supplied.
 - Rundown item types are:
   - Story Item
@@ -27,6 +28,7 @@ Phase 4 adds NRCS-only program production surfaces. CMS and public KRTRLocal.TV 
 - Carry To Tomorrow can reuse the same copy version or create a new copy version before carrying forward.
 - Programs, Editions, and Rundowns require editor/admin access.
 - The dashboard shows the next upcoming edition for each program with a scheduled future edition.
+- The dashboard and Programs page show one yellow alert bar when there is an upcoming Live Edition later today. If multiple Live Editions exist today, only the next one is shown with a countdown to air.
 - CMS District Configuration owns the district timezone.
 - NRCS consumes district timezone and stores Edition air/recording times as UTC from district-local form input.
 - Programs can be created, edited, enabled, and disabled in NRCS.
@@ -42,6 +44,7 @@ Apply this migration to the NRCS Supabase project:
 ```text
 supabase/nrcs/migrations/20260906000200_phase_4_programs_production.sql
 supabase/nrcs/migrations/20260907000100_district_timezone.sql
+supabase/nrcs/migrations/20260907000200_edition_production_mode.sql
 ```
 
 Apply this migration to the CMS Supabase project:
@@ -71,3 +74,4 @@ After deployment:
 13. Create/edit/disable multiple templates for a Program.
 14. Create a future Edition from a selected template and confirm existing Editions are not changed when the template is edited later.
 15. Search for a Story with saved Rundown Copy from an Edition and add it to the rundown.
+16. Create or edit an Edition as Live and confirm Dashboard/Programs show the yellow countdown alert only for the next Live Edition today.

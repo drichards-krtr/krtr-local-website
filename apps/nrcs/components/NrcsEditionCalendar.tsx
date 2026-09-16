@@ -11,6 +11,7 @@ export type EditionCalendarItem = {
   airAt: string;
   recordingAt: string | null;
   status: string;
+  productionMode: string;
   localDate: string;
   localTime: string;
 };
@@ -65,7 +66,7 @@ export default function NrcsEditionCalendar({ editions, weekStart }: Props) {
                   className="grid gap-1 rounded border border-neutral-200 p-2 text-left text-sm hover:border-neutral-400"
                 >
                   <span className="font-medium">{edition.localTime} {edition.title}</span>
-                  <span className="text-xs text-neutral-500">{edition.programName}</span>
+                  <span className="text-xs text-neutral-500">{edition.programName} | {edition.productionMode}</span>
                 </button>
               ))}
               {day.editions.length === 0 && <p className="text-sm text-neutral-400">No editions.</p>}
@@ -98,6 +99,10 @@ export default function NrcsEditionCalendar({ editions, weekStart }: Props) {
               <div>
                 <dt className="text-neutral-500">Status</dt>
                 <dd className="font-medium capitalize">{selected.status}</dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500">Mode</dt>
+                <dd className="font-medium capitalize">{selected.productionMode}</dd>
               </div>
               <div>
                 <dt className="text-neutral-500">Recording</dt>

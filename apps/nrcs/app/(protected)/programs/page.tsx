@@ -1,6 +1,7 @@
 import Link from "next/link";
 import RichTextEditor from "@/components/RichTextEditor";
 import NrcsEditionCalendar, { type EditionCalendarItem } from "@/components/NrcsEditionCalendar";
+import NrcsLiveRundownAlert from "@/components/NrcsLiveRundownAlert";
 import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
 import { formatDateTimeInTimeZone, getDateTextInTimeZone, getDayRangeInTimeZone } from "@/lib/localDates";
@@ -11,6 +12,8 @@ import {
   createProgram,
   createProgramTemplate,
   deleteTemplateItem,
+  EDITION_PRODUCTION_MODES,
+  getNextLiveEditionToday,
   RUNDOWN_ITEM_TYPES,
   updateProgram,
   updateProgramTemplate,
@@ -50,6 +53,7 @@ type EditionRow = {
   air_at: string;
   recording_at: string | null;
   status: string;
+  production_mode: string;
 };
 
 function itemTypeLabel(value: string) {
@@ -100,7 +104,7 @@ export default async function NrcsProgramsPage({
   const rangeEnd = getDayRangeInTimeZone(weekEnd, timezone);
 
   const supabase = await createNrcsServerClient();
-  const [{ data: programs, error: programsError }, { data: templates }, { data: templateItems }] = await Promise.all([
+  const [{ data: programs, error: programsError }, { data: templates }, { data: templateItems }, nextLiveEdition] = await Promise.all([
     supabase
       .from("nrcs_programs")
       .select("id, district_key, name, enabled")
@@ -111,6 +115,7 @@ export default async function NrcsProgramsPage({
       .from("nrcs_program_template_items")
       .select("id, template_id, item_type, title, body_html, segment_kind, sort_order")
       .order("sort_order", { ascending: true }),
+    getNextLiveEditionToday(districtKey, timezone),
   ]);
 
   if (programsError) throw new Error(`Unable to load programs: ${programsError.message}`);
@@ -119,7 +124,7 @@ export default async function NrcsProgramsPage({
   const programIds = programRows.map((program) => program.id);
   let editionsQuery = supabase
     .from("nrcs_editions")
-    .select("id, program_id, title, air_at, recording_at, status")
+    .select("id, program_id, title, air_at, recording_at, status, production_mode")
     .eq("district_key", districtKey)
     .gte("air_at", range.startIso)
     .lt("air_at", rangeEnd.startIso)
@@ -146,9 +151,11 @@ export default async function NrcsProgramsPage({
     airAt: edition.air_at,
     recordingAt: edition.recording_at ? formatDateTimeInTimeZone(edition.recording_at, timezone) : null,
     status: edition.status,
+    productionMode: edition.production_mode || "recorded",
     localDate: getDateTextInTimeZone(edition.air_at, timezone),
     localTime: localTimeLabel(edition.air_at, timezone),
   }));
+  const nextLiveProgram = Array.isArray(nextLiveEdition?.nrcs_programs) ? nextLiveEdition?.nrcs_programs[0] : nextLiveEdition?.nrcs_programs;
 
   return (
     <div className="grid gap-6">
@@ -169,6 +176,15 @@ export default async function NrcsProgramsPage({
 
       {resolvedSearchParams.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
       {resolvedSearchParams.success && <p className="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">Program update saved.</p>}
+      {nextLiveEdition && (
+        <NrcsLiveRundownAlert
+          title={nextLiveEdition.title}
+          programName={nextLiveProgram?.name || "Program"}
+          airAt={nextLiveEdition.air_at}
+          href={`/editions/${nextLiveEdition.id}`}
+          timeZone={timezone}
+        />
+      )}
 
       <section className="rounded border border-neutral-200 bg-white p-5">
         <h2 className="text-lg font-semibold">Create Program</h2>
@@ -220,6 +236,25 @@ export default async function NrcsProgramsPage({
                     ))}
                   </select>
                 </label>
+                <fieldset className="grid gap-1 text-sm">
+                  <legend className="font-medium">Mode</legend>
+                  <div className="grid grid-cols-2 rounded border border-neutral-300 p-1">
+                    {EDITION_PRODUCTION_MODES.map((mode) => (
+                      <label key={mode} className="cursor-pointer">
+                        <input
+                          type="radio"
+                          name="production_mode"
+                          value={mode}
+                          defaultChecked={mode === "recorded"}
+                          className="peer sr-only"
+                        />
+                        <span className="block rounded px-3 py-2 text-center text-sm font-semibold capitalize peer-checked:bg-neutral-900 peer-checked:text-white">
+                          {mode}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
                 <label className="grid gap-1 text-sm">
                   <span className="font-medium">Scheduled Air Date/Time ({timezone})</span>
                   <input name="air_at" type="datetime-local" required className="rounded border border-neutral-300 px-3 py-2" />

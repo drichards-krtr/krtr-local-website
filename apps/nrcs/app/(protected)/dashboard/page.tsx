@@ -1,6 +1,8 @@
 import Link from "next/link";
+import NrcsLiveRundownAlert from "@/components/NrcsLiveRundownAlert";
 import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
+import { getNextLiveEditionToday } from "@/lib/programs";
 import { hasNrcsRoleAtLeast } from "@/lib/roles";
 import { createNrcsServerClient } from "@/lib/server";
 import { formatLocalDateTime, updateStoryWake } from "@/lib/workflow";
@@ -42,6 +44,7 @@ type EditionRow = {
   title: string;
   air_at: string;
   status: string;
+  production_mode: string;
   nrcs_programs: { name: string } | Array<{ name: string }> | null;
 };
 
@@ -58,6 +61,7 @@ export default async function NrcsDashboardPage() {
   sevenDays.setDate(sevenDays.getDate() + 7);
   const supabase = await createNrcsServerClient();
   const canManageIntake = hasNrcsRoleAtLeast(profile.role, "editor");
+  const timezone = activeDistrict?.timezone || "America/Chicago";
 
   const [
     { data: followUps },
@@ -67,6 +71,7 @@ export default async function NrcsDashboardPage() {
     { data: recentStories },
     { data: recentItems },
     { data: upcomingEditions },
+    nextLiveEdition,
     intakeResult,
   ] = await Promise.all([
     supabase
@@ -114,12 +119,13 @@ export default async function NrcsDashboardPage() {
     canManageIntake
       ? supabase
           .from("nrcs_editions")
-          .select("id, program_id, title, air_at, status, nrcs_programs(name)")
+          .select("id, program_id, title, air_at, status, production_mode, nrcs_programs(name)")
           .eq("district_key", districtKey)
           .gte("air_at", now.toISOString())
           .order("air_at", { ascending: true })
           .limit(30)
       : Promise.resolve({ data: [] as EditionRow[], error: null }),
+    canManageIntake ? getNextLiveEditionToday(districtKey, timezone) : Promise.resolve(null),
     canManageIntake
       ? supabase
           .from("nrcs_intake_items")
@@ -137,6 +143,7 @@ export default async function NrcsDashboardPage() {
   const nextEditionRows = ((upcomingEditions || []) as unknown as EditionRow[]).filter((edition, index, editions) => {
     return editions.findIndex((candidate) => candidate.program_id === edition.program_id) === index;
   });
+  const nextLiveProgram = Array.isArray(nextLiveEdition?.nrcs_programs) ? nextLiveEdition?.nrcs_programs[0] : nextLiveEdition?.nrcs_programs;
 
   return (
     <div className="grid gap-6">
@@ -153,6 +160,16 @@ export default async function NrcsDashboardPage() {
           <Link href="/follow-ups" className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Follow-Ups</Link>
         </div>
       </header>
+
+      {nextLiveEdition && (
+        <NrcsLiveRundownAlert
+          title={nextLiveEdition.title}
+          programName={nextLiveProgram?.name || "Program"}
+          airAt={nextLiveEdition.air_at}
+          href={`/editions/${nextLiveEdition.id}`}
+          timeZone={timezone}
+        />
+      )}
 
       <section className="rounded border border-neutral-200 bg-white p-4">
         <h2 className="text-lg font-semibold">Access Status</h2>
@@ -263,7 +280,7 @@ export default async function NrcsDashboardPage() {
                   <div className="font-semibold">{program?.name || "Program"}</div>
                   <div className="mt-1">{edition.title}</div>
                   <div className="mt-1 text-neutral-500">{formatLocalDateTime(edition.air_at)}</div>
-                  <div className="mt-1 capitalize text-neutral-500">{edition.status}</div>
+                  <div className="mt-1 capitalize text-neutral-500">{edition.status} | {edition.production_mode || "recorded"}</div>
                 </Link>
               );
             })}

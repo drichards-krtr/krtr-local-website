@@ -7,6 +7,7 @@ import {
   addRundownItem,
   carryStoryItemToTomorrow,
   deleteRundownItem,
+  EDITION_PRODUCTION_MODES,
   EDITION_STATUSES,
   formatDateTimeLocal,
   formatProgramDateTime,
@@ -30,6 +31,7 @@ type EditionRow = {
   air_at: string;
   recording_at: string | null;
   status: string;
+  production_mode: string;
   nrcs_programs: { id: string; name: string } | Array<{ id: string; name: string }> | null;
 };
 
@@ -81,7 +83,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
   const [{ data: edition, error: editionError }, { data: rundownItems, error: rundownError }] = await Promise.all([
     supabase
       .from("nrcs_editions")
-      .select("id, district_key, title, air_at, recording_at, status, nrcs_programs(id, name)")
+      .select("id, district_key, title, air_at, recording_at, status, production_mode, nrcs_programs(id, name)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -127,7 +129,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
         <div>
           <h1 className="text-2xl font-semibold">{editionRow.title}</h1>
           <p className="text-sm text-neutral-500">
-            {program?.name || "Program"} - Airs {formatProgramDateTime(editionRow.air_at, timezone)}
+            {program?.name || "Program"} - {editionRow.production_mode === "live" ? "Live" : "Recorded"} - Airs {formatProgramDateTime(editionRow.air_at, timezone)}
           </p>
           <p className="mt-1 text-xs text-neutral-400">Edition ID: {editionRow.id}</p>
         </div>
@@ -192,6 +194,25 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
                   ))}
                 </select>
               </label>
+              <fieldset className="grid gap-1 text-sm">
+                <legend className="font-medium">Mode</legend>
+                <div className="grid grid-cols-2 rounded border border-neutral-300 p-1">
+                  {EDITION_PRODUCTION_MODES.map((mode) => (
+                    <label key={mode} className="cursor-pointer">
+                      <input
+                        type="radio"
+                        name="production_mode"
+                        value={mode}
+                        defaultChecked={(editionRow.production_mode || "recorded") === mode}
+                        className="peer sr-only"
+                      />
+                      <span className="block rounded px-3 py-2 text-center text-sm font-semibold capitalize peer-checked:bg-neutral-900 peer-checked:text-white">
+                        {mode}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <label className="grid gap-1 text-sm">
                 <span className="font-medium">Scheduled Air Date/Time</span>
                 <input name="air_at" type="datetime-local" defaultValue={formatDateTimeLocal(editionRow.air_at, timezone)} required className="rounded border border-neutral-300 px-3 py-2" />
