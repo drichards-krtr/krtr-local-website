@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { label: "Taxonomy", href: "/taxonomy", minimumRole: "editor" },
   { label: "School Activity Manager", href: "/school-activity-manager", minimumRole: "editor" },
   { label: "Users", href: "/users", minimumRole: "admin" },
+  { label: "Temporary Reset", href: "/maintenance", minimumRole: "admin" },
 ] as const;
 
 export default function NrcsShell({
