@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentNrcsStaff } from "@/lib/auth";
 import { createNrcsServerClient } from "@/lib/server";
 import { MIGRATION_KINDS, fetchLegacy, migrationHash, normalizeLegacy, verifyLegacyMedia } from "@/lib/migration";
+import { isPastMigrationEvent, migrationEventDay } from "@/lib/migrationEventScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,9 +116,12 @@ export async function POST(request: Request) {
         let query = db.from("nrcs_migration_identities").select("*").eq("district_key", run.district_key).order("id").limit(10);
         if (run.cursor) query = query.gt("id", run.cursor);
         const { data: identities } = checked(await query);
+        const { data: district } = checked(await db.from("nrcs_districts").select("timezone").eq("district_key", run.district_key).single());
+        if (!district?.timezone) throw new Error("District timezone is unavailable.");
+        const eventDay = migrationEventDay(district.timezone);
         for (const identity of identities || []) {
           const { data: present } = checked(await db.from("nrcs_migration_items").select("id").eq("run_id", runId).eq("kind", identity.kind).eq("source_id", identity.source_id).maybeSingle());
-          if (!present) checked(await db.from("nrcs_migration_items").upsert({ run_id: runId, kind: identity.kind, source_id: identity.source_id, source_hash: identity.source_hash, raw: {}, normalized: {}, status: "removed", errors: ["Source no longer exists; target retained."], detail: "No automatic delete or unpublish" }, { onConflict: "run_id,kind,source_id" }));
+          if (!present && !(identity.kind === "events" && isPastMigrationEvent(identity.provenance?.start_at, eventDay))) checked(await db.from("nrcs_migration_items").upsert({ run_id: runId, kind: identity.kind, source_id: identity.source_id, source_hash: identity.source_hash, raw: {}, normalized: {}, status: "removed", errors: ["Source no longer exists; target retained."], detail: "No automatic delete or unpublish" }, { onConflict: "run_id,kind,source_id" }));
         }
         update = { ...update, cursor: identities?.length === 10 ? identities.at(-1)?.id : null, phase: identities?.length === 10 ? "scan" : "ready" };
       }

@@ -4,6 +4,7 @@ import { convertLegacyMarkdown } from "@/lib/legacyMarkdown";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { getTagBySlug, getTagTree } from "@/lib/tags";
 import type { DistrictKey } from "@/lib/districts";
+import { migrationEventDay } from "@/apps/nrcs/lib/migrationEventScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,11 @@ export async function GET(request: Request) {
     const audit = kind === "terms" && !after && !id ? await db.rpc("nrcs_legacy_migration_audit") : { data: null, error: null };
     if (audit.error) throw new Error(`CMS audit: ${audit.error.message}`);
     let query = db.from(TABLES[kind]).select("*", { count: "exact" }).eq("district_key", district).order(key).limit(10);
+    if (kind === "events") {
+      const { data: configuration, error: districtError } = await db.from("districts").select("timezone").eq("district_key", district).single();
+      if (districtError || !configuration?.timezone) throw new Error(districtError?.message || "District timezone is missing.");
+      query = query.gte("start_at", `${migrationEventDay(configuration.timezone)}T00:00:00`);
+    }
     if (after && kind !== "slots") query = query.gt(key, after);
     if (id && kind !== "slots") query = query.eq(key, id);
     const { data, error, count } = await query;

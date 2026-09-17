@@ -10,33 +10,47 @@ function load(file, mocks = {}) {
 }
 const richText = load("apps/nrcs/lib/richText.ts");
 const markdown = load("lib/legacyMarkdown.ts", { "./nrcsPublication": { sanitizePublicationHtml: richText.sanitizeRichTextHtml } });
+const scope = load("apps/nrcs/lib/migrationEventScope.ts");
+assert.equal(scope.migrationEventDay("America/Chicago", new Date("2026-09-18T02:00:00Z")), "2026-09-17");
+assert.equal(scope.migrationEventDay("Asia/Tokyo", new Date("2026-09-18T02:00:00Z")), "2026-09-18");
+assert.equal(scope.isPastMigrationEvent("2026-09-16T23:59:59", "2026-09-17"), true);
+assert.equal(scope.isPastMigrationEvent("2026-09-17T00:00:00", "2026-09-17"), false);
+const today = scope.migrationEventDay("America/Chicago");
 const uuid = number => `f7000000-0000-0000-0000-${String(number).padStart(12, "0")}`;
 const records = {
   event_classification_terms: Array.from({ length: 12 }, (_, index) => ({ id: uuid(index + 1), district_key: "dlpc", name: `Sport ${index}`, kind: "sport", enabled: true })),
   profiles: [{ id: uuid(100), email: "editor@example.test" }],
   stories: [{ id: uuid(200), district_key: "dlpc", title: "Story", created_by: uuid(100), body_markdown: "# Headline\n\n**Copy**", tags: ["dysart"], submitter_id: uuid(300) }],
   story_submitters: [{ id: uuid(300), name: "Private contact", email: "private@example.test", submitted_story_id: uuid(200) }],
-  events: [], event_submitters: [], event_classification_assignments: [], story_slots: [],
+  districts: [{ district_key: "dlpc", timezone: "America/Chicago" }],
+  events: [
+    { id: uuid(401), district_key: "dlpc", title: "Past", status: "published", start_at: "2000-01-01T12:00:00" },
+    { id: uuid(402), district_key: "dlpc", title: "Today", status: "draft", start_at: `${today}T00:00:00` },
+    { id: uuid(403), district_key: "dlpc", title: "Future", status: "archived", start_at: "2099-01-01T12:00:00" },
+  ], event_submitters: [], event_classification_assignments: [], story_slots: [],
 };
 class Query {
   constructor(table) { this.rows = structuredClone(records[table] || []); this.max = Infinity; }
   select() { return this; }
   eq(key, value) { this.rows = this.rows.filter(row => row[key] === value); return this; }
   gt(key, value) { this.rows = this.rows.filter(row => row[key] > value); return this; }
+  gte(key, value) { this.rows = this.rows.filter(row => row[key] >= value); return this; }
   in(key, values) { this.rows = this.rows.filter(row => values.includes(row[key])); return this; }
   order(key) { this.rows.sort((a, b) => String(a[key]).localeCompare(String(b[key]))); return this; }
   limit(max) { this.max = max; return this; }
+  single() { return Promise.resolve({ data: this.rows[0] || null, error: null }); }
   then(resolve, reject) { return Promise.resolve({ data: this.rows.slice(0, this.max), count: this.rows.length, error: null }).then(resolve, reject); }
 }
 const exporter = load("app/api/nrcs/migration-export/route.ts", {
   "@/lib/nrcsPublication": { authorizeNrcsService: request => request.headers.get("authorization") === "Bearer fixture" },
   "@/lib/legacyMarkdown": markdown,
+  "@/apps/nrcs/lib/migrationEventScope": scope,
   "@/lib/tags": { getTagBySlug: () => ({ label: "Dysart" }), getTagTree: () => [{ slug: "dysart", label: "Dysart", children: [{ slug: "child", label: "Child" }] }] },
   "@/lib/supabase/admin": { createServiceClient: () => ({ from: table => new Query(table), rpc: async () => ({ data: { unassigned_story_submitters: 0 }, error: null }) }) },
 });
 const migration = load("apps/nrcs/lib/migration.ts", { "./richText": richText, "./mux": { getMuxCredentials: () => null }, "./env": { getNrcsCmsApiEnv: () => ({ baseUrl: "https://cms.example", secret: "fixture" }) } });
 let staff = null;
-const runner = load("apps/nrcs/app/api/migrations/route.ts", { "@/lib/auth": { getCurrentNrcsStaff: async () => staff }, "@/lib/server": { createNrcsServerClient: async () => { throw new Error("Database must not be reached without authorization"); } }, "@/lib/migration": migration });
+const runner = load("apps/nrcs/app/api/migrations/route.ts", { "@/lib/auth": { getCurrentNrcsStaff: async () => staff }, "@/lib/server": { createNrcsServerClient: async () => { throw new Error("Database must not be reached without authorization"); } }, "@/lib/migration": migration, "@/lib/migrationEventScope": scope });
 (async () => {
   const oldFetch = global.fetch;
   try {
@@ -53,6 +67,10 @@ const runner = load("apps/nrcs/app/api/migrations/route.ts", { "@/lib/auth": { g
     assert.equal(story.author.email, "editor@example.test");
     assert.match(story.converted_html, /<strong>Copy<\/strong>/);
     assert.equal((await migration.fetchLegacy("slots", "dlpc")).rows[0].slots.length, 0);
+    const events = await migration.fetchLegacy("events", "dlpc");
+    assert.equal(events.remaining, 2, "Counts must exclude past Events");
+    assert.deepEqual(events.rows.map(row => row.title), ["Today", "Future"]);
+    assert.equal((await migration.fetchLegacy("events", "dlpc", null, uuid(401))).rows.length, 0, "Import recheck must exclude old staged past Events");
     assert.equal((await runner.GET(new Request("https://nrcs.example/api/migrations"))).status, 401);
     staff = { profile: { role: "contributor" } };
     assert.equal((await runner.GET(new Request("https://nrcs.example/api/migrations"))).status, 403);
