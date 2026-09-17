@@ -11,6 +11,9 @@ for (const deleted of ["nrcs_sources", "nrcs_source_documents", "nrcs_assets", "
 for (const [child, parent] of [["nrcs_homepage_lineups", "nrcs_web_outputs"], ["nrcs_social_outputs", "nrcs_stories"], ["nrcs_web_outputs", "nrcs_copy_versions"], ["nrcs_rundown_items", "nrcs_editions"], ["nrcs_source_documents", "nrcs_sources"]]) assert.ok(tables.indexOf(child) < tables.indexOf(parent));
 assert.match(sql, /if not public\.nrcs_has_role\('admin'\)/);
 assert.match(sql, /if p_confirmation is not null then\s+execute format\('delete/);
+assert.match(sql, /create or replace function public\.nrcs_temporary_editorial_reset/);
+assert.match(sql, /predicate := ' where true'/);
+assert.doesNotMatch(sql, /predicate := ''/);
 assert.match(sql, /s\.logo_url = nrcs_assets\.cloudinary_url/);
 assert.match(sql, /not like 'krtr\/schools\/%'/);
 assert.match(sql, /revoke all .* from public, anon/);

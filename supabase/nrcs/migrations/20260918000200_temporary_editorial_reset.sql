@@ -3,7 +3,7 @@ set local lock_timeout = '5s';
 set local statement_timeout = '45s';
 
 -- Temporary pre-cutover capability. Drop this function before cutover.
-create function public.nrcs_temporary_editorial_reset(p_confirmation text default null)
+create or replace function public.nrcs_temporary_editorial_reset(p_confirmation text default null)
 returns jsonb language plpgsql security definer set search_path = public
 set lock_timeout = '5s' set statement_timeout = '30s'
 as $$
@@ -39,7 +39,8 @@ begin
     lock table public.nrcs_school_identities in share mode;
   end if;
   foreach table_name in array tables loop
-    predicate := '';
+    -- Explicit all-row predicate satisfies Supabase's safe-delete safeguard.
+    predicate := ' where true';
     if table_name = 'nrcs_assets' then
       -- School logos normally live on identities, not in the Asset library.
       -- Preserve matching library entries and the dedicated school namespace too.
