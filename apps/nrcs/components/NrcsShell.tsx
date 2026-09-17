@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { label: "Stories", href: "/stories" },
   { label: "Programs", href: "/programs", minimumRole: "editor" },
   { label: "Events", href: "/events" },
+  { label: "Graphics", href: "/graphics" },
+  { label: "Schools & Co-ops", href: "/schools", minimumRole: "editor" },
   { label: "Follow-Ups", href: "/follow-ups" },
   { label: "Search", href: "/search" },
   { label: "Intake", href: "/intake", minimumRole: "editor" },

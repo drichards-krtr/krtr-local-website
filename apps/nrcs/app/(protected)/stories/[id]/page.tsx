@@ -993,6 +993,7 @@ export default async function EditStoryPage({
             children: (
               <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
                 <h2 className="text-lg font-semibold">Assets</h2>
+                {(canManageProduction || storyRow.created_by === profile.id) && <Link href={`/graphics?district=${storyRow.district_key}&story=${id}`} className="w-fit rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Create Graphic</Link>}
                 <div className="grid gap-3 text-sm">
                   {(assetLinks || []).map((link, index) => {
                     const asset = Array.isArray(link.nrcs_assets) ? link.nrcs_assets[0] : link.nrcs_assets;

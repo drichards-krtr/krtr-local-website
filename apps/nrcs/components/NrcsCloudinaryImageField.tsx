@@ -90,10 +90,12 @@ export default function NrcsCloudinaryImageField({
   initialUrl,
   label,
   name,
+  originalImage = false,
 }: {
   initialUrl?: string | null;
   label: string;
   name: string;
+  originalImage?: boolean;
 }) {
   const [url, setUrl] = useState(initialUrl || "");
   const [ready, setReady] = useState(false);
@@ -134,7 +136,7 @@ export default function NrcsCloudinaryImageField({
       mediaLibraryRef.current = cloudinaryWindow.cloudinary.createMediaLibrary(widgetConfig, {
         insertHandler: (data) => {
           const asset = data.assets?.[0] || null;
-          const selectedUrl = asset ? getAssetUrl(asset) : "";
+          const selectedUrl = asset ? (originalImage ? asset.secure_url || asset.url || "" : getAssetUrl(asset)) : "";
           if (!selectedUrl) {
             setError("Selected Cloudinary asset did not include a usable URL.");
             return;

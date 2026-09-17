@@ -18,6 +18,7 @@ import {
   updateRundownItem,
 } from "@/lib/programs";
 import { createNrcsServerClient } from "@/lib/server";
+import NrcsEditionGraphics from "@/components/NrcsEditionGraphics";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -134,6 +135,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
           <p className="mt-1 text-xs text-neutral-400">Edition ID: {editionRow.id}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`/graphics?district=${editionRow.district_key}&edition=${id}`} className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">Create Graphic</Link>
           <Link href="/programs" className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">
             Back to Programs
           </Link>
@@ -232,6 +234,8 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
             </div>
           </section>
 
+          <NrcsEditionGraphics editionId={id} districtKey={editionRow.district_key} />
+
           <section className="rounded border border-neutral-200 bg-white p-5">
             <h2 className="text-lg font-semibold">Add Segment, Script, or Note</h2>
             <form action={addRundownItem} className="mt-4 grid gap-3">
@@ -292,6 +296,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {item.item_type === "segment" && <Link href={`/graphics?district=${editionRow.district_key}&edition=${id}&item=${item.id}`} className="rounded border border-neutral-300 px-3 py-1 text-sm font-semibold">Create Graphic</Link>}
                       <form action={moveRundownItem}>
                         <input type="hidden" name="edition_id" value={editionRow.id} />
                         <input type="hidden" name="item_id" value={item.id} />
