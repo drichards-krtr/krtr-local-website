@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Run = { id: string; district_key: string; phase: string; mode: string; created_at: string; last_error: string | null; source_counts: Record<string, number>; source_audit: Record<string, number> };
+type Run = { id: string; district_key: string; phase: string; mode: string; created_at: string; last_error: string | null; source_counts: Record<string, number>; source_audit: Record<string, number>; tag_mappings?: Record<string, { id: string; name: string; slug: string }> };
 type Item = { id: string; kind: string; source_id: string; status: string; detail: string | null; errors: string[]; warnings: string[]; normalized: { title?: string; name?: string; body_html?: string; owner_id?: string | null; classification_target_id?: string | null; district_key?: string; is_school_sports?: boolean; slug?: string; image_url?: string } };
 type Owner = { id: string; email: string };
 type Term = { id: string; district_key: string; kind: string; name: string };
@@ -113,6 +113,7 @@ export default function MigrationConsole({ districts, defaultDistrict, owners, t
       {report.summary && <div className="flex flex-wrap gap-4 text-sm">{Object.entries(run.source_counts).map(([kind, count]) => <span key={kind}>{kind}: CMS {count} / scanned {report.summary?.kinds[kind] || 0}{["ready", "complete"].includes(run.phase) && count !== (report.summary?.kinds[kind] || 0) ? " - count mismatch" : ""}</span>)}</div>}
       {["ready", "complete"].includes(run.phase) && <section className="space-y-3 border-y py-4">
         <h2 className="text-lg font-semibold">Tag Collision Resolution</h2>
+        {Object.entries(run.tag_mappings || {}).map(([slug, tag]) => <p key={slug} className="break-words text-sm">{slug} to {tag.name} ({tag.slug}) - Saved</p>)}
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid min-w-0 flex-1 gap-1 text-sm">Legacy CMS Tag<select disabled={busy} value={legacySlug} onChange={event => { setLegacySlug(event.target.value); setCanonicalTag(""); }} className="w-full rounded border p-2"><option value="">Select Legacy Tag</option>{report.legacyTags?.map(tag => <option key={tag.slug} value={tag.slug}>{tag.name} ({tag.slug})</option>)}</select></label>
           <label className="grid min-w-0 flex-1 gap-1 text-sm">Use Existing NRCS Tag<select disabled={busy || !legacySlug} value={canonicalTag} onChange={event => setCanonicalTag(event.target.value)} className="w-full rounded border p-2"><option value="">Select Canonical Tag</option>{currentTags.map(tag => <option key={tag.id} value={tag.id}>{tag.name} ({tag.slug})</option>)}</select></label>

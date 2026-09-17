@@ -50,7 +50,8 @@ const exporter = load("app/api/nrcs/migration-export/route.ts", {
 });
 const migration = load("apps/nrcs/lib/migration.ts", { "./richText": richText, "./mux": { getMuxCredentials: () => null }, "./env": { getNrcsCmsApiEnv: () => ({ baseUrl: "https://cms.example", secret: "fixture" }) } });
 let staff = null;
-const runner = load("apps/nrcs/app/api/migrations/route.ts", { "@/lib/auth": { getCurrentNrcsStaff: async () => staff }, "@/lib/server": { createNrcsServerClient: async () => { throw new Error("Database must not be reached without authorization"); } }, "@/lib/migration": migration, "@/lib/migrationEventScope": scope });
+let runnerDb = null;
+const runner = load("apps/nrcs/app/api/migrations/route.ts", { "@/lib/auth": { getCurrentNrcsStaff: async () => staff }, "@/lib/server": { createNrcsServerClient: async () => { if (runnerDb) return runnerDb; throw new Error("Database must not be reached without authorization"); } }, "@/lib/migration": migration, "@/lib/migrationEventScope": scope });
 (async () => {
   const oldFetch = global.fetch;
   try {
@@ -75,6 +76,23 @@ const runner = load("apps/nrcs/app/api/migrations/route.ts", { "@/lib/auth": { g
     staff = { profile: { role: "contributor" } };
     assert.equal((await runner.GET(new Request("https://nrcs.example/api/migrations"))).status, 403);
     assert.equal((await runner.POST(new Request("https://nrcs.example/api/migrations", { method: "POST", body: JSON.stringify({ action: "start", district: "dlpc" }) }))).status, 403);
+    const savedMappings = { "dg-elementary": { id: uuid(501), name: "DG Elementary", slug: "dg-elementary", target_hash: "fixture" } };
+    let insertedRun;
+    runnerDb = { from(table) {
+      const query = {
+        select() { return this; }, eq(key, value) { if (key === "district_key") assert.equal(value, "dlpc"); return this; },
+        in(key, values) { assert.equal(key, "phase"); assert.deepEqual(values, ["ready", "complete"]); return this; },
+        order() { return this; }, limit() { return this; },
+        insert(value) { insertedRun = value; return this; },
+        async maybeSingle() { return { data: { id: uuid(502), tag_mappings: savedMappings }, error: null }; },
+        async single() { return { data: table === "nrcs_districts" ? { district_key: "dlpc" } : { id: uuid(503), ...insertedRun }, error: null }; },
+      }; return query;
+    } };
+    staff = { profile: { role: "admin", id: uuid(500) } };
+    const refreshed = await runner.POST(new Request("https://nrcs.example/api/migrations", { method: "POST", body: JSON.stringify({ action: "start", district: "dlpc" }) }));
+    assert.equal(refreshed.status, 200);
+    assert.deepEqual(insertedRun.tag_mappings, savedMappings, "Fresh dry runs must retain unimported saved mappings");
+    assert.equal(insertedRun.parent_run_id, uuid(502), "Prior staged owner/classification mappings must remain available");
     global.fetch = async () => Response.json({ schema_version: 1, kind: "stories", district_key: "vs", rows: [] });
     await assert.rejects(migration.fetchLegacy("stories", "dlpc"), /identity mismatch/);
     global.fetch = async () => new Response(null, { status: 308, headers: { location: "https://other.example" } });

@@ -54,7 +54,8 @@ export async function POST(request: Request) {
     if (body.action === "start") {
       const { data: district } = checked(await db.from("nrcs_districts").select("district_key").eq("district_key", String(body.district)).single());
       if (!district) throw new Error("District is unavailable.");
-      const { data: run } = checked(await db.from("nrcs_migration_runs").insert({ district_key: district.district_key, created_by: context.staff.profile.id }).select("*").single());
+      const { data: previous } = checked(await db.from("nrcs_migration_runs").select("id,tag_mappings").eq("district_key", district.district_key).in("phase", ["ready", "complete"]).order("created_at", { ascending: false }).limit(1).maybeSingle());
+      const { data: run } = checked(await db.from("nrcs_migration_runs").insert({ district_key: district.district_key, created_by: context.staff.profile.id, parent_run_id: previous?.id || null, tag_mappings: previous?.tag_mappings || {} }).select("*").single());
       return NextResponse.json({ run });
     }
     const runId = String(body.run || "");
