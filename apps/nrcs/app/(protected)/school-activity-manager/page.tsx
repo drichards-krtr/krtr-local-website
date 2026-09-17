@@ -107,7 +107,8 @@ export default async function SchoolActivityManagerPage({
   return (
     <div className="grid gap-6">
       <header>
-        <h1 className="text-2xl font-semibold">School Activity Manager</h1>
+        <Link href={`/events?district=${encodeURIComponent(districtKey)}`} className="mb-2 inline-block text-sm underline">Back to Events</Link>
+        <h1 className="text-2xl font-semibold">Event Class Manager</h1>
         <p className="text-sm text-neutral-500">Manage district sports, extra-curriculars, and other event types.</p>
       </header>
 
@@ -169,3 +170,4 @@ export default async function SchoolActivityManagerPage({
     </div>
   );
 }
+import Link from "next/link";

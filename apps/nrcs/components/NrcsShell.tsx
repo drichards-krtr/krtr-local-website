@@ -17,7 +17,6 @@ const NAV_ITEMS = [
   { label: "Search", href: "/search" },
   { label: "Intake", href: "/intake", minimumRole: "editor" },
   { label: "Taxonomy", href: "/taxonomy", minimumRole: "editor" },
-  { label: "School Activity Manager", href: "/school-activity-manager", minimumRole: "editor" },
   { label: "Users", href: "/users", minimumRole: "admin" },
   { label: "Temporary Reset", href: "/maintenance", minimumRole: "admin" },
   { label: "Migration", href: "/migrations", minimumRole: "admin" },

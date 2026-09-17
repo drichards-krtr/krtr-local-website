@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireNrcsStaff } from "@/lib/auth";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 import { getNrcsDistrictContext } from "@/lib/districts";
 import { formatNaiveDateTime } from "@/lib/localDates";
 import { createNrcsServiceClient } from "@/lib/server";
@@ -111,7 +112,7 @@ export default async function NrcsEventsPage({
   }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  await requireNrcsStaff("contributor");
+  const staff = await requireNrcsStaff("contributor");
   const { activeDistrict, allowedDistricts } = await getNrcsDistrictContext();
   const districtKey =
     resolvedSearchParams?.district && allowedDistricts.some((district) => district.district_key === resolvedSearchParams.district)
@@ -144,9 +145,16 @@ export default async function NrcsEventsPage({
           <h1 className="text-2xl font-semibold">Events</h1>
           <p className="text-sm text-neutral-500">Create, edit, duplicate, and publish Community Calendar events.</p>
         </div>
-        <Link href={`/events/new?district=${districtKey}`} className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">
-          New Event
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          {hasNrcsRoleAtLeast(staff.profile.role, "editor") && (
+            <Link href={`/school-activity-manager?district=${encodeURIComponent(districtKey)}`} className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">
+              Event Class Manager
+            </Link>
+          )}
+          <Link href={`/events/new?district=${districtKey}`} className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">
+            New Event
+          </Link>
+        </div>
       </header>
 
       {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
