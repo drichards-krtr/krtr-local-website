@@ -1,5 +1,15 @@
 # Phase 8 - Migration Tooling Preparation
 
+## Explicit Tag Collision Resolution
+
+Migration author amendment: new/refreshed dry runs assign otherwise-unassigned Story/Event authors to the active NRCS staff profile `drichards@krtrlocal.tv`. Exact source-author matches and non-null manual mappings remain intact. The fallback is recorded in mapping metadata and warnings; original source author/contact provenance is preserved. This does not assign unknown video uploaders or change contributor video access. Start a fresh dry run to apply this to previously staged records. No SQL/environment change is needed for the author amendment.
+
+Apply `supabase/nrcs/migrations/20260918000400_phase_8_tag_resolution.sql` once in the NRCS Supabase project, then deploy NRCS. No CMS migration or environment-variable change is required for this addition.
+
+For a completed dry-run report with a tag collision, use **Tag Collision Resolution**: select the legacy CMS tag (for example `ucsd`), choose the intended existing canonical NRCS tag, then click **Apply Tag Mapping**. This creates a refreshed dry run; use **Resume Processing** and review its exceptions before authorizing import. Previously selected owner/classification mappings are retained.
+
+Explicit reuse preserves the canonical tag name and slug. If the legacy slug differs, import adds an alias only when that slug is not already owned by another tag. Dry-run mapping never edits tags or editorial records. Canonical changes after selection require reconfirmation rather than silently accepting a stale choice. Relevant Story tag relationships use the selected canonical tag.
+
 Status: Migration tooling implemented and locally verified; production SQL/deployment and user testing remain pending. No production content was inspected or imported, and no cutover occurred. Local production credentials are deliberately absent.
 
 ## Existing Decisions / Boundaries

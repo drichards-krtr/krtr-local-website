@@ -6,6 +6,7 @@ import { getMuxAsset, getMuxCredentials } from "./mux";
 export const MIGRATION_KINDS = ["tags", "terms", "stories", "events", "slots"] as const;
 export type MigrationKind = typeof MIGRATION_KINDS[number];
 export type LegacyRow = Record<string, any>;
+export const MIGRATION_FALLBACK_AUTHOR_EMAIL = "drichards@krtrlocal.tv";
 export function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
   if (value && typeof value === "object") return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${stableJson(item)}`).join(",")}}`;
@@ -32,12 +33,28 @@ export function utcTimestamp(value: unknown): string | null {
   return zoned.replace(" ", "T");
 }
 function escapeHtml(value: unknown) { return String(value || "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]!)); }
-export function normalizeLegacy(kind: MigrationKind, row: LegacyRow, owner: string | null, now = new Date(), timezone = "America/Chicago", mapping: LegacyRow = {}) {
+export function normalizeLegacy(kind: MigrationKind, row: LegacyRow, owner: string | null, now = new Date(), timezone = "America/Chicago", mapping: LegacyRow = {}, fallbackOwner: string | null = null) {
   const errors: string[] = [];
   const warnings: string[] = [];
   const id = String(kind === "slots" ? row.slot : kind === "tags" ? row.slug : row.id);
   const targetId = kind === "events" && row.nrcs_source_id ? String(row.nrcs_source_id) : migrationUuid(kind, `${row.district_key}:${id}`);
   const normalized: LegacyRow = { ...row, source_id: id, target_id: targetId, owner_id: Object.hasOwn(mapping, "owner_id") ? mapping.owner_id : owner, classification_target_id: mapping.classification_target_id || null, mapping };
+  if (["stories", "events"].includes(kind) && !normalized.owner_id && fallbackOwner) {
+    normalized.owner_id = fallbackOwner;
+    mapping = { ...mapping, owner_id: fallbackOwner, fallback_author_email: MIGRATION_FALLBACK_AUTHOR_EMAIL };
+    warnings.push(`Unassigned author mapped to ${MIGRATION_FALLBACK_AUTHOR_EMAIL}; original author provenance retained.`);
+  }
+  const tagMappings = mapping.tags || {};
+  const relevantSlugs = kind === "tags" ? [id] : kind === "stories" ? (row.tag_definitions || []).map((definition: LegacyRow) => definition.slug) : [];
+  normalized.mapping = { ...mapping, tags: Object.fromEntries(Object.entries(tagMappings).filter(([slug]) => relevantSlugs.includes(slug))) };
+  if (kind === "tags" && tagMappings[id]) {
+    normalized.name = tagMappings[id].name;
+    normalized.target_id = tagMappings[id].id;
+  }
+  if (kind === "stories") {
+    const definitions = (row.tag_definitions || []).map((definition: LegacyRow) => tagMappings[definition.slug] ? { ...definition, legacy_slug: definition.slug, slug: tagMappings[definition.slug].slug, name: tagMappings[definition.slug].name } : definition);
+    normalized.tag_definitions = [...new Map(definitions.map((definition: LegacyRow) => [definition.slug, definition])).values()];
+  }
   if (!["slots", "tags"].includes(kind) && !/^[0-9a-f-]{36}$/i.test(id)) errors.push("Invalid source UUID.");
   if (["stories", "events"].includes(kind)) {
     errors.push(...(row.relationship_issues || []));

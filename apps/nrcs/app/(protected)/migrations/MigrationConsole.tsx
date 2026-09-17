@@ -6,7 +6,8 @@ type Run = { id: string; district_key: string; phase: string; mode: string; crea
 type Item = { id: string; kind: string; source_id: string; status: string; detail: string | null; errors: string[]; warnings: string[]; normalized: { title?: string; name?: string; body_html?: string; owner_id?: string | null; classification_target_id?: string | null; district_key?: string; is_school_sports?: boolean; slug?: string; image_url?: string } };
 type Owner = { id: string; email: string };
 type Term = { id: string; district_key: string; kind: string; name: string };
-type Report = { runs: Run[]; run?: Run; items?: Item[]; count?: number; page?: number; summary?: { total: number; issues: number; warnings: number; statuses: Record<string, number>; kinds: Record<string, number> } };
+type Tag = { id: string; name: string; slug: string };
+type Report = { runs: Run[]; run?: Run; items?: Item[]; legacyTags?: { slug: string; name: string }[]; count?: number; page?: number; summary?: { total: number; issues: number; warnings: number; statuses: Record<string, number>; kinds: Record<string, number> } };
 
 async function api(body?: Record<string, unknown>, query = "") {
   const response = await fetch(`/api/migrations${query}`, { method: body ? "POST" : "GET", ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}), cache: "no-store", signal: AbortSignal.timeout(70000) });
@@ -15,7 +16,7 @@ async function api(body?: Record<string, unknown>, query = "") {
   return data;
 }
 
-export default function MigrationConsole({ districts, defaultDistrict, owners, terms }: { districts: { key: string; name: string }[]; defaultDistrict: string; owners: Owner[]; terms: Term[] }) {
+export default function MigrationConsole({ districts, defaultDistrict, owners, terms, tags }: { districts: { key: string; name: string }[]; defaultDistrict: string; owners: Owner[]; terms: Term[]; tags: Tag[] }) {
   const [district, setDistrict] = useState(defaultDistrict || districts[0]?.key || "");
   const [selected, setSelected] = useState("");
   const [report, setReport] = useState<Report>({ runs: [] });
@@ -25,6 +26,9 @@ export default function MigrationConsole({ districts, defaultDistrict, owners, t
   const [confirmation, setConfirmation] = useState("");
   const [mode, setMode] = useState("import");
   const [page, setPage] = useState(0);
+  const [legacySlug, setLegacySlug] = useState("");
+  const [canonicalTag, setCanonicalTag] = useState("");
+  const [notice, setNotice] = useState("");
   const active = useRef(false);
   const mounted = useRef(true);
   const reload = useCallback(async (id = selected, index = page) => {
@@ -74,10 +78,21 @@ export default function MigrationConsole({ districts, defaultDistrict, owners, t
     } catch (exception) { setError(String(exception)); }
     finally { setBusy(false); }
   }
+  async function resolveTag() {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await api({ action: "tag_mapping", run: selected, source_slug: legacySlug, tag_id: canonicalTag });
+      setSelected(result.run.id); setPage(0);
+      setNotice("Tag mapping saved. A refreshed dry run is ready to process.");
+      setLegacySlug(""); setCanonicalTag("");
+    } catch (exception) { setError(exception instanceof Error ? exception.message : "Tag mapping failed."); }
+    finally { setBusy(false); }
+  }
   const run = report.run;
   return <div className="space-y-6">
     <h1 className="text-2xl font-semibold">Content Migration</h1>
     {error && <p role="alert" className="border border-red-500 bg-red-50 p-3">{error}</p>}
+    {notice && <p role="status" className="border border-green-600 bg-green-50 p-3">{notice}</p>}
     <section className="flex flex-wrap items-end gap-3 border-b pb-5">
       <label className="grid gap-1 text-sm">District<select value={district} onChange={event => setDistrict(event.target.value)} disabled={busy} className="rounded border p-2">{districts.map(item => <option key={item.key} value={item.key}>{item.name}</option>)}</select></label>
       <button onClick={start} disabled={busy || !district} className="rounded bg-neutral-900 px-4 py-2 text-sm text-white disabled:opacity-50">Create Dry Run</button>
@@ -93,6 +108,14 @@ export default function MigrationConsole({ districts, defaultDistrict, owners, t
       {report.summary && <div className="flex flex-wrap gap-4 text-sm">{Object.entries(report.summary.statuses).map(([status, count]) => <span key={status}><strong>{status}:</strong> {count}</span>)}</div>}
       {Object.entries(run.source_audit || {}).filter(([, count]) => count > 0).map(([key, count]) => <p key={key} role="alert" className="text-sm text-red-700">CMS-wide exception: {key.replaceAll("_", " ")} ({count}). District ownership must be resolved before cutover.</p>)}
       {report.summary && <div className="flex flex-wrap gap-4 text-sm">{Object.entries(run.source_counts).map(([kind, count]) => <span key={kind}>{kind}: CMS {count} / scanned {report.summary?.kinds[kind] || 0}{["ready", "complete"].includes(run.phase) && count !== (report.summary?.kinds[kind] || 0) ? " - count mismatch" : ""}</span>)}</div>}
+      {["ready", "complete"].includes(run.phase) && <section className="space-y-3 border-y py-4">
+        <h2 className="text-lg font-semibold">Tag Collision Resolution</h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid min-w-0 flex-1 gap-1 text-sm">Legacy CMS Tag<select disabled={busy} value={legacySlug} onChange={event => { setLegacySlug(event.target.value); setCanonicalTag(""); }} className="w-full rounded border p-2"><option value="">Select Legacy Tag</option>{report.legacyTags?.map(tag => <option key={tag.slug} value={tag.slug}>{tag.name} ({tag.slug})</option>)}</select></label>
+          <label className="grid min-w-0 flex-1 gap-1 text-sm">Use Existing NRCS Tag<select disabled={busy || !legacySlug} value={canonicalTag} onChange={event => setCanonicalTag(event.target.value)} className="w-full rounded border p-2"><option value="">Select Canonical Tag</option>{tags.map(tag => <option key={tag.id} value={tag.id}>{tag.name} ({tag.slug})</option>)}</select></label>
+          <button disabled={busy || !legacySlug || !canonicalTag} onClick={resolveTag} className="rounded border px-3 py-2 text-sm disabled:opacity-50">Apply Tag Mapping</button>
+        </div>
+      </section>}
       {run.phase === "ready" && <section className="flex flex-wrap items-end gap-3 border-b pb-5">
         <label className="grid gap-1 text-sm">Mode<select value={mode} onChange={event => setMode(event.target.value)} className="rounded border p-2"><option value="import">Import</option><option value="delta">Delta Sync</option></select></label>
         <label className="grid flex-1 gap-1 text-sm">Type IMPORT THIS DISTRICT<input value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="off" className="rounded border p-2" /></label>

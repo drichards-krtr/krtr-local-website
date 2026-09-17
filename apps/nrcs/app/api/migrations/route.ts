@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentNrcsStaff } from "@/lib/auth";
 import { createNrcsServerClient } from "@/lib/server";
-import { MIGRATION_KINDS, fetchLegacy, migrationHash, normalizeLegacy, verifyLegacyMedia } from "@/lib/migration";
+import { MIGRATION_KINDS, MIGRATION_FALLBACK_AUTHOR_EMAIL, fetchLegacy, migrationHash, normalizeLegacy, verifyLegacyMedia } from "@/lib/migration";
 import { isPastMigrationEvent, migrationEventDay } from "@/lib/migrationEventScope";
 
 export const runtime = "nodejs";
@@ -33,7 +33,8 @@ export async function GET(request: Request) {
     const { data: run } = checked(await db.from("nrcs_migration_runs").select("*").eq("id", runId).single());
     const { data: items, count } = checked(await db.from("nrcs_migration_items").select("id,kind,source_id,status,detail,errors,warnings,normalized", { count: "exact" }).eq("run_id", runId).order("kind").order("source_id").range(page * 50, page * 50 + 49));
     const { data: summary } = checked(await db.rpc("nrcs_migration_report", { p_run: runId }));
-    return NextResponse.json({ runs, run, items, count, page, summary }, { headers: { "Cache-Control": "no-store" } });
+    const { data: legacyTags } = checked(await db.from("nrcs_migration_items").select("source_id,raw").eq("run_id", runId).eq("kind", "tags").order("source_id").limit(1000));
+    return NextResponse.json({ runs, run, items, count, page, summary, legacyTags: (legacyTags || []).map(tag => ({ slug: tag.source_id, name: tag.raw.name })) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return failure(error); }
 }
 
@@ -52,6 +53,14 @@ export async function POST(request: Request) {
     }
     const runId = String(body.run || "");
     const { data: run } = checked(await db.from("nrcs_migration_runs").select("*").eq("id", runId).single());
+    if (body.action === "tag_mapping") {
+      if (!["ready", "complete"].includes(run.phase)) throw new Error("Finish or stop processing before reviewing tag mappings.");
+      const slug = String(body.source_slug || "");
+      checked(await db.from("nrcs_migration_items").select("id").eq("run_id", runId).eq("kind", "tags").eq("source_id", slug).single());
+      const { data: snapshot } = checked(await db.rpc("nrcs_migration_tag_snapshot", { p_source_slug: slug, p_tag: String(body.tag_id || "") }));
+      const { data: nextRun } = checked(await db.from("nrcs_migration_runs").insert({ district_key: run.district_key, created_by: context.staff.profile.id, parent_run_id: run.id, tag_mappings: { ...(run.tag_mappings || {}), [slug]: snapshot } }).select("*").single());
+      return NextResponse.json({ run: nextRun });
+    }
     const { data: token } = checked(await db.rpc("nrcs_migration_claim", { p_run: runId }));
     lease = String(token); activeRun = runId;
     let update: Record<string, unknown> = { last_error: null };
@@ -88,11 +97,15 @@ export async function POST(request: Request) {
         const batch = await fetchLegacy(kind, run.district_key, run.cursor);
         const { data: district } = checked(await db.from("nrcs_districts").select("timezone").eq("district_key", run.district_key).single());
         if (!district) throw new Error("District is unavailable.");
+        const fallbackAuthor = ["stories", "events"].includes(kind)
+          ? checked(await db.from("nrcs_staff_profiles").select("id").eq("email", MIGRATION_FALLBACK_AUTHOR_EMAIL).eq("active", true).maybeSingle()).data
+          : null;
+        if (["stories", "events"].includes(kind) && !fallbackAuthor) throw new Error(`Migration fallback author ${MIGRATION_FALLBACK_AUTHOR_EMAIL} must have an active NRCS staff profile.`);
         const emails = [...new Set(batch.rows.map(row => row.author?.email?.toLowerCase()).filter(Boolean))];
         const owners = emails.length ? checked(await db.from("nrcs_staff_profiles").select("id,email").in("email", emails)) : { data: [] };
         const items = batch.rows.map(row => {
           const owner = owners.data?.find(user => user.email.toLowerCase() === row.author?.email?.toLowerCase())?.id || null;
-          const result = normalizeLegacy(kind, row, owner, new Date(run.created_at), district.timezone);
+          const result = normalizeLegacy(kind, row, owner, new Date(run.created_at), district.timezone, { tags: run.tag_mappings || {} }, fallbackAuthor?.id || null);
           return { run_id: runId, kind, source_id: result.normalized.source_id, source_hash: migrationHash(row), raw: row, ...result };
         });
         const mediaIssues = await Promise.all(batch.rows.map(row => verifyLegacyMedia(row)));
@@ -100,12 +113,20 @@ export async function POST(request: Request) {
         // Surface existing target edits/collisions during Dry Run, not only Import.
         for (const item of items) {
           const { data: identity } = checked(await db.from("nrcs_migration_identities").select("target_id,target_hash,mapping").eq("district_key", run.district_key).eq("kind", kind).eq("source_id", item.source_id).maybeSingle());
-          if (identity?.mapping && Object.keys(identity.mapping).length) {
-            const result = normalizeLegacy(kind, item.raw, item.normalized.owner_id, new Date(run.created_at), district.timezone, identity.mapping);
+          const prior = run.parent_run_id ? checked(await db.from("nrcs_migration_items").select("normalized").eq("run_id", run.parent_run_id).eq("kind", kind).eq("source_id", item.source_id).maybeSingle()).data?.normalized?.mapping : null;
+          if (prior || identity?.mapping && Object.keys(identity.mapping).length) {
+            const combined = { ...(identity?.mapping || {}), ...(prior || {}), tags: { ...(identity?.mapping?.tags || {}), ...(prior?.tags || {}), ...(run.tag_mappings || {}) } };
+            const result = normalizeLegacy(kind, item.raw, item.normalized.owner_id, new Date(run.created_at), district.timezone, combined, fallbackAuthor?.id || null);
             item.normalized = result.normalized; item.errors = [...result.errors, ...mediaIssues[items.indexOf(item)]]; item.warnings = result.warnings;
           }
-          const { data: assessment } = checked(await db.rpc("nrcs_migration_assess", { p_kind: kind, p_target: identity?.target_id || item.normalized.target_id, p_baseline: identity?.target_hash || null, p_normalized: item.normalized }));
-          item.errors.push(...(assessment || []));
+          if (kind === "tags" && item.normalized.mapping.tags?.[item.source_id]) {
+            const chosen = item.normalized.mapping.tags[item.source_id];
+            const result = await db.rpc("nrcs_migration_tag_snapshot", { p_source_slug: item.source_id, p_tag: chosen.id });
+            if (result.error || migrationHash(result.data) !== migrationHash(chosen)) item.errors.push(result.error?.message || "Chosen canonical tag changed; review mapping again.");
+          } else {
+            const { data: assessment } = checked(await db.rpc("nrcs_migration_assess", { p_kind: kind, p_target: identity?.target_id || item.normalized.target_id, p_baseline: identity?.target_hash || null, p_normalized: item.normalized }));
+            item.errors.push(...(assessment || []));
+          }
         }
         if (items.length) checked(await db.from("nrcs_migration_items").upsert(items, { onConflict: "run_id,kind,source_id" }));
         const sourceCounts = { ...run.source_counts };
