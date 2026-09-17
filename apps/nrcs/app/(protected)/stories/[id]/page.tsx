@@ -9,7 +9,6 @@ import {
   copyStreamLabel,
   isStoryLifecycleState,
   sanitizeStoryHtml,
-  normalizeSlug,
   type CopyStreamType,
 } from "@/lib/stories";
 import { hasNrcsRoleAtLeast } from "@/lib/roles";
@@ -168,36 +167,6 @@ async function updateOverview(formData: FormData) {
   if (error) redirect(storyPath(id, districtKey, `error=${encodeURIComponent(error.message)}`));
   revalidatePath(`/stories/${id}`);
   redirect(storyPath(id, districtKey));
-}
-
-async function saveWebOutput(formData: FormData) {
-  "use server";
-
-  const { profile } = await requireNrcsStaff("contributor");
-  const storyId = String(formData.get("story_id") || "");
-  const districtKey = String(formData.get("district_key") || "dlpc");
-  const outputId = String(formData.get("output_id") || "");
-  const slugInput = String(formData.get("slug") || "").trim();
-  const slug = slugInput ? normalizeSlug(slugInput) : null;
-  const payload = {
-    story_id: storyId,
-    copy_version_id: String(formData.get("copy_version_id") || "").trim() || null,
-    status: String(formData.get("status") || "draft"),
-    slug,
-    seo_title: String(formData.get("seo_title") || "").trim() || null,
-    seo_description: String(formData.get("seo_description") || "").trim() || null,
-    scheduled_at: String(formData.get("scheduled_at") || "").trim() || null,
-    published_at: String(formData.get("published_at") || "").trim() || null,
-  };
-
-  const supabase = await createNrcsServerClient();
-  const result = outputId
-    ? await supabase.from("nrcs_web_outputs").update(payload).eq("id", outputId)
-    : await supabase.from("nrcs_web_outputs").insert(payload);
-
-  if (result.error) redirect(storyPath(storyId, districtKey, `error=${encodeURIComponent(result.error.message)}`));
-  revalidatePath(`/stories/${storyId}`);
-  redirect(storyPath(storyId, districtKey, "success=web-output"));
 }
 
 async function addStoryTag(formData: FormData) {
@@ -824,54 +793,9 @@ export default async function EditStoryPage({
             children: (
               <section className="grid gap-4 rounded border border-neutral-200 bg-white p-5">
                 <h2 className="text-lg font-semibold">Web Output</h2>
-                <form action={saveWebOutput} className="grid gap-3 md:grid-cols-2">
-                  <input type="hidden" name="story_id" value={id} />
-                  <input type="hidden" name="district_key" value={storyRow.district_key} />
-                  <input type="hidden" name="output_id" value={(webOutput as WebOutputRow | null)?.id || ""} />
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Status</span>
-                    <select name="status" defaultValue={(webOutput as WebOutputRow | null)?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">
-                      <option value="draft">Draft</option>
-                      <option value="scheduled">Scheduled</option>
-                      <option value="published">Published</option>
-                      <option value="unpublished">Unpublished</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Exact Web Copy Version</span>
-                    <select name="copy_version_id" defaultValue={(webOutput as WebOutputRow | null)?.copy_version_id || ""} className="rounded border border-neutral-300 px-3 py-2">
-                      <option value="">None selected</option>
-                      {streamsWithVersions
-                        .filter((stream) => stream.stream_type === "web" && stream.current_version)
-                        .map((stream) => (
-                          <option key={stream.current_version?.id} value={stream.current_version?.id}>
-                            Web Copy v{stream.current_version?.version_number}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Slug</span>
-                    <input name="slug" defaultValue={(webOutput as WebOutputRow | null)?.slug || ""} className="rounded border border-neutral-300 px-3 py-2" />
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Scheduled At</span>
-                    <input name="scheduled_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.scheduled_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Published At</span>
-                    <input name="published_at" type="datetime-local" defaultValue={(webOutput as WebOutputRow | null)?.published_at?.slice(0, 16) || ""} className="rounded border border-neutral-300 px-3 py-2" />
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">SEO Title</span>
-                    <input name="seo_title" defaultValue={(webOutput as WebOutputRow | null)?.seo_title || ""} className="rounded border border-neutral-300 px-3 py-2" />
-                  </label>
-                  <label className="grid gap-1 text-sm md:col-span-2">
-                    <span className="font-medium">SEO Description</span>
-                    <textarea name="seo_description" defaultValue={(webOutput as WebOutputRow | null)?.seo_description || ""} className="min-h-[80px] rounded border border-neutral-300 px-3 py-2" />
-                  </label>
-                  <button className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Save Web Output</button>
-                </form>
+                <p className="text-sm text-neutral-600">Saved publication instruction: {(webOutput as WebOutputRow | null)?.status || "No output yet"}</p>
+                {(canManageProduction || storyRow.created_by === profile.id) && <Link href={`/outputs/${id}`} className="w-fit rounded border border-neutral-300 px-4 py-2 text-sm font-semibold">Edit Web & Social Outputs</Link>}
+                {canManageProduction && <Link href={`/homepage?district=${storyRow.district_key}&story=${id}`} className="w-fit text-sm underline">Create Priority Alert</Link>}
               </section>
             ),
           },

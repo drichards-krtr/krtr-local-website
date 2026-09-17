@@ -23,6 +23,7 @@ export async function getCmsDistricts(): Promise<CmsDistrict[] | null> {
       },
       cache: "no-store",
       redirect: "manual",
+      signal: AbortSignal.timeout(8000),
     });
   } catch (error) {
     console.error("[getCmsDistricts] CMS district request failed", error);

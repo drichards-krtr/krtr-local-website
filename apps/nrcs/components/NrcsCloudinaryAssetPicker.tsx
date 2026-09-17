@@ -97,12 +97,14 @@ export default function NrcsCloudinaryAssetPicker({
   districtKey,
   categoryId,
   label = "Choose Image/Graphic",
+  clientSubmit = false,
 }: {
   action: (formData: FormData) => Promise<void>;
   storyId: string;
   districtKey: string;
   categoryId?: string | null;
   label?: string;
+  clientSubmit?: boolean;
 }) {
   const [selected, setSelected] = useState<MediaLibraryAsset | null>(null);
   const [ready, setReady] = useState(false);
@@ -166,7 +168,7 @@ export default function NrcsCloudinaryAssetPicker({
   const url = selected ? getAssetUrl(selected) : "";
 
   return (
-    <form action={action} className="grid gap-3 rounded border border-neutral-200 p-4">
+    <form action={clientSubmit ? undefined : action} onSubmit={clientSubmit ? event => { event.preventDefault(); void action(new FormData(event.currentTarget)); } : undefined} className="grid gap-3 rounded border border-neutral-200 p-4">
       <input type="hidden" name="story_id" value={storyId} />
       <input type="hidden" name="district_key" value={districtKey} />
       <input type="hidden" name="category_id" value={categoryId || ""} />

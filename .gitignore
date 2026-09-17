@@ -3,6 +3,7 @@ out/
 node_modules/
 .npm-cache/
 .phase5-checks/
+.phase6-checks/
 dist/
 .vercel/
 .env

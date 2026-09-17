@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import NrcsEventForm, { type NrcsEventFormValue } from "@/components/NrcsEventForm";
 import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
@@ -121,6 +122,7 @@ export default async function EditEventPage({
       <header>
         <h1 className="text-2xl font-semibold">Edit Event</h1>
         <p className="text-sm text-neutral-500">Update event details, classification, and publication status.</p>
+        {profile.role !== "contributor" && <Link className="mt-2 inline-block text-sm underline" href={`/homepage?district=${event.district_key}&event=${id}`}>Create Priority Alert</Link>}
       </header>
       {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
       {resolvedSearchParams?.success && (
