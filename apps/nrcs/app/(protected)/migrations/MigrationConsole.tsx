@@ -29,15 +29,18 @@ export default function MigrationConsole({ districts, defaultDistrict, owners, t
   const [legacySlug, setLegacySlug] = useState("");
   const [canonicalTag, setCanonicalTag] = useState("");
   const [notice, setNotice] = useState("");
+  const [pendingTags, setPendingTags] = useState<Record<string, string>>({});
+  const [currentTags, setCurrentTags] = useState(tags);
   const active = useRef(false);
   const mounted = useRef(true);
   const reload = useCallback(async (id = selected, index = page) => {
     const data = await api(undefined, id ? `?run=${encodeURIComponent(id)}&page=${index}` : "");
-    if (mounted.current) setReport(data);
+    if (mounted.current) { setReport(data); if (data.canonicalTags) setCurrentTags(data.canonicalTags); }
     return data as Report;
   }, [selected, page]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; active.current = false; }; }, []);
   useEffect(() => { reload().catch(exception => { if (mounted.current) setError(String(exception)); }); }, [reload]);
+  useEffect(() => { setPendingTags({}); }, [selected]);
 
   async function process(id: string) {
     if (active.current) return;
@@ -81,9 +84,9 @@ export default function MigrationConsole({ districts, defaultDistrict, owners, t
   async function resolveTag() {
     setBusy(true); setError(""); setNotice("");
     try {
-      const result = await api({ action: "tag_mapping", run: selected, source_slug: legacySlug, tag_id: canonicalTag });
+      const result = await api({ action: "tag_mapping", run: selected, mappings: Object.entries(pendingTags).map(([source_slug, tag_id]) => ({ source_slug, tag_id })) });
       setSelected(result.run.id); setPage(0);
-      setNotice("Tag mapping saved. A refreshed dry run is ready to process.");
+      setNotice("Tag mappings saved together. A refreshed dry run is ready to process.");
       setLegacySlug(""); setCanonicalTag("");
     } catch (exception) { setError(exception instanceof Error ? exception.message : "Tag mapping failed."); }
     finally { setBusy(false); }
@@ -112,14 +115,17 @@ export default function MigrationConsole({ districts, defaultDistrict, owners, t
         <h2 className="text-lg font-semibold">Tag Collision Resolution</h2>
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid min-w-0 flex-1 gap-1 text-sm">Legacy CMS Tag<select disabled={busy} value={legacySlug} onChange={event => { setLegacySlug(event.target.value); setCanonicalTag(""); }} className="w-full rounded border p-2"><option value="">Select Legacy Tag</option>{report.legacyTags?.map(tag => <option key={tag.slug} value={tag.slug}>{tag.name} ({tag.slug})</option>)}</select></label>
-          <label className="grid min-w-0 flex-1 gap-1 text-sm">Use Existing NRCS Tag<select disabled={busy || !legacySlug} value={canonicalTag} onChange={event => setCanonicalTag(event.target.value)} className="w-full rounded border p-2"><option value="">Select Canonical Tag</option>{tags.map(tag => <option key={tag.id} value={tag.id}>{tag.name} ({tag.slug})</option>)}</select></label>
-          <button disabled={busy || !legacySlug || !canonicalTag} onClick={resolveTag} className="rounded border px-3 py-2 text-sm disabled:opacity-50">Apply Tag Mapping</button>
+          <label className="grid min-w-0 flex-1 gap-1 text-sm">Use Existing NRCS Tag<select disabled={busy || !legacySlug} value={canonicalTag} onChange={event => setCanonicalTag(event.target.value)} className="w-full rounded border p-2"><option value="">Select Canonical Tag</option>{currentTags.map(tag => <option key={tag.id} value={tag.id}>{tag.name} ({tag.slug})</option>)}</select></label>
+          <button disabled={busy || !legacySlug || !canonicalTag} onClick={() => { setPendingTags(previous => ({ ...previous, [legacySlug]: canonicalTag })); setLegacySlug(""); setCanonicalTag(""); }} className="rounded border px-3 py-2 text-sm disabled:opacity-50">Add Mapping</button>
+          <button disabled={busy} onClick={() => reload().catch(exception => setError(String(exception)))} className="rounded border px-3 py-2 text-sm">Refresh Tags</button>
         </div>
+        {Object.entries(pendingTags).map(([slug, id]) => <div key={slug} className="flex flex-wrap items-center gap-3 text-sm"><span>{slug} to {currentTags.find(tag => tag.id === id)?.name || id} (Pending)</span><button disabled={busy} onClick={() => setPendingTags(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => key !== slug)))} className="underline">Remove</button></div>)}
+        <button disabled={busy || !Object.keys(pendingTags).length} onClick={resolveTag} className="rounded bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-50">Save Mappings &amp; Create Refreshed Dry Run</button>
       </section>}
       {run.phase === "ready" && <section className="flex flex-wrap items-end gap-3 border-b pb-5">
         <label className="grid gap-1 text-sm">Mode<select value={mode} onChange={event => setMode(event.target.value)} className="rounded border p-2"><option value="import">Import</option><option value="delta">Delta Sync</option></select></label>
         <label className="grid flex-1 gap-1 text-sm">Type IMPORT THIS DISTRICT<input value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="off" className="rounded border p-2" /></label>
-        <button onClick={beginImport} disabled={busy || confirmation !== "IMPORT THIS DISTRICT"} className="rounded bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-50">Authorize Import</button>
+        <button onClick={beginImport} disabled={busy || Object.keys(pendingTags).length > 0 || confirmation !== "IMPORT THIS DISTRICT"} className="rounded bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-50">Authorize Import</button>
       </section>}
       <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="p-2">Content</th><th className="p-2">Status</th><th className="p-2">Exceptions / Warnings</th></tr></thead><tbody>{report.items?.map(item => <tr key={item.id} className="border-b align-top"><td className="max-w-xs break-words p-2"><strong>{item.normalized.title || item.normalized.name || item.kind}</strong><div className="text-xs text-neutral-500">{item.kind}: {item.source_id}</div>
         {["stories", "events"].includes(item.kind) && item.status !== "removed" && <details className="mt-3"><summary className="cursor-pointer font-medium">Review Copy / Mapping</summary><div className="mt-2 max-h-64 overflow-auto break-words" dangerouslySetInnerHTML={{ __html: item.normalized.body_html || "" }} />

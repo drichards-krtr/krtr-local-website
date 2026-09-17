@@ -34,7 +34,13 @@ export async function GET(request: Request) {
     const { data: items, count } = checked(await db.from("nrcs_migration_items").select("id,kind,source_id,status,detail,errors,warnings,normalized", { count: "exact" }).eq("run_id", runId).order("kind").order("source_id").range(page * 50, page * 50 + 49));
     const { data: summary } = checked(await db.rpc("nrcs_migration_report", { p_run: runId }));
     const { data: legacyTags } = checked(await db.from("nrcs_migration_items").select("source_id,raw").eq("run_id", runId).eq("kind", "tags").order("source_id").limit(1000));
-    return NextResponse.json({ runs, run, items, count, page, summary, legacyTags: (legacyTags || []).map(tag => ({ slug: tag.source_id, name: tag.raw.name })) }, { headers: { "Cache-Control": "no-store" } });
+    const canonicalTags = [];
+    for (let offset = 0; ; offset += 500) {
+      const { data: tags } = checked(await db.from("nrcs_tags").select("id,name,slug").order("name").order("id").range(offset, offset + 499));
+      canonicalTags.push(...(tags || []));
+      if (!tags || tags.length < 500) break;
+    }
+    return NextResponse.json({ runs, run, items, count, page, summary, canonicalTags, legacyTags: (legacyTags || []).map(tag => ({ slug: tag.source_id, name: tag.raw.name })) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return failure(error); }
 }
 
@@ -55,10 +61,16 @@ export async function POST(request: Request) {
     const { data: run } = checked(await db.from("nrcs_migration_runs").select("*").eq("id", runId).single());
     if (body.action === "tag_mapping") {
       if (!["ready", "complete"].includes(run.phase)) throw new Error("Finish or stop processing before reviewing tag mappings.");
-      const slug = String(body.source_slug || "");
-      checked(await db.from("nrcs_migration_items").select("id").eq("run_id", runId).eq("kind", "tags").eq("source_id", slug).single());
-      const { data: snapshot } = checked(await db.rpc("nrcs_migration_tag_snapshot", { p_source_slug: slug, p_tag: String(body.tag_id || "") }));
-      const { data: nextRun } = checked(await db.from("nrcs_migration_runs").insert({ district_key: run.district_key, created_by: context.staff.profile.id, parent_run_id: run.id, tag_mappings: { ...(run.tag_mappings || {}), [slug]: snapshot } }).select("*").single());
+      const choices = body.mappings || [{ source_slug: body.source_slug, tag_id: body.tag_id }];
+      if (!Array.isArray(choices) || !choices.length || choices.length > 100) throw new Error("Choose between 1 and 100 tag mappings per refresh.");
+      const mappings = { ...(run.tag_mappings || {}) };
+      for (const choice of choices) {
+        const slug = String(choice.source_slug || "");
+        checked(await db.from("nrcs_migration_items").select("id").eq("run_id", runId).eq("kind", "tags").eq("source_id", slug).single());
+        const { data: snapshot } = checked(await db.rpc("nrcs_migration_tag_snapshot", { p_source_slug: slug, p_tag: String(choice.tag_id || "") }));
+        mappings[slug] = snapshot;
+      }
+      const { data: nextRun } = checked(await db.from("nrcs_migration_runs").insert({ district_key: run.district_key, created_by: context.staff.profile.id, parent_run_id: run.id, tag_mappings: mappings }).select("*").single());
       return NextResponse.json({ run: nextRun });
     }
     const { data: token } = checked(await db.rpc("nrcs_migration_claim", { p_run: runId }));
