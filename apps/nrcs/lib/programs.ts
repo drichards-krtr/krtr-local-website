@@ -138,14 +138,15 @@ export async function createEdition(formData: FormData) {
         .maybeSingle();
 
   if (template) {
-    const { data: templateItems } = await supabase
+    const { data: templateItems, error: templateItemsError } = await supabase
       .from("nrcs_program_template_items")
       .select("item_type, title, body_html, segment_kind, sort_order")
       .eq("template_id", template.id)
       .order("sort_order", { ascending: true });
 
+    if (templateItemsError) redirect(`/editions/${edition.id}?error=${encodeURIComponent("Edition saved, but template items could not be loaded: " + templateItemsError.message)}`);
     if (templateItems?.length) {
-      await supabase.from("nrcs_rundown_items").insert(
+      const { error: copyError } = await supabase.from("nrcs_rundown_items").insert(
         templateItems.map((item) => ({
           edition_id: edition.id,
           item_type: item.item_type,
@@ -157,6 +158,7 @@ export async function createEdition(formData: FormData) {
           updated_by: profile.id,
         }))
       );
+      if (copyError) redirect(`/editions/${edition.id}?error=${encodeURIComponent("Edition saved, but template items could not be copied: " + copyError.message)}`);
     }
   }
 
@@ -341,19 +343,18 @@ export async function createProgramTemplate(formData: FormData) {
 
   await requireNrcsStaff("editor");
   const programId = String(formData.get("program_id") || "");
-  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
   const name = String(formData.get("name") || "").trim();
-  if (!programId || !name) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template name is required.")}`);
+  if (!programId || !name) redirect(`/templates/new?program=${programId}&error=${encodeURIComponent("Template name is required.")}`);
 
   const supabase = await createNrcsServerClient();
-  const { error } = await supabase.from("nrcs_program_templates").insert({
+  const { data: template, error } = await supabase.from("nrcs_program_templates").insert({
     program_id: programId,
     name,
     enabled: formData.get("enabled") === "on",
-  });
-  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  }).select("id").single();
+  if (error || !template) redirect(`/templates/new?program=${programId}&error=${encodeURIComponent(error?.message || "Unable to create template.")}`);
   revalidatePath("/programs");
-  redirect(`/programs?district=${districtKey}&success=template`);
+  redirect(`/templates/${template.id}?success=template`);
 }
 
 export async function updateProgramTemplate(formData: FormData) {
@@ -361,18 +362,18 @@ export async function updateProgramTemplate(formData: FormData) {
 
   await requireNrcsStaff("editor");
   const templateId = String(formData.get("template_id") || "");
-  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
   const name = String(formData.get("name") || "").trim();
-  if (!templateId || !name) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template and name are required.")}`);
+  if (!templateId || !name) redirect(`/templates/${templateId}?error=${encodeURIComponent("Template and name are required.")}`);
 
   const supabase = await createNrcsServerClient();
   const { error } = await supabase
     .from("nrcs_program_templates")
     .update({ name, enabled: formData.get("enabled") === "on" })
     .eq("id", templateId);
-  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/templates/${templateId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/programs");
-  redirect(`/programs?district=${districtKey}&success=template`);
+  revalidatePath(`/templates/${templateId}`);
+  redirect(`/templates/${templateId}?success=template`);
 }
 
 export async function addTemplateItem(formData: FormData) {
@@ -380,11 +381,10 @@ export async function addTemplateItem(formData: FormData) {
 
   await requireNrcsStaff("editor");
   const templateId = String(formData.get("template_id") || "");
-  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
   const itemType = String(formData.get("item_type") || "script") as RundownItemType;
   const title = String(formData.get("title") || "").trim();
   if (!templateId || !title || itemType === "story" || !RUNDOWN_ITEM_TYPES.includes(itemType)) {
-    redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template item requires a non-story type and title.")}`);
+    redirect(`/templates/${templateId}?error=${encodeURIComponent("Template item requires a non-story type and title.")}`);
   }
 
   const supabase = await createNrcsServerClient();
@@ -396,21 +396,22 @@ export async function addTemplateItem(formData: FormData) {
     segment_kind: itemType === "segment" ? String(formData.get("segment_kind") || "").trim() || null : null,
     sort_order: await nextTemplateSortOrder(templateId),
   });
-  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/templates/${templateId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/programs");
-  redirect(`/programs?district=${districtKey}&success=template-item`);
+  revalidatePath(`/templates/${templateId}`);
+  redirect(`/templates/${templateId}?success=template-item`);
 }
 
 export async function updateTemplateItem(formData: FormData) {
   "use server";
 
   await requireNrcsStaff("editor");
+  const templateId = String(formData.get("template_id") || "");
   const itemId = String(formData.get("template_item_id") || "");
-  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
   const itemType = String(formData.get("item_type") || "script") as RundownItemType;
   const title = String(formData.get("title") || "").trim();
   if (!itemId || !title || itemType === "story" || !RUNDOWN_ITEM_TYPES.includes(itemType)) {
-    redirect(`/programs?district=${districtKey}&error=${encodeURIComponent("Template item requires a non-story type and title.")}`);
+    redirect(`/templates/${templateId}?error=${encodeURIComponent("Template item requires a non-story type and title.")}`);
   }
 
   const supabase = await createNrcsServerClient();
@@ -422,23 +423,25 @@ export async function updateTemplateItem(formData: FormData) {
       body_html: sanitizeRichTextHtml(String(formData.get("body_html") || "")) || plainTextToHtml(""),
       segment_kind: itemType === "segment" ? String(formData.get("segment_kind") || "").trim() || null : null,
     })
-    .eq("id", itemId);
-  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+    .eq("id", itemId).eq("template_id", templateId);
+  if (error) redirect(`/templates/${templateId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/programs");
-  redirect(`/programs?district=${districtKey}&success=template-item`);
+  revalidatePath(`/templates/${templateId}`);
+  redirect(`/templates/${templateId}?success=template-item`);
 }
 
 export async function deleteTemplateItem(formData: FormData) {
   "use server";
 
   await requireNrcsStaff("editor");
+  const templateId = String(formData.get("template_id") || "");
   const itemId = String(formData.get("template_item_id") || "");
-  const districtKey = String(formData.get("district_key") || "dlpc").trim().toLowerCase();
   const supabase = await createNrcsServerClient();
-  const { error } = await supabase.from("nrcs_program_template_items").delete().eq("id", itemId);
-  if (error) redirect(`/programs?district=${districtKey}&error=${encodeURIComponent(error.message)}`);
+  const { error } = await supabase.from("nrcs_program_template_items").delete().eq("id", itemId).eq("template_id", templateId);
+  if (error) redirect(`/templates/${templateId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/programs");
-  redirect(`/programs?district=${districtKey}&success=template-item`);
+  revalidatePath(`/templates/${templateId}`);
+  redirect(`/templates/${templateId}?success=template-item`);
 }
 
 export async function addStoryToRundown(formData: FormData) {
@@ -659,4 +662,32 @@ export async function carryStoryItemToTomorrow(formData: FormData) {
 
   revalidatePath(`/editions/${targetEditionId}`);
   redirect(`/editions/${targetEditionId}?success=carried`);
+}
+
+
+export async function moveTemplateItem(formData: FormData) {
+  "use server";
+  await requireNrcsStaff("editor");
+  const templateId = String(formData.get("template_id") || "");
+  const itemId = String(formData.get("template_item_id") || "");
+  const direction = String(formData.get("direction") || "");
+  const supabase = await createNrcsServerClient();
+  const { data, error } = await supabase.from("nrcs_program_template_items")
+    .select("id, sort_order").eq("template_id", templateId)
+    .order("sort_order").order("id");
+  const path = `/templates/${templateId}`;
+  if (error) redirect(`${path}?error=${encodeURIComponent(error.message)}`);
+  const items = data || [];
+  const index = items.findIndex((item) => item.id === itemId);
+  const target = direction === "down" ? index + 1 : index - 1;
+  if (index >= 0 && target >= 0 && target < items.length && ["up", "down"].includes(direction)) {
+    [items[index], items[target]] = [items[target], items[index]];
+    for (let i = 0; i < items.length; i++) {
+      const { error: updateError } = await supabase.from("nrcs_program_template_items")
+        .update({ sort_order: (i + 1) * 10 }).eq("id", items[i].id).eq("template_id", templateId);
+      if (updateError) redirect(`${path}?error=${encodeURIComponent(updateError.message)}`);
+    }
+  }
+  revalidatePath(path);
+  redirect(`${path}?success=order`);
 }

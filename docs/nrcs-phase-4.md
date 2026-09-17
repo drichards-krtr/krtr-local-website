@@ -36,6 +36,8 @@ Phase 4 adds NRCS-only program production surfaces. CMS and public KRTRLocal.TV 
 - Template edits affect future Editions only.
 - The Programs page includes a weekly Editions calendar filtered by date and Program.
 - The Edition rundown page uses searchable Story Rundown Copy selection instead of a long dropdown.
+- Programs lists template names with links to dedicated template editors and Create Rundown from Template scheduling pages.
+- Template editors support rich-text Segment, Script, and Production Note items, item reordering, and Script View. Existing Editions retain their copied items when templates change.
 
 ## User Action Required
 
