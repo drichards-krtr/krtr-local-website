@@ -68,6 +68,7 @@ export async function syncEventToCms(payload: SyncEventPayload) {
       body: JSON.stringify(payload),
       cache: "no-store",
       redirect: "manual",
+      signal: AbortSignal.timeout(15000),
     });
   } catch (error) {
     return {

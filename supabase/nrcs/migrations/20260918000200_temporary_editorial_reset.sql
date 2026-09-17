@@ -9,6 +9,7 @@ set lock_timeout = '5s' set statement_timeout = '30s'
 as $$
 declare
   tables text[] := array[
+    'nrcs_migration_items', 'nrcs_migration_runs', 'nrcs_migration_identities',
     'nrcs_publication_deliveries', 'nrcs_homepage_lineups', 'nrcs_priority_alerts',
     'nrcs_social_outputs', 'nrcs_web_output_media', 'nrcs_web_outputs',
     'nrcs_edition_assets', 'nrcs_rundown_items', 'nrcs_editions',
@@ -34,11 +35,13 @@ begin
   if p_confirmation is not null then
     -- Block writers during the transaction; fail promptly on contention.
     foreach table_name in array tables loop
+      if to_regclass('public.'||table_name) is null then continue; end if;
       execute format('lock table public.%I in share row exclusive mode', table_name);
     end loop;
     lock table public.nrcs_school_identities in share mode;
   end if;
   foreach table_name in array tables loop
+    if to_regclass('public.'||table_name) is null then continue; end if;
     -- Explicit all-row predicate satisfies Supabase's safe-delete safeguard.
     predicate := ' where true';
     if table_name = 'nrcs_assets' then

@@ -59,6 +59,7 @@ export async function sendIntakeToNrcs(payload: NrcsIntakePayload): Promise<Nrcs
       }),
       cache: "no-store",
       redirect: "manual",
+      signal: AbortSignal.timeout(15000),
     });
   } catch (error) {
     return {

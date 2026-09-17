@@ -1,6 +1,6 @@
 # Phase 8 - Migration Tooling Preparation
 
-Status: Repository/specification audit complete; mapping decisions approved. Temporary editorial reset implemented, pending NRCS SQL application and deployment. Migration tooling/import and cutover are not implemented. Live counts/schema drift have not been inspected because local production credentials are deliberately absent.
+Status: Migration tooling implemented and locally verified; production SQL/deployment and user testing remain pending. No production content was inspected or imported, and no cutover occurred. Local production credentials are deliberately absent.
 
 ## Existing Decisions / Boundaries
 
@@ -18,15 +18,15 @@ Status: Repository/specification audit complete; mapping decisions approved. Tem
 
 | CMS source | NRCS destination / known gap |
 | --- | --- |
-| `stories` | Canonical Story, immutable Web Copy, Web Output linked through existing `cms_story_id`; lifecycle/status mapping needs approval |
+| `stories` | Canonical Story, immutable Web Copy, Web Output linked through existing `cms_story_id`; approved lifecycle/status mapping |
 | Story `tags` plus district tag configuration | Canonical tags/aliases and Story links; no separate legacy Story category column exists |
 | Story image/Mux fields | Shared image or permission-scoped video Assets and Story relationships; preserve video orientation, dimensions, IDs/status; reuse hosted files |
 | `story_submitters` and associated Story | Private submission/contact provenance and intake-to-Story link; distinguish retained tips from existing editorial Stories without duplicate conversion |
 | `events` and `event_submitters` | Events, private intake/contact provenance; retain existing `nrcs_source_id`/`cms_event_id` identities to avoid reimporting NRCS projections |
 | Event classification terms/assignments | District-scoped term mapping; old `is_school_sports=true` without a term cannot identify a particular sport |
-| `dailys` | Program Edition and finished media references; legacy records have no Program association or independently recorded air time |
+| `dailys` | Excluded by explicit user decision |
 | `story_slots` | District Homepage Hero/Top Four references resolved to imported Web Outputs |
-| `alerts` | Priority Alert; legacy record has message/link/schedule/enabled state but no headline |
+| `alerts` | Excluded by explicit user decision |
 | Existing NRCS content / private Phase 7 projections | Preserve existing work and delivery snapshots; do not treat private receiving projections as new legacy public Stories |
 
 Ads, logos, district configuration, site settings, stream configuration and other CMS-owned operations are not automatically editorial migration targets. Scope must follow the specification's ownership split, including any future Recognition Program work rather than silently migrating its model now.
@@ -50,9 +50,37 @@ Ads, logos, district configuration, site settings, stream configuration and othe
 6. Legacy alerts are excluded from import by explicit user decision.
 7. Delta conflicts: proposed update untouched imported content, create real additional immutable Copy Versions when legacy copy changes, and report any locally edited NRCS target for explicit resolution. Source removals become exceptions, not automatic deletion/unpublish.
 
-## USER ACTION REQUIRED - Preparation
+## USER ACTION REQUIRED - Deployment
 
-Apply `supabase/nrcs/migrations/20260918000200_temporary_editorial_reset.sql` in NRCS Supabase only, then commit/push/deploy. Applying this SQL installs a capability; it does not delete content.
+1. CMS Supabase: apply `supabase/migrations/20260918000200_phase_8_migration_export_audit.sql`.
+2. NRCS Supabase: apply `supabase/nrcs/migrations/20260918000300_phase_8_migration_tooling.sql`.
+3. NRCS Supabase: reapply the updated `supabase/nrcs/migrations/20260918000200_temporary_editorial_reset.sql` so reset also clears migration runs/items/identities. It safely skips those tables when not installed.
+4. User commits/pushes main and deploys BOTH Vercel applications. No new environment variables or credentials are required. Existing canonical `NRCS_CMS_API_BASE_URL` and paired API secrets are reused; Mux credentials already installed are used for read-only verification.
+
+Applying these migrations does not delete or import editorial content. Stop and report SQL errors rather than increasing lock/statement timeouts blindly.
+
+## Operator Flow / Validation Gate
+
+- Admin sidebar: Migration (`/migrations`). Select one district, Create Dry Run, then Resume Processing. Disabled districts remain selectable for admin migration without enabling public access. The page drives bounded asynchronous batches; Pause finishes the current batch, and closing the page stops new requests. Reopen/select the run and Resume. A lost in-flight lease expires after two minutes. Stop Run abandons future processing without undoing committed imports.
+- Dry Run stages private source snapshots/reports ONLY. Scans all configured legacy tags (including unused tags), classification terms, Stories, Events and the Homepage lineup; associated submissions/contact provenance are exported with their editorial object. No editorial/taxonomy/asset inserts happen during Dry Run.
+- Compare CMS counts with scanned counts. Audit reports CMS-wide unassigned submissions and unknown district ownership; these require source correction/explicit district assignment before cutover. They are not silently assigned to DLPC.
+- Review Copy / Mapping supports explicit existing-user ownership and district classification selections before Import. Upcoming old sports flags require sport assignment. Successful explicit mappings survive in migration identities for later deltas. Unsupported Markdown constructs/URLs, missing dates/media, tag/alias/slug collisions, and local edits are exceptions, not guessed conversions.
+- Image validation requests only the trusted Cloudinary host (HEAD, no redirects, bounded timeout); arbitrary source hosts are not fetched. Mux verification uses the existing server credentials and verifies ready asset/playback identity. Rechecks at Import catch changed/deleted media and source records changed since Dry Run.
+- Legacy Story authorship cannot establish video upload ownership. Legacy imported videos remain unassigned, with a report warning, so contributors are not granted library access to uploads that cannot be proven theirs. Images remain in the shared pool. Actual hosted media is reused, never re-uploaded.
+- Once Ready, choose Import or Delta Sync, type `IMPORT THIS DISTRICT`, authorize, then Resume Processing. Both modes scan complete manifests; Delta is an explicit repeat run with baseline/conflict checks, not an unattended sync subscription.
+- Dependencies: tags -> classification terms -> Stories -> Events -> Homepage lineup. Each editorial item, links, identity and result commit in one transaction. Unchanged reruns do not create copies; actual text/headline changes append real immutable versions. Locally edited targets are blocked/reported, never overwritten. Deleted source records are reported and retained in NRCS.
+- Homepage is imported as a complete district lineup, preserving existing CMS Story identities and resolving to imported Web Outputs. Missing dependencies block the entire lineup. Nothing is sent to CMS, scheduled for automatic delivery, or made public by this tool; NRCS output states mirror existing source publication intent.
+- Completion means processing finished, NOT that every item succeeded. Inspect blocked/conflict/failed/removed statuses, count mismatches, warnings and the CMS-wide audit. Resolve source errors, or review existing NRCS work separately, and run another Dry Run/Delta. Local conflict exceptions require explicit human resolution; this phase does not provide a blanket force-overwrite button.
+- Before calling Phase 8 complete: test Dry Run does not create editorial rows, pause/resume, valid Import, identical rerun (no duplicates/versions), actual CMS copy delta (new version), local NRCS edits (conflict), source deletion (retained target), missing media/classification (exception), owner/contributor visibility, and unchanged public CMS content/routes. Excluded Dailys/alerts must not be imported.
+
+## Local Checks
+
+- Both Next production builds passed. CMS emitted expected missing-local-Supabase warnings from existing ad loading; no production environment was added locally.
+- `node tests/phase8-api.cjs`: authenticated export pagination, district isolation, Markdown conversion, reciprocal submitter deduplication, API role restrictions, redirect and response identity rejection.
+- `node tests/phase8-migration.cjs`: full NRCS SQL chain and CMS audit SQL in local PGlite PostgreSQL, mapping, metadata-only staging, actual imports, retry/idempotency, deltas, local conflict protection, private RLS, rollback on partial import/reset failure, and school-logo preservation/reset bookkeeping.
+- PGlite is a temporary test runtime, not a production dependency. To reproduce, install it with `npm install --prefix .tmp/phase8-test --no-package-lock --no-save @electric-sql/pglite`, then run the test; `PGLITE_PATH` can point to another installed runtime.
+- Existing Phase 7 and temporary-reset checks pass. Production auth/credentials, live schema drift and Vercel execution still require user verification. Browser workflow testing against production has not been performed locally.
+- Dependency audit reports FOUR existing package advisories: baseline-browser-mapping (moderate), browserslist (high), postcss-selector-parser (low), sharp/libheif (high). The added Markdown conversion packages are not implicated. Unrelated dependency updates have not been mixed into this phase.
 
 ## Temporary Editorial Reset
 

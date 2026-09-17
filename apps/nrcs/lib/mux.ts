@@ -38,6 +38,7 @@ export async function fetchMuxData<T>(path: string): Promise<T | null> {
       "Content-Type": "application/json",
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
 
   if (response.status === 404) return null;
