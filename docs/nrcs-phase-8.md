@@ -14,7 +14,7 @@ For a completed dry-run report with tag collisions, use **Tag Collision Resoluti
 
 Explicit reuse preserves the canonical tag name and slug. If the legacy slug differs, import adds an alias only when that slug is not already owned by another tag. Dry-run mapping never edits tags or editorial records. Canonical changes after selection require reconfirmation rather than silently accepting a stale choice. Relevant Story tag relationships use the selected canonical tag.
 
-Status: Migration tooling implemented and locally verified; production SQL/deployment and user testing remain pending. No production content was inspected or imported, and no cutover occurred. Local production credentials are deliberately absent.
+Status: User confirmed production dry-run and import, with imported records showing as expected. CMS editorial changes are frozen until cutover. Delta/conflict behavior has local regression coverage but was not artificially exercised on live production content. Phase 8 is closed on that basis; no cutover occurred. Local production credentials remain absent. The temporary reset capability is retired by the preparation step documented in `docs/nrcs-phase-9.md`.
 
 ## Existing Decisions / Boundaries
 

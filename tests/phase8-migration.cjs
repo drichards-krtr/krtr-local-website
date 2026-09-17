@@ -53,7 +53,9 @@ assert.ok(migration.normalizeLegacy("events", { ...event, start_at: "2026-02-30T
       create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid',true),'')::uuid $$;
       grant usage on schema public,auth to authenticated;
       alter default privileges in schema public grant select,insert,update,delete on tables to authenticated;`);
-    const files = fs.readdirSync("supabase/nrcs/migrations").filter(file => file.endsWith(".sql")).sort();
+    const retirement = "20260918000600_retire_editorial_reset.sql";
+    // Exercise the historical reset before verifying its permanent retirement.
+    const files = fs.readdirSync("supabase/nrcs/migrations").filter(file => file.endsWith(".sql") && file !== retirement).sort();
     for (const file of files) {
       const sql = fs.readFileSync(`supabase/nrcs/migrations/${file}`, "utf8").replace("create extension if not exists pgcrypto;", "-- gen_random_uuid is built into the test PostgreSQL runtime.");
       try { await db.exec(sql); } catch (error) { throw new Error(`${file}: ${error.message}`); }
@@ -180,6 +182,11 @@ assert.ok(migration.normalizeLegacy("events", { ...event, start_at: "2026-02-30T
     assert.equal((await db.query("select count(*) n from nrcs_migration_identities")).rows[0].n, 0);
     assert.ok((await db.query("select count(*) n from nrcs_school_identities")).rows[0].n > 0);
     assert.equal((await db.query("select title from nrcs_assets")).rows[0].title, "Protected School Logo");
+    const beforeRetirement = (await db.query("select count(*) n from nrcs_school_identities")).rows[0].n;
+    await db.exec(fs.readFileSync(`supabase/nrcs/migrations/${retirement}`, "utf8"));
+    assert.equal((await db.query("select to_regprocedure('public.nrcs_temporary_editorial_reset(text)') reset")).rows[0].reset, null);
+    await assert.rejects(db.query("select nrcs_temporary_editorial_reset()"), /does not exist/);
+    assert.equal((await db.query("select count(*) n from nrcs_school_identities")).rows[0].n, beforeRetirement, "Capability retirement must not delete records");
     console.log("Phase 8 mapping and PostgreSQL migration/import/retry/delta/conflict/permissions/reset tests passed.");
   } finally { await db.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

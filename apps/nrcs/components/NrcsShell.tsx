@@ -18,7 +18,6 @@ const NAV_ITEMS = [
   { label: "Intake", href: "/intake", minimumRole: "editor" },
   { label: "Taxonomy", href: "/taxonomy", minimumRole: "editor" },
   { label: "Users", href: "/users", minimumRole: "admin" },
-  { label: "Temporary Reset", href: "/maintenance", minimumRole: "admin" },
   { label: "Migration", href: "/migrations", minimumRole: "admin" },
 ] as const;
 
