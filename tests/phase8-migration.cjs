@@ -85,6 +85,13 @@ assert.ok(migration.normalizeLegacy("events", { ...event, start_at: "2026-02-30T
       return result;
     }
     const first = await run();
+    const bowling = { id: "f7000000-0000-0000-0000-000000000020", district_key: "dlpc", name: "Boys Bowling", kind: "sport", enabled: true };
+    await db.exec("update nrcs_event_classification_terms set enabled=false where district_key='dlpc' and kind='sport' and name='Boys Bowling'");
+    const bowlingTarget = (await db.query("select id from nrcs_event_classification_terms where district_key='dlpc' and kind='sport' and name='Boys Bowling'")).rows[0].id;
+    assert.deepEqual((await db.query("select nrcs_migration_assess('terms',$1,null,$2) issues", [migration.migrationUuid("terms", `dlpc:${bowling.id}`), JSON.stringify(bowling)])).rows[0].issues, []);
+    assert.equal(await apply(first, await stage(first, "terms", bowling)), "imported");
+    assert.equal((await db.query("select target_id from nrcs_migration_identities where kind='terms' and source_id=$1", [bowling.id])).rows[0].target_id, bowlingTarget);
+    assert.equal((await db.query("select enabled from nrcs_event_classification_terms where id=$1", [bowlingTarget])).rows[0].enabled, false);
     assert.equal(await apply(first, await stage(first, "tags", { district_key: "dlpc", slug: "unused-tag", name: "Unused Tag" })), "imported");
     const termRaw = { id: "f7000000-0000-0000-0000-000000000010", district_key: "dlpc", name: "Football", kind: "sport", enabled: true };
     assert.equal(await apply(first, await stage(first, "terms", termRaw)), "imported");
@@ -110,7 +117,13 @@ assert.ok(migration.normalizeLegacy("events", { ...event, start_at: "2026-02-30T
     const third = await run();
     assert.equal(await apply(third, await stage(third, "tags", { district_key: "dlpc", slug: "unused-tag", name: "Updated Tag" })), "imported");
     assert.equal(await apply(third, await stage(third, "terms", { ...termRaw, enabled: false })), "imported");
-    assert.equal((await db.query("select enabled from nrcs_event_classification_terms where name='Football' and district_key='dlpc'")).rows[0].enabled, false);
+    assert.equal((await db.query("select enabled from nrcs_event_classification_terms where name='Football' and district_key='dlpc'")).rows[0].enabled, true, "CMS delta must not override canonical NRCS enabled state");
+    await db.exec("update nrcs_event_classification_terms set enabled=false where name='Football' and district_key='dlpc'");
+    const canonicalAssessment = (await db.query("select nrcs_migration_assess('terms',$1,null,$2) issues", [migration.migrationUuid("terms", `dlpc:${termRaw.id}`), JSON.stringify(termRaw)])).rows[0].issues;
+    assert.deepEqual(canonicalAssessment, [], "NRCS disabled state must not cause a migration conflict");
+    await db.query("delete from nrcs_migration_items where run_id=$1 and kind='terms' and source_id=$2", [third, termRaw.id]);
+    assert.equal(await apply(third, await stage(third, "terms", termRaw)), "imported");
+    assert.equal((await db.query("select enabled from nrcs_event_classification_terms where name='Football' and district_key='dlpc'")).rows[0].enabled, false, "Import must preserve locally disabled activities");
     const termTarget = (await db.query("select target_id from nrcs_migration_identities where kind='terms' and source_id=$1", [termRaw.id])).rows[0].target_id;
     assert.equal(await apply(third, await stage(third, "events", { ...event, is_school_sports: true }, { classification_target_id: termTarget })), "imported");
     assert.equal((await db.query("select classification_term_id from nrcs_events")).rows[0].classification_term_id, termTarget);

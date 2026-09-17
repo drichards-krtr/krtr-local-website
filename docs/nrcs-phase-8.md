@@ -2,6 +2,8 @@
 
 ## Explicit Tag Collision Resolution
 
+School Activity Manager authority amendment: existing district/kind/name-matched NRCS classification definitions are canonical, including their enabled/disabled settings. Apply `supabase/nrcs/migrations/20260918000500_phase_8_canonical_activities.sql` in NRCS only and process a fresh dry run to remove previously staged enabled-state conflicts. Imports and deltas link existing definitions without changing their settings, even when staff change enabled state after scanning. Missing definitions are initially created from source metadata; identity/name mismatches still require reconciliation. CMS is not an activity-management interface.
+
 Migration author amendment: new/refreshed dry runs assign otherwise-unassigned Story/Event authors to the active NRCS staff profile `drichards@krtrlocal.tv`. Exact source-author matches and non-null manual mappings remain intact. The fallback is recorded in mapping metadata and warnings; original source author/contact provenance is preserved. This does not assign unknown video uploaders or change contributor video access. Start a fresh dry run to apply this to previously staged records. No SQL/environment change is needed for the author amendment.
 
 Apply `supabase/nrcs/migrations/20260918000400_phase_8_tag_resolution.sql` once in the NRCS Supabase project, then deploy NRCS. No CMS migration or environment-variable change is required for this addition.
