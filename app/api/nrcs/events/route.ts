@@ -1,149 +1,26 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { authorizeNrcsService, sanitizePublicationHtml } from "@/lib/nrcsPublication";
+import sanitizeHtml from "sanitize-html";
 
-type EventPayload = {
-  id: string;
-  district_key: string;
-  title: string;
-  body_html: string | null;
-  location_name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  location: string | null;
-  start_at: string;
-  end_at: string | null;
-  image_url: string | null;
-  status: "draft" | "published" | "archived";
-  classification: {
-    kind: "sport" | "extra_curricular" | "event_type";
-    name: string;
-    enabled: boolean;
-  } | null;
-};
-
-function isAuthorized(request: Request) {
-  const expected = process.env.CMS_NRCS_API_SECRET;
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  return Boolean(expected && supplied && supplied === expected);
-}
-
-function htmlToPlainText(html: string | null) {
-  if (!html) return null;
-
-  const text = html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|h1|h2|li|blockquote|ol|ul)>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-
-  return text || null;
-}
-
+export const runtime = "nodejs";
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!authorizeNrcsService(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const raw = await request.text();
+    if (Buffer.byteLength(raw) > 1000000) throw new Error("Event exceeds size limit.");
+    const payload = JSON.parse(raw);
+    if (!payload || !/^[0-9a-f-]{36}$/i.test(payload.id) || !/^[a-z0-9][a-z0-9-]*$/.test(payload.district_key) || typeof payload.title !== "string" || !payload.title.trim() || !Number.isFinite(Date.parse(payload.start_at)) || !["draft", "published", "archived"].includes(payload.status)) throw new Error("Invalid required event fields.");
+    if (payload.classification && (!["sport", "extra_curricular", "event_type"].includes(payload.classification.kind) || typeof payload.classification.name !== "string" || !payload.classification.name.trim() || typeof payload.classification.enabled !== "boolean")) throw new Error("Invalid event classification.");
+    if (payload.body_html !== null && typeof payload.body_html !== "string") throw new Error("Invalid event description.");
+    const bodyHtml = payload.body_html ? sanitizePublicationHtml(payload.body_html) : null;
+    const plain = bodyHtml ? sanitizeHtml(bodyHtml.replace(/<br\s*\/?>|<\/(p|h1|h2|li|blockquote|ol|ul)>/gi, "\n"), { allowedTags: [], allowedAttributes: {} }).replace(/\n{3,}/g, "\n\n").trim() : null;
+    const service = createServiceClient();
+    const { data: event, error } = await service.rpc("receive_nrcs_event", { p_event: { ...payload, body_html: bodyHtml, description: plain || null } });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!event?.id || event.nrcs_source_id !== payload.id || event.district_key !== payload.district_key || event.status !== payload.status) throw new Error("CMS event receipt could not be verified.");
+    return NextResponse.json({ ok: true, table: "events", cms_event_id: event.id, event_id: event.id, nrcs_source_id: event.nrcs_source_id, district_key: event.district_key, status: event.status, cms_supabase_host: process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host : null }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Event receiving failed." }, { status: 400 });
   }
-
-  const payload = (await request.json()) as EventPayload;
-  if (!payload.id || !payload.district_key || !payload.title || !payload.start_at) {
-    return NextResponse.json({ error: "Missing required event fields" }, { status: 400 });
-  }
-
-  const service = createServiceClient();
-  const description = htmlToPlainText(payload.body_html);
-  const { data: event, error: eventError } = await service
-    .from("events")
-    .upsert(
-      {
-        nrcs_source_id: payload.id,
-        district_key: payload.district_key,
-        title: payload.title,
-        description,
-        body_html: payload.body_html,
-        location_name: payload.location_name,
-        address: payload.address,
-        city: payload.city,
-        state: payload.state,
-        zip: payload.zip,
-        location: payload.location,
-        start_at: payload.start_at,
-        end_at: payload.end_at,
-        image_url: payload.image_url,
-        status: payload.status,
-        is_school_sports: payload.classification?.kind === "sport",
-      },
-      { onConflict: "nrcs_source_id" }
-    )
-    .select("id")
-    .single();
-
-  if (eventError) {
-    return NextResponse.json({ error: eventError.message }, { status: 500 });
-  }
-
-  await service.from("event_classification_assignments").delete().eq("event_id", event.id);
-
-  if (payload.classification) {
-    const { data: term, error: termError } = await service
-      .from("event_classification_terms")
-      .upsert(
-        {
-          district_key: payload.district_key,
-          kind: payload.classification.kind,
-          name: payload.classification.name,
-          enabled: payload.classification.enabled,
-        },
-        { onConflict: "district_key,kind,name" }
-      )
-      .select("id")
-      .single();
-
-    if (termError) {
-      return NextResponse.json({ error: termError.message }, { status: 500 });
-    }
-
-    const { error: assignmentError } = await service.from("event_classification_assignments").insert({
-      event_id: event.id,
-      term_id: term.id,
-    });
-
-    if (assignmentError) {
-      return NextResponse.json({ error: assignmentError.message }, { status: 500 });
-    }
-  }
-
-  const { data: verifiedEvent, error: verifyError } = await service
-    .from("events")
-    .select("id, nrcs_source_id, district_key, status")
-    .eq("id", event.id)
-    .maybeSingle();
-
-  if (verifyError || !verifiedEvent) {
-    return NextResponse.json(
-      { error: verifyError?.message || "CMS event write could not be verified" },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    table: "events",
-    cms_event_id: verifiedEvent.id,
-    event_id: verifiedEvent.id,
-    nrcs_source_id: verifiedEvent.nrcs_source_id,
-    district_key: verifiedEvent.district_key,
-    status: verifiedEvent.status,
-    cms_supabase_host: process.env.NEXT_PUBLIC_SUPABASE_URL
-      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
-      : null,
-  });
 }

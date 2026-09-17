@@ -149,7 +149,7 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       const common = { story_id: storyId, district_key: district.district_key, copy_version_id: uuid(body.copy_version_id, true), status: body.status, scheduled_at: date(body.scheduled_at), published_at: date(body.published_at) || (body.status === "published" ? new Date().toISOString() : null) };
       if (kind === "web") {
         const slug = text(body.slug ?? "", 240);
-        const { data: outputId, error } = await supabase.rpc("nrcs_save_web_output", { p_output: { ...common, slug: slug ? normalizeSlug(slug) : null, hero_asset_id: uuid(body.hero_asset_id, true), seo_title: text(body.seo_title ?? "", 240), seo_description: text(body.seo_description ?? "", 1000) }, p_media: ids(body.media_ids), p_revision: body.revision });
+        const { data: outputId, error } = await supabase.rpc("nrcs_save_web_output", { p_output: { ...common, slug: slug ? normalizeSlug(slug) : null, hero_asset_id: uuid(body.hero_asset_id, true), video_asset_id: uuid(body.video_asset_id, true), tease: text(body.tease ?? "", 1000), seo_title: text(body.seo_title ?? "", 240), seo_description: text(body.seo_description ?? "", 1000) }, p_media: ids(body.media_ids), p_revision: body.revision });
         if (error) throw new Error(error.message);
         const { data: output, error: readError } = await supabase.from("nrcs_web_outputs").select("*").eq("id", outputId).single();
         if (readError) throw new Error("Saved, but confirmation could not be loaded. Reload before retrying. " + readError.message);

@@ -83,7 +83,7 @@ if (process.argv.includes("--unit")) process.exit(0);
 
 const runtime = process.env.KRTR_TEST_NODE_MODULES;
 const { chromium } = runtime ? createRequire(path.join(runtime, "package.json"))("playwright") : require("playwright");
-const files = ["lib/localDates.ts", "lib/outputs.ts", "components/NrcsOutputEditor.tsx", "components/NrcsEditorialPicker.tsx", "components/NrcsHomepageManager.tsx", "components/NrcsCloudinaryAssetPicker.tsx"];
+const files = ["lib/localDates.ts", "lib/outputs.ts", "components/NrcsPublicationDelivery.tsx", "components/NrcsOutputEditor.tsx", "components/NrcsEditorialPicker.tsx", "components/NrcsHomepageManager.tsx", "components/NrcsCloudinaryAssetPicker.tsx"];
 const modules = files.map(file => {
   const id = file.replace(/\.tsx?$/, "");
   const js = ts.transpileModule(readFileSync(path.join(root, file), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
@@ -93,6 +93,8 @@ modules.push(`"react/jsx-runtime":function(require,module,exports){${readFileSyn
 const versions = [{ id: versionId, version_number: 2, headline: "Current headline", body_html: "<h2>Heading</h2><p>Body with <strong>bold</strong> text.</p><blockquote>Quotation</blockquote><ul><li>Bullet</li></ul>", created_at: "2026-09-17T17:00:00Z" }, { id: "f6200000-0000-0000-0000-000000000002", version_number: 1, headline: "Older headline", body_html: "<p>Older copy.</p>", created_at: "2026-09-16T17:00:00Z" }];
 const image = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#31a77a"/><circle cx="320" cy="180" r="90" fill="#fff"/></svg>');
 const assets = [1, 2].map(i => ({ id: `f6300000-0000-0000-0000-00000000000${i}`, title: `Graphic ${i}`, asset_type: "graphic", cloudinary_url: image, thumbnail_url: null, mux_status: null, mux_playback_id: null }));
+assets.push({ id: "f6300000-0000-0000-0000-000000000003", title: "Ready video", asset_type: "video", cloudinary_url: null, thumbnail_url: image, mux_status: "ready", mux_playback_id: "FixturePlayback" });
+assets.push({ id: "f6300000-0000-0000-0000-000000000004", title: "Processing video", asset_type: "video", cloudinary_url: null, thumbnail_url: image, mux_status: "preparing", mux_playback_id: null });
 const bundle = `var process={env:{NODE_ENV:"development"}};var factories={${modules.join(",")}};var cache={};function load(id){if(id==="react")return window.React;id=id.replace(/^@\\//,"");if(cache[id])return cache[id].exports;var m={exports:{}};cache[id]=m;factories[id](function(n){return load(n.startsWith("./")?id.split("/").slice(0,-1).join("/")+"/"+n.slice(2):n)},m,m.exports);return m.exports;}var page=new URLSearchParams(location.search).get("page");var component=load(page==="homepage"?"components/NrcsHomepageManager":"components/NrcsOutputEditor").default;var props=page==="homepage"?{districtKey:"dlpc",timezone:"America/Chicago",initialLineup:null,initialAlerts:[],initialTarget:null}:{storyId:${JSON.stringify(storyId)},districtKey:"dlpc",timezone:"America/Chicago",editor:new URLSearchParams(location.search).get("contributor")!=="1",initialWeb:null,initialSocial:[],webVersions:${JSON.stringify(versions)},socialVersions:${JSON.stringify(versions)},assets:${JSON.stringify(assets)},initialMedia:[]};ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(component,props));`;
 const postcss = require("postcss"), tailwind = require("tailwindcss");
 const css = (await postcss([tailwind({ content: files.map(file => path.join(root, file)), theme: { extend: {} }, plugins: [] })]).process(readFileSync(path.join(root, "app/globals.css"), "utf8"), { from: undefined })).css;
@@ -111,6 +113,12 @@ try {
   await page.route("**/api/cloudinary/signature", route => route.fulfill({ json: { cloudName: "fixture", apiKey: "fixture", folder: "krtr" } }));
   await page.route("https://res.cloudinary.com/fixture/image/upload/image.png", route => route.fulfill({ contentType: "image/png", body: readFileSync(path.join(root, "public/graphics/legacy/union-knights.png")) }));
   let posted = [], fail = false;
+  let deliveryAttempts = 0;
+  await page.route("**/api/publications**", route => {
+    if (route.request().method() === "GET") return route.fulfill({ json: { delivery: null } });
+    deliveryAttempts++;
+    return route.fulfill({ json: { delivery: { status: deliveryAttempts === 1 ? "failed" : "received", last_error: deliveryAttempts === 1 ? "CMS unavailable" : null, receipt: deliveryAttempts === 1 ? null : { cms_projection_id: uid } } } });
+  });
   await page.route("**/api/editorial/**", async route => {
     const request = route.request(); const kind = new URL(request.url()).pathname.split("/").at(-1);
     if (request.method() === "GET") {
@@ -130,10 +138,20 @@ try {
   const web = page.locator("section").filter({ has: page.getByRole("heading", { name: "Web Output", exact: true }) });
   assert.equal(await web.locator('[name="copy_version_id"]').inputValue(), versionId);
   await web.getByLabel("Hero Image · Optional").selectOption(assets[1].id);
+  assert.equal(await web.locator('[name="video_asset_id"] option').filter({ hasText: "Processing video" }).evaluate(option => option.disabled), true);
+  await web.getByLabel("Primary Video · Optional").selectOption(assets[2].id);
+  await web.getByLabel("Tease · Optional").fill("Public tease, not SEO description.");
   await web.getByRole("checkbox").nth(0).check(); await web.getByRole("checkbox").nth(1).check();
   await web.getByRole("button", { name: "Save Web Output", exact: true }).click();
   await web.getByRole("status").waitFor(); assert.deepEqual(posted.at(-1).media_ids, [assets[1].id, assets[0].id]);
   assert.equal(posted.at(-1).copy_version_id, versionId);
+  assert.equal(posted.at(-1).video_asset_id, assets[2].id);
+  assert.equal(posted.at(-1).tease, "Public tease, not SEO description.");
+  await web.getByRole("button", { name: "Send to CMS", exact: true }).click();
+  await web.getByText("CMS delivery failed", { exact: true }).waitFor();
+  await web.getByRole("button", { name: "Retry / Check CMS Receipt", exact: true }).click();
+  await web.getByText("CMS received (non-public)", { exact: true }).waitFor();
+  assert.equal(deliveryAttempts, 2);
   await web.getByRole("button", { name: "Preview Selected Copy" }).click(); await page.getByRole("dialog").waitFor();
   assert.equal(await page.getByRole("dialog").locator("blockquote").innerText(), "Quotation");
   await page.getByRole("button", { name: "Next image" }).click(); await page.keyboard.press("Escape");

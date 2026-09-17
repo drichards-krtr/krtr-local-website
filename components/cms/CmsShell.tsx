@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import LogoutButton from "@/components/cms/LogoutButton";
+import { isLegacyEditorialPath, legacyEditorialEnabled } from "@/lib/editorialFeatureFlag";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/cms" },
   { label: "Analytics", href: "/cms/analytics" },
   { label: "Daily's", href: "/cms/dailys" },
   { label: "Stories", href: "/cms/stories" },
+  { label: "NRCS Receipts", href: "/cms/nrcs" },
   { label: "Ads", href: "/cms/ads" },
   { label: "Logos", href: "/cms/logos" },
   { label: "Social Links", href: "/cms/social-links" },
@@ -29,7 +31,7 @@ export default function CmsShell({ children }: { children: ReactNode }) {
         <aside className="w-64 border-r border-neutral-200 bg-white">
           <div className="px-6 py-5 text-lg font-semibold">KRTR Local CMS</div>
           <nav className="grid gap-1 px-3 pb-6 text-sm">
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.filter(item => legacyEditorialEnabled() || !isLegacyEditorialPath(item.href)).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

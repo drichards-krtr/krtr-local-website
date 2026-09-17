@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { CMS_SESSION_COOKIE, isCmsSessionExpired } from "@/lib/cmsSession";
+import { isLegacyEditorialPath, legacyEditorialEnabled } from "@/lib/editorialFeatureFlag";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,6 +18,9 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
+  if (!legacyEditorialEnabled() && isLegacyEditorialPath(pathname)) {
+    return NextResponse.redirect(new URL("/cms", request.url));
+  }
   return NextResponse.next();
 }
 
