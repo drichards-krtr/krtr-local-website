@@ -75,6 +75,26 @@ const originalFetch = global.fetch;
     const retry = load("apps/nrcs/lib/publicationDelivery.ts", { "server-only": {}, "./editorialContract": contract, "./richText": {}, "./districts": { getNrcsDistrictContext: () => { throw new Error("Retry rebuilt dependencies"); } }, "./env": { getNrcsCmsApiEnv: () => ({ baseUrl: "https://example.invalid", secret: "fixture" }) }, "./server": { createNrcsServerClient: async () => ({ from: rlsQuery }), createNrcsServiceClient: () => ({ from: serviceQuery, rpc: async () => ({ data: { ...saved, attempts: 1 }, error: null }) }) } });
     global.fetch = async (_url, options) => { assert.equal(JSON.parse(options.body).request_id, id); return Response.json({ ok: true, receipt }); };
     assert.equal((await retry.sendPublication("web", source, "dlpc", 1)).status, "received");
+    let streamKind = "web", streamStory = source;
+    const streamId = "f7000000-0000-0000-0000-000000000003";
+    const queried = [];
+    const builder = load("apps/nrcs/lib/publicationDelivery.ts", {
+      "server-only": {}, "./editorialContract": contract, "./env": {},
+      "./richText": { sanitizeRichTextHtml: helper.sanitizePublicationHtml },
+      "./districts": { getNrcsDistrictContext: async () => ({ allowedDistricts: [{ district_key: "dlpc", timezone: "America/Chicago" }] }) },
+      "./server": { createNrcsServerClient: async () => ({ from(table) {
+        const result = () => ({ data: table === "nrcs_web_outputs" ? { ...envelope.payload, id: source, story_id: source, district_key: "dlpc", revision: 1, copy_version_id: id, hero_asset_id: null, video_asset_id: null } : table === "nrcs_stories" ? { id: source, title: "Test", district_key: "dlpc", nrcs_categories: null } : table === "nrcs_copy_versions" ? { id, stream_id: streamId, headline: "Exact version", body_html: "<p>Body</p>" } : table === "nrcs_copy_streams" ? { story_id: streamStory, stream_type: streamKind } : [], error: null });
+        return { select(columns) { assert.ok(!columns.includes("nrcs_copy_streams!")); return this; }, eq(column, value) { queried.push([table, column, value]); return this; }, order() { return this; }, single: async () => result(), maybeSingle: async () => result(), then(resolve, reject) { return Promise.resolve(result()).then(resolve, reject); } };
+      } }) },
+    });
+    const built = await builder.buildPublication("web", source, "dlpc", 1);
+    assert.equal(built.payload.copy_version_id, id);
+    assert.equal(built.payload.title, "Exact version");
+    assert.ok(queried.some(([table, column, value]) => table === "nrcs_copy_streams" && column === "id" && value === streamId));
+    streamKind = "rundown";
+    await assert.rejects(builder.buildPublication("web", source, "dlpc", 1), /Web Copy/);
+    streamKind = "web"; streamStory = id;
+    await assert.rejects(builder.buildPublication("web", source, "dlpc", 1), /Web Copy/);
     console.log("Phase 7 package, sanitization, authorization, receipt and transport checks passed.");
   } finally { global.fetch = originalFetch; }
 })().catch(error => { console.error(error); process.exitCode = 1; });

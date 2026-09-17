@@ -6,6 +6,8 @@
 - Work on main; no new branches, commits, or pushes by Codex.
 - TipTap sanitized HTML remains authoritative. Existing public Markdown, URLs, CMS editors, and public queries are unchanged.
 - Web Outputs gain optional tease and primary ready Mux video attached to the Story. Social Outputs already accept video and remain manually published.
+- Web Hero selection uses the full Cloudinary Media Library widget, attaches/reuses the selected shared asset, and provides a preview and clear control. Save Web Output persists the assignment; article inclusion remains explicit.
+- Delivery loads the pinned Copy Version's `stream_id` separately and verifies its Story/Web stream, avoiding the ambiguous reciprocal current-version relationship.
 - Explicit asynchronous Send to CMS / Retry stores an immutable package and validates a non-public receipt. Saving alone does not send or publish.
 - Web, Homepage/Daily, and Priority Alert instructions are received into private CMS projections. Even a requested Published status is NOT public publication in this phase. Receipt article ID, public URL, and actual publication timestamp remain null.
 - Stable Story/output/copy IDs, district, canonical category/tags, ordered images, separate listing Hero, video, schedules, and SEO travel through an explicit whitelist. Internal notes, facts, source documents, and private assets never travel.

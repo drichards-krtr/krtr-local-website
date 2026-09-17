@@ -42,10 +42,12 @@ export async function buildPublication(kind: PublicationKind, sourceId: string, 
   }
   const { data: story, error: storyError } = await supabase.from("nrcs_stories").select("id,title,district_key,category_id,nrcs_categories(id,name,slug)").eq("id", source.story_id).single();
   if (storyError || !story || story.district_key !== districtKey) throw new Error("Story is unavailable.");
-  const versionResult = source.copy_version_id ? await supabase.from("nrcs_copy_versions").select("id,headline,body_html,nrcs_copy_streams!inner(story_id,stream_type)").eq("id", source.copy_version_id).single() : { data: null, error: null };
+  const versionResult = source.copy_version_id ? await supabase.from("nrcs_copy_versions").select("id,stream_id,headline,body_html").eq("id", source.copy_version_id).single() : { data: null, error: null };
   if (versionResult.error) throw new Error(versionResult.error.message);
   const version = versionResult.data;
-  const stream = version ? Array.isArray(version.nrcs_copy_streams) ? version.nrcs_copy_streams[0] : version.nrcs_copy_streams : null;
+  const streamResult = version ? await supabase.from("nrcs_copy_streams").select("story_id,stream_type").eq("id", version.stream_id).single() : { data: null, error: null };
+  if (streamResult.error) throw new Error(streamResult.error.message);
+  const stream = streamResult.data;
   if (version && (stream?.story_id !== story.id || stream?.stream_type !== "web")) throw new Error("Copy version does not belong to this Story's Web Copy.");
   const { data: links, error: linksError } = await supabase.from("nrcs_web_output_media").select("asset_id").eq("output_id", source.id).order("position");
   const { data: tags, error: tagsError } = await supabase.from("nrcs_story_tags").select("nrcs_tags(id,name,slug,tag_type)").eq("story_id", story.id).order("tag_id");

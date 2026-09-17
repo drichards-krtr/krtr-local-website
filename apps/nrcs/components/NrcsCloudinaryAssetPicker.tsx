@@ -98,6 +98,7 @@ export default function NrcsCloudinaryAssetPicker({
   categoryId,
   label = "Choose Image/Graphic",
   clientSubmit = false,
+  submitLabel = "Attach Selected",
 }: {
   action: (formData: FormData) => Promise<void>;
   storyId: string;
@@ -105,6 +106,7 @@ export default function NrcsCloudinaryAssetPicker({
   categoryId?: string | null;
   label?: string;
   clientSubmit?: boolean;
+  submitLabel?: string;
 }) {
   const [selected, setSelected] = useState<MediaLibraryAsset | null>(null);
   const [ready, setReady] = useState(false);
@@ -189,7 +191,7 @@ export default function NrcsCloudinaryAssetPicker({
           disabled={!url}
           className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          Attach Selected
+          {submitLabel}
         </button>
       </div>
       {!ready && !error && <p className="text-xs text-neutral-500">Loading Cloudinary Media Library...</p>}
