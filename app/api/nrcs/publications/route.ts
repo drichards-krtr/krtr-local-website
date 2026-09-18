@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { authorizeNrcsService, publicationHash, sanitizePublicationHtml } from "@/lib/nrcsPublication";
 import { validatePublication, verifyPublicationReceipt } from "@/apps/nrcs/lib/editorialContract";
+import { nrcsPublishingEnabled } from "@/lib/editorialFeatureFlag";
 
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -14,9 +15,11 @@ export async function POST(request: Request) {
     // Hash the original validated instructions; sanitize independently before storage.
     const stored = envelope.kind === "web" ? { ...envelope, payload: { ...envelope.payload, body_html: sanitizePublicationHtml(envelope.payload.body_html) } } : envelope;
     const service = createServiceClient();
-    const { data, error } = await service.rpc("receive_nrcs_publication", { p_package: stored, p_hash: hash });
+    const live = nrcsPublishingEnabled() && envelope.kind === "web";
+    const { data, error } = await service.rpc(live ? "receive_nrcs_web_publication" : "receive_nrcs_publication", { p_package: stored, p_hash: hash });
     if (error) return NextResponse.json({ error: error.message }, { status: /conflict|stale|cannot change/i.test(error.message) ? 409 : 422 });
-    const receipt = verifyPublicationReceipt(data, envelope, hash);
+    const enriched = data?.public_url?.startsWith("/stories/") ? { ...data, public_url: new URL(data.public_url, request.url).toString() } : data;
+    const receipt = verifyPublicationReceipt(enriched, envelope, hash, live);
     return NextResponse.json({ ok: true, receipt }, { headers: { "Cache-Control": "no-store" } });
   } catch (failure) {
     return NextResponse.json({ error: failure instanceof Error ? failure.message : "Invalid publication package." }, { status: 400 });

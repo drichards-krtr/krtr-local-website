@@ -10,6 +10,8 @@ import { buildPageMetadata, markdownToDescription } from "@/lib/metadata";
 import { syncStoryVideoState } from "@/lib/mux";
 import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
+import NrcsArticleMedia from "@/components/cms/NrcsArticleMedia";
+import { sanitizePublicationHtml } from "@/lib/nrcsPublication";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +75,8 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   const syncedVideo =
     story.mux_playback_id ? null : await syncStoryVideoState(story.id).catch(() => null);
   const playbackId = syncedVideo?.mux_playback_id || story.mux_playback_id;
-  const fallbackImage = !playbackId ? story.image_url : null;
+  const nrcsArticle = story.editorial_origin === "nrcs" && typeof story.body_html === "string";
+  const fallbackImage = !playbackId && !nrcsArticle ? story.image_url : null;
 
   let storyAd: Ad | null = null;
   try {
@@ -120,7 +123,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
             orientation={story.video_orientation}
           />
         )}
-        <Markdown content={story.body_markdown || ""} />
+        {nrcsArticle ? <><NrcsArticleMedia images={story.article_media || []} /><div className="rich-text break-words" dangerouslySetInnerHTML={{ __html: sanitizePublicationHtml(story.body_html || "") }} /></> : <Markdown content={story.body_markdown || ""} />}
       </article>
 
       <div className="mt-6">

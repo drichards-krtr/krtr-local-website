@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { DistrictKey } from "@/lib/districts";
+import type { ImageReference } from "@/apps/nrcs/lib/editorialContract";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -11,6 +12,9 @@ export type PublishedStory = {
   title: string;
   tease: string | null;
   body_markdown: string | null;
+  body_html?: string | null;
+  editorial_origin?: string;
+  article_media?: ImageReference[];
   published_at: string | null;
   image_url: string | null;
   mux_playback_id: string | null;
@@ -18,7 +22,7 @@ export type PublishedStory = {
 };
 
 const STORY_SELECT =
-  "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id, video_orientation";
+  "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id, video_orientation,body_html,editorial_origin,article_media";
 
 const DATED_SLUG_SUFFIX_PATTERN = /-\d{2}-[a-z]+-\d{4}$/;
 
@@ -54,7 +58,15 @@ export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStor
   }
 
   if (storyBySlug) {
-    return storyBySlug as PublishedStory;
+    return storyBySlug as unknown as PublishedStory;
+  }
+
+  const { data: alias, error: aliasError } = await supabase.from("story_slug_aliases").select("story_id").eq("district_key", districtKey).eq("slug", idOrSlug).maybeSingle();
+  if (aliasError) throw new Error(`[getPublishedStoryByIdOrSlug:${districtKey}:aliasLookup] ${aliasError.message}`);
+  if (alias) {
+    const { data: aliasedStory, error: aliasedError } = await supabase.from("stories").select(STORY_SELECT).eq("district_key", districtKey).eq("id", alias.story_id).eq("status", "published").or(publishedAtVisibilityFilter()).maybeSingle();
+    if (aliasedError) throw new Error(aliasedError.message);
+    if (aliasedStory) return aliasedStory as unknown as PublishedStory;
   }
 
   const datedSlugPrefix = getDatedSlugPrefix(idOrSlug);
@@ -78,7 +90,7 @@ export const getPublishedStoryByIdOrSlug = cache(async function getPublishedStor
     }
 
     if (storyByDatedSlugPrefix) {
-      return storyByDatedSlugPrefix as PublishedStory;
+      return storyByDatedSlugPrefix as unknown as PublishedStory;
     }
   }
 

@@ -24,6 +24,10 @@ assert.equal(helper.sanitizePublicationHtml('<p onclick="bad()">Safe<script>bad(
 const hash = helper.publicationHash(envelope);
 const receipt = { schema_version: 1, request_id: id, kind: "web", source_id: source, district_key: "dlpc", revision: 1, content_hash: hash, state: "received_non_public", cms_projection_id: source, cms_article_id: null, public_url: null, published_at: null, received_at: "2026-09-17T17:00:00Z", current_projection_revision: 1 };
 assert.deepEqual(contract.verifyPublicationReceipt(receipt, envelope, hash), receipt);
+const draftReceipt = { ...receipt, state: "draft", cms_article_id: source };
+assert.deepEqual(contract.verifyPublicationReceipt(draftReceipt, envelope, hash, true), draftReceipt);
+assert.throws(() => contract.verifyPublicationReceipt(draftReceipt, envelope, hash), /mismatched/);
+assert.throws(() => contract.verifyPublicationReceipt({ ...draftReceipt, state: "published", public_url: "https://example.invalid/stories/test", published_at: receipt.received_at }, envelope, hash, true), /unexpected/);
 for (const changed of [{ district_key: "other" }, { public_url: "https://example.invalid/story" }, { content_hash: "wrong" }, { state: "published" }, { current_projection_revision: 0 }]) assert.throws(() => contract.verifyPublicationReceipt({ ...receipt, ...changed }, envelope, hash), /mismatched/);
 process.env.CMS_NRCS_API_SECRET = "fixture-only-secret";
 assert.equal(helper.authorizeNrcsService(new Request("https://example.invalid", { headers: { Authorization: "Bearer fixture-only-secret" } })), true);
@@ -62,6 +66,7 @@ const originalFetch = global.fetch;
     const receive = load("app/api/nrcs/publications/route.ts", {
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
       "@/lib/nrcsPublication": helper,
+      "@/lib/editorialFeatureFlag": { nrcsPublishingEnabled: () => false },
       "@/apps/nrcs/lib/editorialContract": contract,
       "@/lib/supabase/admin": { createServiceClient: () => ({ rpc: async () => ({ data: receipt, error: null }) }) },
     });

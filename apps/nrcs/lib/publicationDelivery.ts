@@ -58,7 +58,9 @@ export async function buildPublication(kind: PublicationKind, sourceId: string, 
   const byId = new Map((assetResult.data || []).map(a => [a.id, a as Asset]));
   function selected(id: string) { const asset = byId.get(id); if (!asset) throw new Error("Selected media is unavailable."); return media(asset); }
   const category = Array.isArray(story.nrcs_categories) ? story.nrcs_categories[0] || null : story.nrcs_categories;
-  return validatePublication({ ...base, payload: { story_id: story.id, copy_version_id: source.copy_version_id, title: version?.headline || story.title, body_html: sanitizeRichTextHtml(version?.body_html || ""), tease: source.tease, slug: source.slug, status: source.status, scheduled_at: source.scheduled_at, published_at: source.published_at, seo_title: source.seo_title, seo_description: source.seo_description, category, tags: (tags || []).flatMap(t => Array.isArray(t.nrcs_tags) ? t.nrcs_tags : t.nrcs_tags ? [t.nrcs_tags] : []), hero: source.hero_asset_id ? selected(source.hero_asset_id) : null, article_media: (links || []).map(l => selected(l.asset_id)), video: source.video_asset_id ? selected(source.video_asset_id) : null } });
+  // Include stable migration linkage independently of a subsequently edited slug.
+  const cmsArticleId = source.cms_story_id || null;
+  return validatePublication({ ...base, payload: { cms_article_id: cmsArticleId, story_id: story.id, copy_version_id: source.copy_version_id, title: version?.headline || story.title, body_html: sanitizeRichTextHtml(version?.body_html || ""), tease: source.tease, slug: source.slug, status: source.status, scheduled_at: source.scheduled_at, published_at: source.published_at, seo_title: source.seo_title, seo_description: source.seo_description, category, tags: (tags || []).flatMap(t => Array.isArray(t.nrcs_tags) ? t.nrcs_tags : t.nrcs_tags ? [t.nrcs_tags] : []), hero: source.hero_asset_id ? selected(source.hero_asset_id) : null, article_media: (links || []).map(l => selected(l.asset_id)), video: source.video_asset_id ? selected(source.video_asset_id) : null } });
 }
 export async function getDelivery(kind: PublicationKind, sourceId: string, revision: number, districtKey: string) {
   const supabase = await createNrcsServerClient();
@@ -74,7 +76,7 @@ export async function transmitPublication(envelope: PublicationEnvelope, hash: s
   if (response.status >= 300 && response.status < 400) throw new Error("CMS endpoint redirected. Use the canonical CMS host in NRCS_CMS_API_BASE_URL; this request was not confirmed.");
   const data = await response.json().catch(() => null);
   if (!response.ok || data?.ok !== true) throw new Error(typeof data?.error === "string" ? data.error.slice(0, 2000) : `CMS rejected delivery (${response.status}).`);
-  return verifyPublicationReceipt(data.receipt, envelope, hash);
+  return verifyPublicationReceipt(data.receipt, envelope, hash, true);
 }
 export async function sendPublication(kind: PublicationKind, sourceId: string, districtKey: string, revision: number) {
   const existing = await getDelivery(kind, sourceId, revision, districtKey);

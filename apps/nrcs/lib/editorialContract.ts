@@ -1,11 +1,11 @@
 export type ImageReference = { id: string; title: string; asset_type: "image" | "graphic"; url: string; public_id: string | null };
 export type VideoReference = { id: string; title: string; asset_type: "video"; playback_id: string; mux_asset_id: string | null; thumbnail_url: string | null; orientation: "vertical" | "horizontal" };
-export type WebPackage = { story_id: string; copy_version_id: string | null; title: string; body_html: string; tease: string | null; slug: string | null; status: "draft" | "scheduled" | "published" | "unpublished"; scheduled_at: string | null; published_at: string | null; seo_title: string | null; seo_description: string | null; category: { id: string; name: string; slug: string } | null; tags: Array<{ id: string; name: string; slug: string; tag_type: string }>; hero: ImageReference | null; article_media: ImageReference[]; video: VideoReference | null };
+export type WebPackage = { cms_article_id?: string | null; story_id: string; copy_version_id: string | null; title: string; body_html: string; tease: string | null; slug: string | null; status: "draft" | "scheduled" | "published" | "unpublished"; scheduled_at: string | null; published_at: string | null; seo_title: string | null; seo_description: string | null; category: { id: string; name: string; slug: string } | null; tags: Array<{ id: string; name: string; slug: string; tag_type: string }>; hero: ImageReference | null; article_media: ImageReference[]; video: VideoReference | null };
 export type HomepagePackage = { timezone: string; hero_output_id: string | null; top_output_ids: string[]; daily: { edition_id: string; title: string; program_id: string; program_name: string; publication_date: string; asset: ImageReference | VideoReference } | null };
 export type AlertPackage = { headline: string; message: string; active: boolean; start_at: string | null; end_at: string | null; target_type: "none" | "story" | "event" | "external"; target_id: string | null; external_url: string | null };
 export type PublicationKind = "web" | "homepage" | "alert";
 export type PublicationEnvelope = { schema_version: 1; request_id: string; district_key: string; source_id: string; revision: number } & ({ kind: "web"; payload: WebPackage } | { kind: "homepage"; payload: HomepagePackage } | { kind: "alert"; payload: AlertPackage });
-export type PublicationReceipt = { schema_version: 1; request_id: string; kind: PublicationKind; source_id: string; district_key: string; revision: number; content_hash: string; state: "received_non_public"; cms_projection_id: string; cms_article_id: null; public_url: null; published_at: null; received_at: string; current_projection_revision: number };
+export type PublicationReceipt = { schema_version: 1; request_id: string; kind: PublicationKind; source_id: string; district_key: string; revision: number; content_hash: string; state: "received_non_public" | "draft" | "scheduled" | "published" | "unpublished"; cms_projection_id: string; cms_article_id: string | null; public_url: string | null; published_at: string | null; received_at: string; current_projection_revision: number };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function object(value: unknown, keys: string[]): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected an object.");
@@ -41,9 +41,10 @@ export function validatePublication(value: unknown): PublicationEnvelope {
   if (kind === "homepage" && source !== district) throw new Error("Homepage identity must match district.");
   const base = { schema_version: 1 as const, request_id: id(e.request_id), district_key: district, source_id: source, revision: Number(e.revision) };
   if (kind === "web") {
-    const p = object(e.payload, ["story_id", "copy_version_id", "title", "body_html", "tease", "slug", "status", "scheduled_at", "published_at", "seo_title", "seo_description", "category", "tags", "hero", "article_media", "video"]);
+    const p = object(e.payload, ["cms_article_id", "story_id", "copy_version_id", "title", "body_html", "tease", "slug", "status", "scheduled_at", "published_at", "seo_title", "seo_description", "category", "tags", "hero", "article_media", "video"]);
     const category = p.category === null ? null : object(p.category, ["id", "name", "slug"]);
     const payload: WebPackage = { story_id: id(p.story_id), copy_version_id: optionalId(p.copy_version_id), title: string(p.title, 1000, true), body_html: string(p.body_html, 500000), tease: optional(p.tease, 1000), slug: optional(p.slug, 240), status: choice(p.status, ["draft", "scheduled", "published", "unpublished"]), scheduled_at: time(p.scheduled_at), published_at: time(p.published_at), seo_title: optional(p.seo_title, 240), seo_description: optional(p.seo_description, 1000), category: category ? { id: id(category.id), name: string(category.name, 240, true), slug: string(category.slug, 240, true) } : null, tags: array(p.tags, 200).map(value => { const t = object(value, ["id", "name", "slug", "tag_type"]); return { id: id(t.id), name: string(t.name, 240, true), slug: string(t.slug, 240, true), tag_type: choice(t.tag_type, ["place", "organization", "person", "topic", "event_series", "other"]) }; }), hero: p.hero === null ? null : image(p.hero), article_media: array(p.article_media, 100).map(image), video: p.video === null ? null : video(p.video) };
+    if (Object.hasOwn(p, "cms_article_id")) payload.cms_article_id = optionalId(p.cms_article_id);
     if (payload.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(payload.slug)) throw new Error("Invalid publication slug.");
     if (payload.status !== "draft" && !payload.copy_version_id || ["scheduled", "published"].includes(payload.status) && !payload.slug || payload.status === "scheduled" && !payload.scheduled_at || payload.status === "published" && !payload.published_at) throw new Error("Incomplete publication instructions.");
     if (new Set(payload.article_media.map(a => a.id)).size !== payload.article_media.length || new Set(payload.tags.map(t => t.id)).size !== payload.tags.length) throw new Error("Duplicate package references.");
@@ -75,8 +76,20 @@ export function canonicalPublication(envelope: PublicationEnvelope) {
   function sorted(value: unknown): unknown { return Array.isArray(value) ? value.map(sorted) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => [key, sorted(entry)])) : value; }
   return JSON.stringify(sorted(content));
 }
-export function verifyPublicationReceipt(value: unknown, envelope: PublicationEnvelope, hash: string): PublicationReceipt {
+export function verifyPublicationReceipt(value: unknown, envelope: PublicationEnvelope, hash: string, allowPublic = false): PublicationReceipt {
   const r = value as PublicationReceipt;
-  if (!r || r.schema_version !== 1 || r.request_id !== envelope.request_id || r.kind !== envelope.kind || r.source_id !== envelope.source_id || r.district_key !== envelope.district_key || r.revision !== envelope.revision || r.content_hash !== hash || r.state !== "received_non_public" || !UUID.test(r.cms_projection_id) || r.cms_article_id !== null || r.public_url !== null || r.published_at !== null || !Number.isFinite(Date.parse(r.received_at)) || !Number.isSafeInteger(r.current_projection_revision) || r.current_projection_revision < r.revision) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
+  if (!r || r.schema_version !== 1 || r.request_id !== envelope.request_id || r.kind !== envelope.kind || r.source_id !== envelope.source_id || r.district_key !== envelope.district_key || r.revision !== envelope.revision || r.content_hash !== hash || !UUID.test(r.cms_projection_id) || !Number.isFinite(Date.parse(r.received_at)) || !Number.isSafeInteger(r.current_projection_revision) || r.current_projection_revision < r.revision) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
+  if (r.state === "received_non_public") {
+    if (r.cms_article_id !== null || r.public_url !== null || r.published_at !== null) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
+  } else {
+    if (!allowPublic || envelope.kind !== "web" || !["draft", "scheduled", "published", "unpublished"].includes(r.state) || !r.cms_article_id || !UUID.test(r.cms_article_id)) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
+    if (["draft", "unpublished"].includes(envelope.payload.status) ? r.state !== envelope.payload.status : !["scheduled", "published"].includes(r.state)) throw new Error("CMS returned an unexpected publication state.");
+    if (r.state === "published" ? !r.published_at || !Number.isFinite(Date.parse(r.published_at)) : r.published_at !== null) throw new Error("CMS returned an invalid publication timestamp.");
+    if (r.public_url !== null) {
+      const parsed = new URL(r.public_url);
+      if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password || parsed.pathname !== `/stories/${envelope.payload.slug || r.cms_article_id}`) throw new Error("CMS returned an invalid public URL.");
+    }
+    if (["published", "scheduled"].includes(r.state) && !r.public_url) throw new Error("CMS returned an invalid public URL.");
+  }
   return r;
 }
