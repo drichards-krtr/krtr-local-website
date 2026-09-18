@@ -12,6 +12,19 @@ function object(value: unknown, keys: string[]): Record<string, unknown> {
   for (const key of Object.keys(value)) if (!keys.includes(key)) throw new Error(`Unsupported package field: ${key}`);
   return value as Record<string, unknown>;
 }
+function tag(value: unknown) {
+  const t = object(value, ["id", "name", "slug", "tag_type", "aliases"]);
+  const result: { id: string; name: string; slug: string; tag_type: string; aliases?: string[] } = {
+    id: id(t.id), name: string(t.name, 240, true), slug: string(t.slug, 240, true),
+    tag_type: choice(t.tag_type, ["place", "organization", "person", "topic", "event_series", "other"]),
+  };
+  if (Object.hasOwn(t, "aliases")) {
+    result.aliases = array(t.aliases, 200).map(value => string(value, 240, true));
+    if (result.aliases.some(alias => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(alias))) throw new Error("Invalid tag alias slug.");
+    if (new Set(result.aliases).size !== result.aliases.length) throw new Error("Duplicate tag aliases.");
+  }
+  return result;
+}
 function string(value: unknown, max: number, required = false): string {
   if (typeof value !== "string" || value.length > max || required && !value.trim()) throw new Error("Invalid package text.");
   return value;
@@ -43,7 +56,7 @@ export function validatePublication(value: unknown): PublicationEnvelope {
   if (kind === "web") {
     const p = object(e.payload, ["cms_article_id", "story_id", "copy_version_id", "title", "body_html", "tease", "slug", "status", "scheduled_at", "published_at", "seo_title", "seo_description", "category", "tags", "hero", "article_media", "video"]);
     const category = p.category === null ? null : object(p.category, ["id", "name", "slug"]);
-    const payload: WebPackage = { story_id: id(p.story_id), copy_version_id: optionalId(p.copy_version_id), title: string(p.title, 1000, true), body_html: string(p.body_html, 500000), tease: optional(p.tease, 1000), slug: optional(p.slug, 240), status: choice(p.status, ["draft", "scheduled", "published", "unpublished"]), scheduled_at: time(p.scheduled_at), published_at: time(p.published_at), seo_title: optional(p.seo_title, 240), seo_description: optional(p.seo_description, 1000), category: category ? { id: id(category.id), name: string(category.name, 240, true), slug: string(category.slug, 240, true) } : null, tags: array(p.tags, 200).map(value => { const t = object(value, ["id", "name", "slug", "tag_type"]); return { id: id(t.id), name: string(t.name, 240, true), slug: string(t.slug, 240, true), tag_type: choice(t.tag_type, ["place", "organization", "person", "topic", "event_series", "other"]) }; }), hero: p.hero === null ? null : image(p.hero), article_media: array(p.article_media, 100).map(image), video: p.video === null ? null : video(p.video) };
+    const payload: WebPackage = { story_id: id(p.story_id), copy_version_id: optionalId(p.copy_version_id), title: string(p.title, 1000, true), body_html: string(p.body_html, 500000), tease: optional(p.tease, 1000), slug: optional(p.slug, 240), status: choice(p.status, ["draft", "scheduled", "published", "unpublished"]), scheduled_at: time(p.scheduled_at), published_at: time(p.published_at), seo_title: optional(p.seo_title, 240), seo_description: optional(p.seo_description, 1000), category: category ? { id: id(category.id), name: string(category.name, 240, true), slug: string(category.slug, 240, true) } : null, tags: array(p.tags, 200).map(tag), hero: p.hero === null ? null : image(p.hero), article_media: array(p.article_media, 100).map(image), video: p.video === null ? null : video(p.video) };
     if (Object.hasOwn(p, "cms_article_id")) payload.cms_article_id = optionalId(p.cms_article_id);
     if (payload.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(payload.slug)) throw new Error("Invalid publication slug.");
     if (payload.status !== "draft" && !payload.copy_version_id || ["scheduled", "published"].includes(payload.status) && !payload.slug || payload.status === "scheduled" && !payload.scheduled_at || payload.status === "published" && !payload.published_at) throw new Error("Incomplete publication instructions.");

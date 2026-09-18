@@ -50,7 +50,7 @@ export async function buildPublication(kind: PublicationKind, sourceId: string, 
   const stream = streamResult.data;
   if (version && (stream?.story_id !== story.id || stream?.stream_type !== "web")) throw new Error("Copy version does not belong to this Story's Web Copy.");
   const { data: links, error: linksError } = await supabase.from("nrcs_web_output_media").select("asset_id").eq("output_id", source.id).order("position");
-  const { data: tags, error: tagsError } = await supabase.from("nrcs_story_tags").select("nrcs_tags(id,name,slug,tag_type)").eq("story_id", story.id).order("tag_id");
+  const { data: tags, error: tagsError } = await supabase.from("nrcs_story_tags").select("nrcs_tags(id,name,slug,tag_type,nrcs_tag_aliases(alias))").eq("story_id", story.id).order("tag_id");
   if (linksError || tagsError) throw new Error(linksError?.message || tagsError?.message);
   const ids = [...new Set([source.hero_asset_id, source.video_asset_id, ...(links || []).map(l => l.asset_id)].filter(Boolean))];
   const assetResult = ids.length ? await supabase.from("nrcs_assets").select(assetSelect).in("id", ids) : { data: [], error: null };
@@ -60,7 +60,11 @@ export async function buildPublication(kind: PublicationKind, sourceId: string, 
   const category = Array.isArray(story.nrcs_categories) ? story.nrcs_categories[0] || null : story.nrcs_categories;
   // Include stable migration linkage independently of a subsequently edited slug.
   const cmsArticleId = source.cms_story_id || null;
-  return validatePublication({ ...base, payload: { cms_article_id: cmsArticleId, story_id: story.id, copy_version_id: source.copy_version_id, title: version?.headline || story.title, body_html: sanitizeRichTextHtml(version?.body_html || ""), tease: source.tease, slug: source.slug, status: source.status, scheduled_at: source.scheduled_at, published_at: source.published_at, seo_title: source.seo_title, seo_description: source.seo_description, category, tags: (tags || []).flatMap(t => Array.isArray(t.nrcs_tags) ? t.nrcs_tags : t.nrcs_tags ? [t.nrcs_tags] : []), hero: source.hero_asset_id ? selected(source.hero_asset_id) : null, article_media: (links || []).map(l => selected(l.asset_id)), video: source.video_asset_id ? selected(source.video_asset_id) : null } });
+  const publicTags = (tags || []).flatMap(t => Array.isArray(t.nrcs_tags) ? t.nrcs_tags : t.nrcs_tags ? [t.nrcs_tags] : [])
+    .map(t => ({ id: t.id, name: t.name, slug: t.slug, tag_type: t.tag_type,
+      aliases: [...new Set((t.nrcs_tag_aliases || []).map(a => a.alias.trim().toLowerCase())
+        .filter(alias => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(alias)))].sort() }));
+  return validatePublication({ ...base, payload: { cms_article_id: cmsArticleId, story_id: story.id, copy_version_id: source.copy_version_id, title: version?.headline || story.title, body_html: sanitizeRichTextHtml(version?.body_html || ""), tease: source.tease, slug: source.slug, status: source.status, scheduled_at: source.scheduled_at, published_at: source.published_at, seo_title: source.seo_title, seo_description: source.seo_description, category, tags: publicTags, hero: source.hero_asset_id ? selected(source.hero_asset_id) : null, article_media: (links || []).map(l => selected(l.asset_id)), video: source.video_asset_id ? selected(source.video_asset_id) : null } });
 }
 export async function getDelivery(kind: PublicationKind, sourceId: string, revision: number, districtKey: string) {
   const supabase = await createNrcsServerClient();

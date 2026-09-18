@@ -9,6 +9,7 @@ import {
   getDescendantSlugs,
 } from "@/lib/tags";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
+import { findPublicTag } from "@/lib/publicTaxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -37,12 +38,20 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
             "bc-middle-school",
             "bc-high-school",
           ];
-  const tag = getTagBySlug(districtKey, slug);
-  if (!tag) notFound();
+  let tag = getTagBySlug(districtKey, slug);
   const isDistrictSchoolChildTag = districtSchoolChildren.includes(slug);
 
   const supabase = createPublicClient();
   const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
+  if (!tag) {
+    const { data: definitions, error: definitionError } = await supabase.from("stories")
+      .select("nrcs_tags").eq("district_key", districtKey).eq("status", "published")
+      .or(publishVisibilityFilter).contains("tags", [slug]).order("published_at", { ascending: false }).limit(1);
+    if (definitionError) throw new Error(`[TagPage] ${definitionError.message}`);
+    const canonical = findPublicTag(definitions?.[0]?.nrcs_tags, slug);
+    if (!canonical) notFound();
+    tag = { slug, label: canonical.name };
+  }
   const tagFilters = isTopLevelTag(districtKey, slug)
     ? getDescendantSlugs(districtKey, slug)
     : [slug];

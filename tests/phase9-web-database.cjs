@@ -23,10 +23,13 @@ const id = n => `f9000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
       alter table alerts enable row level security;
       grant select on alerts to anon;`);
     await db.exec(fs.readFileSync("supabase/migrations/20260919000200_phase_9_homepage_alerts.sql", "utf8"));
+    await db.exec(fs.readFileSync("supabase/migrations/20260919000300_phase_9_public_taxonomy.sql", "utf8"));
     await db.exec(`insert into stories(id,district_key,title,body_markdown,status,slug) values('${id(1)}','dlpc','Legacy','Old Markdown','published','legacy-story');`);
     const base = { schema_version: 1, request_id: id(2), source_id: id(3), district_key: "dlpc", revision: 1, kind: "web", payload: { story_id: id(4), copy_version_id: id(5), title: "Updated", body_html: "<p>HTML copy</p>", tease: null, slug: "legacy-story", status: "published", published_at: "2026-01-01T12:00:00Z", scheduled_at: null, hero: null, video: null, category: null, tags: [], article_media: [] } };
     async function send(envelope) { return (await db.query("select receive_nrcs_web_publication($1,$2) receipt", [JSON.stringify(envelope), String(envelope.revision).padStart(64, "a")])).rows[0].receipt; }
+    base.payload.tags = [{ id: id(90), name: "La Porte City", slug: "lpc", tag_type: "place", aliases: ["la-porte-city", "lpc"] }];
     const receipt = await send(base);
+    assert.deepEqual((await db.query("select tags from stories where id=$1", [id(1)])).rows[0].tags, ["la-porte-city", "lpc"], "Canonical and alias filters must both work without duplicates");
     assert.equal(receipt.cms_article_id, id(1), "Legacy CMS article ID must be retained");
     assert.equal(receipt.state, "published");
     assert.equal((await send(base)).cms_article_id, id(1));

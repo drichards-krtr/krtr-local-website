@@ -75,6 +75,12 @@ User commits/pushes and deploys BOTH applications after CMS SQL succeeds. Leave 
 
 ## Local Verification and Rollback
 
+### Public Taxonomy Compatibility
+
+NRCS Web packages now include URL-safe canonical Tag aliases. Historical immutable packages without aliases remain valid and retain their original hashes. CMS projects canonical slugs and aliases into the existing public filter array, preserving legacy navigation. New canonical Tag pages resolve labels only from district-scoped, currently published CMS projections; draft/future/private taxonomy is not exposed. General text aliases that are not URL slugs remain NRCS-only.
+
+Apply `supabase/migrations/20260919000300_phase_9_public_taxonomy.sql` in **CMS Supabase**, then deploy both apps. No NRCS migration or environment change is needed for this slice. Installing the trigger does not rewrite existing content; alias projection occurs on future Web application. Keep `CMS_NRCS_PUBLICATION_ENABLED` absent/false. Publication lifecycle confirmation and scheduled status refresh remain outstanding before Phase 9 completion.
+
 Local tests cover schedule boundaries, district-local Daily midnight, inclusive Alert starts/exclusive ends, ambiguous/stolen article identities, actual PostgreSQL RPC ID preservation/retries/stale revisions/unpublish/permissions, and private receipt regression. Keep the public flag off. For rollback, disable that flag and re-enable legacy editorial UI; retain projection data, aliases, and HTML-capable presentation. Redeploying a pre-HTML renderer after live activation can make newly delivered HTML-only articles appear blank and is not a safe content rollback.
 
 ## User Action Required - NRCS Supabase
