@@ -13,6 +13,7 @@ import { getVotingBannerText } from "@/lib/nominationVoting";
 import { getCurrentOpenVotingSession } from "@/lib/nominationVotingServer";
 import { storyHref } from "@/lib/stories";
 import type { DistrictKey, SiteScopeKey } from "@/lib/districts";
+import { getPublicPriorityAlert } from "@/lib/publicEditorial";
 
 type Story = {
   id: string;
@@ -191,7 +192,7 @@ export default async function HomePageContent({
   trackAds = true,
   previewBanner,
 }: HomePageContentProps) {
-  const [{ storiesById, slots }, homepageAds, activeNomination, activeVotingSession, latestDaily] =
+  const [{ storiesById, slots }, homepageAds, activeNomination, activeVotingSession, latestDaily, priorityAlert] =
     await Promise.all([
       getSlotStories(siteScopeKey),
       getHomepageAds(siteScopeKey, trackAds),
@@ -205,6 +206,7 @@ export default async function HomePageContent({
         console.error("[HomePageContent:getLatestPublishedDaily] Failed to load Daily", error);
         return null;
       }),
+      getPublicPriorityAlert(siteScopeKey),
     ]);
 
   const slotMap = new Map(slots.map((slot) => [slot.slot, slot.story_id]));
@@ -268,7 +270,8 @@ export default async function HomePageContent({
 
       {latestDaily && <DailyCard daily={latestDaily} />}
 
-      {heroStory && (
+      {priorityAlert && <section role="alert" className="mb-8 border-l-4 border-yellow-500 bg-yellow-100 p-6 text-black"><h1 className="break-words text-2xl font-semibold">{priorityAlert.headline}</h1><p className="mt-3 whitespace-pre-wrap break-words">{priorityAlert.message}</p>{priorityAlert.link_url && <a href={priorityAlert.link_url} className="mt-4 inline-block font-semibold underline">More Information</a>}</section>}
+      {!priorityAlert && heroStory && (
         <section className="mb-8 rounded-lg bg-white p-4">
           <a href={storyHref(heroStory)} className="block">
             {heroStory.image_url && (

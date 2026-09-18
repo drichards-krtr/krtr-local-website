@@ -5,7 +5,7 @@ export type HomepagePackage = { timezone: string; hero_output_id: string | null;
 export type AlertPackage = { headline: string; message: string; active: boolean; start_at: string | null; end_at: string | null; target_type: "none" | "story" | "event" | "external"; target_id: string | null; external_url: string | null };
 export type PublicationKind = "web" | "homepage" | "alert";
 export type PublicationEnvelope = { schema_version: 1; request_id: string; district_key: string; source_id: string; revision: number } & ({ kind: "web"; payload: WebPackage } | { kind: "homepage"; payload: HomepagePackage } | { kind: "alert"; payload: AlertPackage });
-export type PublicationReceipt = { schema_version: 1; request_id: string; kind: PublicationKind; source_id: string; district_key: string; revision: number; content_hash: string; state: "received_non_public" | "draft" | "scheduled" | "published" | "unpublished"; cms_projection_id: string; cms_article_id: string | null; public_url: string | null; published_at: string | null; received_at: string; current_projection_revision: number };
+export type PublicationReceipt = { schema_version: 1; request_id: string; kind: PublicationKind; source_id: string; district_key: string; revision: number; content_hash: string; state: "received_non_public" | "applied" | "draft" | "scheduled" | "published" | "unpublished"; cms_projection_id: string; cms_article_id: string | null; public_url: string | null; published_at: string | null; received_at: string; current_projection_revision: number };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function object(value: unknown, keys: string[]): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected an object.");
@@ -81,6 +81,10 @@ export function verifyPublicationReceipt(value: unknown, envelope: PublicationEn
   if (!r || r.schema_version !== 1 || r.request_id !== envelope.request_id || r.kind !== envelope.kind || r.source_id !== envelope.source_id || r.district_key !== envelope.district_key || r.revision !== envelope.revision || r.content_hash !== hash || !UUID.test(r.cms_projection_id) || !Number.isFinite(Date.parse(r.received_at)) || !Number.isSafeInteger(r.current_projection_revision) || r.current_projection_revision < r.revision) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
   if (r.state === "received_non_public") {
     if (r.cms_article_id !== null || r.public_url !== null || r.published_at !== null) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
+  } else if (r.state === "applied") {
+    if (!allowPublic || envelope.kind === "web" || r.cms_article_id !== null || r.published_at !== null || !r.public_url) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
+    const parsed = new URL(r.public_url);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password || parsed.pathname !== "/") throw new Error("CMS returned an invalid public URL.");
   } else {
     if (!allowPublic || envelope.kind !== "web" || !["draft", "scheduled", "published", "unpublished"].includes(r.state) || !r.cms_article_id || !UUID.test(r.cms_article_id)) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");
     if (["draft", "unpublished"].includes(envelope.payload.status) ? r.state !== envelope.payload.status : !["scheduled", "published"].includes(r.state)) throw new Error("CMS returned an unexpected publication state.");

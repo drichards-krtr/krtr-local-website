@@ -27,6 +27,10 @@ assert.deepEqual(contract.verifyPublicationReceipt(receipt, envelope, hash), rec
 const draftReceipt = { ...receipt, state: "draft", cms_article_id: source };
 assert.deepEqual(contract.verifyPublicationReceipt(draftReceipt, envelope, hash, true), draftReceipt);
 assert.throws(() => contract.verifyPublicationReceipt(draftReceipt, envelope, hash), /mismatched/);
+const homeEnvelope = { ...envelope, kind: "homepage", source_id: "dlpc", payload: { timezone: "America/Chicago", hero_output_id: null, top_output_ids: [], daily: null } };
+const appliedReceipt = { ...receipt, kind: "homepage", source_id: "dlpc", state: "applied", public_url: "https://example.invalid/" };
+assert.deepEqual(contract.verifyPublicationReceipt(appliedReceipt, homeEnvelope, hash, true), appliedReceipt);
+assert.throws(() => contract.verifyPublicationReceipt(appliedReceipt, homeEnvelope, hash), /mismatched/);
 assert.throws(() => contract.verifyPublicationReceipt({ ...draftReceipt, state: "published", public_url: "https://example.invalid/stories/test", published_at: receipt.received_at }, envelope, hash, true), /unexpected/);
 for (const changed of [{ district_key: "other" }, { public_url: "https://example.invalid/story" }, { content_hash: "wrong" }, { state: "published" }, { current_projection_revision: 0 }]) assert.throws(() => contract.verifyPublicationReceipt({ ...receipt, ...changed }, envelope, hash), /mismatched/);
 process.env.CMS_NRCS_API_SECRET = "fixture-only-secret";
@@ -63,17 +67,30 @@ const originalFetch = global.fetch;
     assert.equal(calls, 0);
     assert.equal((await post()).status, 200);
     assert.equal(calls, 1);
+    let liveMode = false, receivingKind;
     const receive = load("app/api/nrcs/publications/route.ts", {
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
       "@/lib/nrcsPublication": helper,
-      "@/lib/editorialFeatureFlag": { nrcsPublishingEnabled: () => false },
+      "@/lib/editorialFeatureFlag": { nrcsPublishingEnabled: () => liveMode },
       "@/apps/nrcs/lib/editorialContract": contract,
-      "@/lib/supabase/admin": { createServiceClient: () => ({ rpc: async () => ({ data: receipt, error: null }) }) },
+      "@/lib/supabase/admin": { createServiceClient: () => ({ from: () => ({ select() { return this; }, eq() { return this; }, single: async () => ({ data: { subdomain: "dlpc.example.invalid" }, error: null }) }), rpc: async (name, args) => { receivingKind = name; const e = args.p_package; return { data: liveMode ? { ...receipt, request_id: e.request_id, kind: e.kind, source_id: e.source_id, content_hash: args.p_hash, state: e.kind === "web" ? "draft" : "applied", cms_article_id: e.kind === "web" ? source : null, public_url: e.kind === "web" ? null : "/" } : receipt, error: null }; } }) },
     });
     const receivePost = (body, token = "fixture-only-secret") => receive.POST(new Request("https://example.invalid/api/nrcs/publications", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(body) }));
     assert.equal((await receivePost(envelope, "wrong")).status, 401);
     assert.equal((await receivePost({ ...envelope, private_notes: "secret" })).status, 400);
     assert.equal((await receivePost(envelope)).status, 200);
+    assert.equal(receivingKind, "receive_nrcs_publication", "Disabled flag must retain private receiving");
+    liveMode = true;
+    assert.equal((await receivePost(envelope)).status, 200);
+    assert.equal(receivingKind, "receive_nrcs_web_publication");
+    const appliedHome = await receivePost(homeEnvelope);
+    assert.equal(appliedHome.status, 200);
+    assert.equal((await appliedHome.json()).receipt.public_url, "https://dlpc.example.invalid/");
+    assert.equal(receivingKind, "receive_nrcs_homepage_publication");
+    const alertEnvelope = { ...envelope, kind: "alert", payload: { headline: "Test", message: "Message", active: false, start_at: null, end_at: null, target_type: "none", target_id: null, external_url: null } };
+    assert.equal((await receivePost(alertEnvelope)).status, 200);
+    assert.equal(receivingKind, "receive_nrcs_alert_publication");
+    liveMode = false;
     let saved = { ...envelope, content_hash: hash, package: envelope, status: "failed", attempts: 0, lease_until: null, receipt: null, last_error: "Previous failure" };
     const rlsQuery = () => ({ select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: saved, error: null }) });
     const serviceQuery = () => ({ select() { return this; }, eq() { return this; }, single: async () => ({ data: saved, error: null }), maybeSingle: async () => ({ data: { request_id: id }, error: null }), update(changes) { saved = { ...saved, ...changes }; return this; }, upsert() { throw new Error("Retry rebuilt the snapshot"); } });

@@ -42,6 +42,7 @@ export default async function AlertBanner() {
     .from("alerts")
     .select("id, message, link_url, active, start_at, end_at, created_at")
     .eq("district_key", district.key)
+    .is("nrcs_source_id", null)
     .eq("active", true)
     .order("created_at", { ascending: false })
     .limit(20);

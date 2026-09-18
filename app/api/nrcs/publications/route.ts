@@ -15,10 +15,19 @@ export async function POST(request: Request) {
     // Hash the original validated instructions; sanitize independently before storage.
     const stored = envelope.kind === "web" ? { ...envelope, payload: { ...envelope.payload, body_html: sanitizePublicationHtml(envelope.payload.body_html) } } : envelope;
     const service = createServiceClient();
-    const live = nrcsPublishingEnabled() && envelope.kind === "web";
-    const { data, error } = await service.rpc(live ? "receive_nrcs_web_publication" : "receive_nrcs_publication", { p_package: stored, p_hash: hash });
+    const live = nrcsPublishingEnabled();
+    let publicOrigin = new URL(request.url).origin;
+    if (live) {
+      const { data: district, error: districtError } = await service.from("districts").select("subdomain").eq("district_key", envelope.district_key).single();
+      if (districtError || !district?.subdomain) throw new Error("CMS district public host is unavailable; publication not applied.");
+      const host = new URL(`https://${district.subdomain}`);
+      if (host.username || host.password || host.pathname !== "/" || host.search || host.hash) throw new Error("CMS district public host is invalid; publication not applied.");
+      publicOrigin = host.origin;
+    }
+    const liveReceiver = { web: "receive_nrcs_web_publication", homepage: "receive_nrcs_homepage_publication", alert: "receive_nrcs_alert_publication" }[envelope.kind];
+    const { data, error } = await service.rpc(live ? liveReceiver : "receive_nrcs_publication", { p_package: stored, p_hash: hash });
     if (error) return NextResponse.json({ error: error.message }, { status: /conflict|stale|cannot change/i.test(error.message) ? 409 : 422 });
-    const enriched = data?.public_url?.startsWith("/stories/") ? { ...data, public_url: new URL(data.public_url, request.url).toString() } : data;
+    const enriched = data?.public_url === "/" || data?.public_url?.startsWith("/stories/") ? { ...data, public_url: new URL(data.public_url, publicOrigin).toString() } : data;
     const receipt = verifyPublicationReceipt(enriched, envelope, hash, live);
     return NextResponse.json({ ok: true, receipt }, { headers: { "Cache-Control": "no-store" } });
   } catch (failure) {

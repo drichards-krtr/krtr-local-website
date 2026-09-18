@@ -30,7 +30,7 @@ All four decisions below were confirmed by the user. No additional decision is r
 
 ## First Web Integration Slice
 
-Implemented a CMS-only `CMS_NRCS_PUBLICATION_ENABLED` flag: absent or any value other than exactly `true` keeps publication reception private. Do not enable it yet. Web packages alone have the live adapter in this slice; Homepage/Alerts still receive private receipts. Events retain their existing live path.
+Implemented a CMS-only `CMS_NRCS_PUBLICATION_ENABLED` flag: absent or any value other than exactly `true` keeps publication reception private. Do not enable it yet. Web, Homepage/Daily, and Priority Alert packages now have live adapters behind this flag. Events retain their existing live path.
 
 The additive CMS RPC atomically receives validated packages and applies Web instructions to the existing Story row. Migration `cms_story_id` now travels as optional `cms_article_id`, avoiding duplicate articles if an imported slug was edited. District mismatches, stolen slugs, and incompatible NRCS identities are rejected. Older revisions cannot overwrite newer instructions. Published/scheduled public rows use existing timestamp eligibility filters; future rows are not public early. No scheduled worker is added.
 
@@ -38,7 +38,29 @@ Story presentation distinguishes legacy Markdown from sanitized NRCS HTML, uses 
 
 Receipt verification now supports confirmed Web draft/scheduled/published/unpublished states, validates article identity/public path, and preserves strict validation of private receipts. The NRCS delivery panel distinguishes those states. Private CMS previews include read-only existing-article resolution and server-time schedule/Daily/Alert eligibility diagnostics.
 
-This does not complete Phase 9. Remaining work: Homepage/Daily/Alert live adapters and rendering, taxonomy alias propagation/public filters, receipt-to-Story lifecycle confirmation, scheduled confirmation refresh, complete permission/failure/browser rehearsal, and activation/rollback checklist. Existing received-private delivery snapshots are not automatically replayed as public writes after activation; controlled activation must explicitly account for them.
+This does not complete Phase 9. Remaining work: taxonomy alias propagation/public filters, receipt-to-Story lifecycle confirmation, scheduled confirmation refresh, full end-to-end permission/failure rehearsal, and activation/rollback checklist. Existing received-private delivery snapshots are not automatically replayed as public writes after activation; controlled activation must explicitly account for them.
+
+## Homepage Daily and Priority Alert Integration
+
+`20260919000200_phase_9_homepage_alerts.sql` adds dormant service-role-only adapters and presentation metadata to existing CMS tables. Homepage applies all five slots and the explicit Daily selection atomically. All selected Web Outputs must first be projected to CMS in the same district; missing dependencies roll back reception and public changes together. Empty slots and a cleared Daily are real clears, not missing instructions.
+
+Daily records retain historical public pages. Homepage selection points to the specific delivered Daily; future/expired/cleared selections never fall back to older Dailys. Publication is district-local midnight, checked against canonical CMS district timezone. Homepage eligibility is evaluated on every uncached server render using the saved district-local publication date, including DST transitions. No cron is required.
+
+Priority Alerts persist headline/body, inclusive start/exclusive end UTC instants, enable state, and Story/Event/external/no target. District alert writes serialize and reject overlapping enabled schedules. Story/Event links resolve CMS identities in the same district and are shown only when the destination is public. Event links open the appropriate calendar week/popover. Alerts never modify saved Hero slots: they occupy the Hero footprint even if no Hero is assigned, and the assigned eligible Hero returns after expiry/disable. Severe weather stays in its existing independent banner; NRCS alerts are excluded from the legacy custom-alert banner. Rollback disables future application but retains already delivered presentation and expiry behavior.
+
+Homepage/Alert receipts use `applied`, not `published`, because applying an instruction does not claim a future/expired Daily/Alert is currently visible. Private receipts remain strictly non-public when the flag is off.
+
+Live receipt URLs use the canonical public subdomain from CMS District Configuration, not the shared API host, so other districts do not receive DLPC links. Invalid/missing district hosts fail before applying publication.
+
+## User Action Required - CMS Supabase for Homepage and Alerts
+
+Where: CMS project > SQL Editor.
+Action: Apply `supabase/migrations/20260919000200_phase_9_homepage_alerts.sql` after the Web slice migration and existing district-timezone migration, before deploying this code.
+Expected: success; no public content is rewritten or activated by installing the adapters. Return exact error if unsuccessful.
+Verify: `select to_regprocedure('public.receive_nrcs_homepage_publication(jsonb,text)'), to_regprocedure('public.receive_nrcs_alert_publication(jsonb,text)');` returns non-null values.
+Then user commits/pushes and deploys both apps, keeping `CMS_NRCS_PUBLICATION_ENABLED` absent/false and legacy editorial access enabled. No NRCS SQL, secrets, DNS, cron, or auth configuration change is required for this addition. Verify existing homepage/weather/Daily/calendar and private Homepage/Alert receipts remain unchanged in public behavior.
+
+Local verification: actual PostgreSQL tests exercise Homepage/Daily/Alert retries, missing-dependency rollback, five-slot clears, historical Daily retention, DST midnight, no Hero mutation, overlapping alerts, stale requests, and RPC/anonymous-read permissions. Playwright checks the actual homepage renderer and weather component at 390px/1366px, with normal Hero, Alert+Hero, and Alert+empty-Hero scenarios; managed Daily helper tests exclude expired/cleared fallback. Screenshots were visually inspected. Production live activation is intentionally untested at this point.
 
 ## User Action Required - CMS Supabase for Web Slice
 

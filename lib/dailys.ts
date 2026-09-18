@@ -2,6 +2,8 @@ import { cache } from "react";
 import { KRTR_TIMEZONE } from "@/lib/dates";
 import type { DistrictKey } from "@/lib/districts";
 import { createPublicClient } from "@/lib/supabase/public";
+import { districtCalendarDay } from "@/lib/nrcsRehearsal";
+import { unstable_noStore as noStore } from "next/cache";
 
 export type DailyVideoOrientation = "vertical" | "horizontal";
 
@@ -74,6 +76,16 @@ export const getLatestPublishedDaily = cache(async function getLatestPublishedDa
   districtKey: DistrictKey
 ) {
   const supabase = createPublicClient();
+  noStore();
+  const { data: lineup, error: lineupError } = await supabase.from("story_slots").select("nrcs_managed,nrcs_daily_id").eq("district_key", districtKey).eq("slot", "hero").maybeSingle();
+  if (lineupError) throw new Error(`Cannot load homepage Daily selection: ${lineupError.message}`);
+  if (lineup?.nrcs_managed) {
+    if (!lineup.nrcs_daily_id) return null;
+    const { data: daily, error: dailyError } = await supabase.from("dailys").select("id,slug,title,published_at,image_url,mux_playback_id,video_orientation,nrcs_publication_date,nrcs_timezone").eq("district_key", districtKey).eq("id", lineup.nrcs_daily_id).eq("status", "published").maybeSingle();
+    if (dailyError) throw new Error(dailyError.message);
+    if (!daily?.nrcs_timezone || daily.nrcs_publication_date !== districtCalendarDay(daily.nrcs_timezone, new Date())) return null;
+    return daily as PublicDaily;
+  }
   const { data, error } = await supabase
     .from("dailys")
     .select(PUBLIC_DAILY_SELECT)
