@@ -5,6 +5,26 @@ import { validatePublication, verifyPublicationReceipt } from "@/apps/nrcs/lib/e
 import { nrcsPublishingEnabled } from "@/lib/editorialFeatureFlag";
 
 export const runtime = "nodejs";
+export async function GET(request: Request) {
+  if (!authorizeNrcsService(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const requestId = new URL(request.url).searchParams.get("request_id");
+    if (!requestId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) throw new Error("Invalid request ID.");
+    const service = createServiceClient();
+    const { data, error } = await service.rpc("nrcs_web_publication_status", { p_request_id: requestId });
+    if (error) return NextResponse.json({ error: error.message }, { status: 422 });
+    if (data?.receipt?.public_url?.startsWith("/stories/")) {
+      const { data: district, error: hostError } = await service.from("districts").select("subdomain").eq("district_key", data.receipt.district_key).single();
+      if (hostError || !district?.subdomain) throw new Error("CMS district public host is unavailable.");
+      const host = new URL(`https://${district.subdomain}`);
+      if (host.username || host.password || host.pathname !== "/" || host.search || host.hash) throw new Error("CMS district public host is invalid.");
+      data.receipt.public_url = new URL(data.receipt.public_url, host.origin).toString();
+    }
+    return NextResponse.json({ ok: true, confirmation: data }, { headers: { "Cache-Control": "no-store" } });
+  } catch (failure) {
+    return NextResponse.json({ error: failure instanceof Error ? failure.message : "Status check failed." }, { status: 400 });
+  }
+}
 export async function POST(request: Request) {
   if (!authorizeNrcsService(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {

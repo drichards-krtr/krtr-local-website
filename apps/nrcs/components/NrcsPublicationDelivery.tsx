@@ -13,35 +13,40 @@ export default function NrcsPublicationDelivery({ kind, sourceId, districtKey, r
     const current = ++generation.current;
     const controller = new AbortController();
     setDelivery(null); setError("");
-    fetch(`/api/publications?${new URLSearchParams(JSON.parse(identity))}`, { signal: controller.signal, cache: "no-store" }).then(async response => {
+    fetch(`/api/publications?${new URLSearchParams(JSON.parse(identity))}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]), cache: "no-store" }).then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Status could not load.");
       if (generation.current === current) setDelivery(data.delivery);
     }).catch(failure => { if (!controller.signal.aborted && generation.current === current) setError(failure.message); });
     return () => controller.abort();
   }, [identity]);
-  async function send() {
+  async function send(refresh = false) {
     if (lock.current || disabled) return;
     lock.current = true; setBusy(true); setError("");
     const current = ++generation.current;
     try {
-      const response = await fetch("/api/publications", { method: "POST", headers: { "Content-Type": "application/json" }, body: identity, signal: AbortSignal.timeout(30000) });
+      const response = await fetch("/api/publications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...JSON.parse(identity), action: refresh ? "refresh" : "send" }), signal: AbortSignal.timeout(30000) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "CMS delivery failed.");
       if (generation.current === current) setDelivery(data.delivery);
     } catch (failure) {
-      if (generation.current === current) setError(failure instanceof Error && failure.name === "TimeoutError" ? "Confirmation timed out. Retry safely reuses the same request." : failure instanceof Error ? failure.message : "CMS delivery failed.");
+      if (generation.current === current) setError(failure instanceof Error && failure.name === "TimeoutError" ? refresh ? "CMS status check timed out. Retry the check." : "Confirmation timed out. Retry safely reuses the same request." : failure instanceof Error ? failure.message : "CMS delivery failed.");
     } finally { lock.current = false; setBusy(false); }
   }
   const received = delivery?.status === "received";
-  const receiptState = delivery?.receipt?.state;
-  const receivedLabel = receiptState && receiptState !== "received_non_public" ? `CMS confirmed: ${receiptState}` : "CMS received (non-public)";
+  const receipt = delivery?.confirmation?.receipt || delivery?.receipt;
+  const receiptState = receipt?.state;
+  const receivedLabel = delivery?.confirmation && !delivery.confirmation.current
+    ? receipt?.current_projection_revision !== revision ? "CMS delivery superseded" : "CMS received; no current public projection"
+    : receiptState && receiptState !== "received_non_public" ? `CMS confirmed: ${receiptState}` : "CMS received (non-public)";
   return <div className="grid gap-2 border-t border-neutral-200 pt-3" aria-live="polite">
     <p className="text-xs text-neutral-600">Saved revision {revision}{disabled ? " · Unsaved changes or save in progress" : ""}</p>
-    <p className={`text-sm font-semibold ${received ? "text-green-800" : delivery?.status === "failed" ? "text-red-800" : "text-neutral-700"}`}>{busy ? "Sending to CMS..." : received ? receivedLabel : delivery?.status === "failed" ? "CMS delivery failed" : delivery?.status === "sending" ? "CMS confirmation pending" : "Not sent to CMS"}</p>
+    <p className={`text-sm font-semibold ${received ? "text-green-800" : delivery?.status === "failed" ? "text-red-800" : "text-neutral-700"}`}>{busy ? "Awaiting CMS confirmation..." : received ? receivedLabel : delivery?.status === "failed" ? "CMS delivery failed" : delivery?.status === "sending" ? "CMS confirmation pending" : "Not sent to CMS"}</p>
     {received && <p className="break-all text-xs text-neutral-600">Projection ID: {delivery.receipt?.cms_projection_id}</p>}
-    {received && delivery.receipt?.cms_article_id && <p className="break-all text-xs text-neutral-600">CMS Article ID: {delivery.receipt.cms_article_id}</p>}
+    {received && receipt?.cms_article_id && <p className="break-all text-xs text-neutral-600">CMS Article ID: {receipt.cms_article_id}</p>}
+    {delivery?.confirmation && <p className="text-xs text-neutral-600">Last checked: {new Date(delivery.confirmation.checked_at).toLocaleString()}</p>}
     {(error || delivery?.last_error) && <p role="alert" className="break-words text-sm text-red-800">{error || delivery?.last_error}</p>}
-    {!received && <button type="button" disabled={busy || disabled} onClick={send} className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{delivery || error ? "Retry / Check CMS Receipt" : "Send to CMS"}</button>}
+    {!received && <button type="button" disabled={busy || disabled} onClick={() => send()} className="w-fit rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{delivery || error ? "Retry / Check CMS Receipt" : "Send to CMS"}</button>}
+    {received && kind === "web" && <button type="button" disabled={busy || disabled} onClick={() => send(true)} className="w-fit rounded border border-neutral-400 px-4 py-2 text-sm font-semibold disabled:opacity-50">Check CMS Status</button>}
   </div>;
 }

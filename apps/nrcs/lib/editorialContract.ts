@@ -89,6 +89,15 @@ export function canonicalPublication(envelope: PublicationEnvelope) {
   function sorted(value: unknown): unknown { return Array.isArray(value) ? value.map(sorted) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => [key, sorted(entry)])) : value; }
   return JSON.stringify(sorted(content));
 }
+export type PublicationConfirmation = { receipt: PublicationReceipt; current: boolean; checked_at: string };
+export function verifyPublicationConfirmation(value: unknown, envelope: PublicationEnvelope, hash: string): PublicationConfirmation {
+  const c = object(value, ["receipt", "current", "checked_at"]);
+  const checked = time(c.checked_at);
+  if (envelope.kind !== "web" || typeof c.current !== "boolean" || !checked) throw new Error("Invalid CMS status confirmation.");
+  const receipt = verifyPublicationReceipt(c.receipt, envelope, hash, true);
+  if (c.current ? receipt.state === "received_non_public" || receipt.current_projection_revision !== envelope.revision : receipt.state !== "received_non_public") throw new Error("Mismatched CMS status confirmation.");
+  return { receipt, current: c.current, checked_at: checked };
+}
 export function verifyPublicationReceipt(value: unknown, envelope: PublicationEnvelope, hash: string, allowPublic = false): PublicationReceipt {
   const r = value as PublicationReceipt;
   if (!r || r.schema_version !== 1 || r.request_id !== envelope.request_id || r.kind !== envelope.kind || r.source_id !== envelope.source_id || r.district_key !== envelope.district_key || r.revision !== envelope.revision || r.content_hash !== hash || !UUID.test(r.cms_projection_id) || !Number.isFinite(Date.parse(r.received_at)) || !Number.isSafeInteger(r.current_projection_revision) || r.current_projection_revision < r.revision) throw new Error("CMS returned an invalid or mismatched receipt. Delivery is unconfirmed.");

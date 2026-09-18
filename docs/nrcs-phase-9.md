@@ -38,7 +38,7 @@ Story presentation distinguishes legacy Markdown from sanitized NRCS HTML, uses 
 
 Receipt verification now supports confirmed Web draft/scheduled/published/unpublished states, validates article identity/public path, and preserves strict validation of private receipts. The NRCS delivery panel distinguishes those states. Private CMS previews include read-only existing-article resolution and server-time schedule/Daily/Alert eligibility diagnostics.
 
-This does not complete Phase 9. Remaining work: taxonomy alias propagation/public filters, receipt-to-Story lifecycle confirmation, scheduled confirmation refresh, full end-to-end permission/failure rehearsal, and activation/rollback checklist. Existing received-private delivery snapshots are not automatically replayed as public writes after activation; controlled activation must explicitly account for them.
+Taxonomy alias propagation, receipt-to-Story lifecycle confirmation, and scheduled confirmation refresh are implemented. Remaining Phase 9 gates are production acceptance of the confirmation slice, full end-to-end rehearsal review, and an approved activation/rollback checklist. Existing received-private delivery snapshots are not automatically replayed as public writes after activation; controlled activation must explicitly account for them.
 
 ## Homepage Daily and Priority Alert Integration
 
@@ -79,7 +79,25 @@ User commits/pushes and deploys BOTH applications after CMS SQL succeeds. Leave 
 
 NRCS Web packages now include URL-safe canonical Tag aliases. Historical immutable packages without aliases remain valid and retain their original hashes. CMS projects canonical slugs and aliases into the existing public filter array, preserving legacy navigation. New canonical Tag pages resolve labels only from district-scoped, currently published CMS projections; draft/future/private taxonomy is not exposed. General text aliases that are not URL slugs remain NRCS-only.
 
-Apply `supabase/migrations/20260919000300_phase_9_public_taxonomy.sql` in **CMS Supabase**, then deploy both apps. No NRCS migration or environment change is needed for this slice. Installing the trigger does not rewrite existing content; alias projection occurs on future Web application. Keep `CMS_NRCS_PUBLICATION_ENABLED` absent/false. Publication lifecycle confirmation and scheduled status refresh remain outstanding before Phase 9 completion.
+Apply `supabase/migrations/20260919000300_phase_9_public_taxonomy.sql` in **CMS Supabase**, then deploy both apps. No NRCS migration or environment change is needed for this slice. Installing the trigger does not rewrite existing content; alias projection occurs on future Web application. Keep `CMS_NRCS_PUBLICATION_ENABLED` absent/false. The user confirmed production navigation, unchanged public presentation, and private delivery checks passed.
+
+### Web Confirmation and Lifecycle
+
+The authenticated CMS GET `/api/nrcs/publications?request_id=...` reads applied Web presentation without replaying packages or writing public content. It remains available when publishing is disabled: rollback disables new writes, not previously delivered content. Exact district, output, Story, copy version, package hash, and current revision must match before a current public confirmation is reported. Older/private-only deliveries report no current public projection. Scheduled/published status uses CMS time and applied public timestamps, not the browser or NRCS clock.
+
+NRCS stores status checks separately in `nrcs_publication_deliveries.confirmation`; it retains the initial receipt and immutable package/hash. A service-only status RPC ignores out-of-order checks. An atomic trigger moves a Story from Ready to Active only on an actual published confirmation for its current saved Web Output revision and pinned copy. Draft, scheduled, private, superseded, and stale-output confirmations do not activate Stories. Other lifecycle states are not changed. Confirmation never rewrites Web instructions or increments their revision. The system transition preserves the last editorial `updated_by`; normal Story timestamps update through the existing trigger.
+
+Editors/admins can use **Check CMS Status** on received Web deliveries. Requests are asynchronous with bounded timeouts and visible errors/retry. Contributors remain forbidden, and the NRCS API checks accessible district plus RLS visibility before using service credentials. No cron, automatic receipt replay, or background polling is introduced. An elapsed schedule becomes publicly eligible through existing server-side presentation; Ready-to-Active confirmation occurs when staff check CMS status, not automatically at airtime.
+
+### User Actions - Confirmation Slice
+
+1. In **CMS Supabase**, apply `supabase/migrations/20260919000400_phase_9_web_confirmation.sql` after the preceding Phase 9 migrations.
+2. In **NRCS Supabase**, apply `supabase/nrcs/migrations/20260919000100_phase_9_web_confirmation.sql` after all existing NRCS migrations.
+3. User commits/pushes and deploys both apps. Keep `CMS_NRCS_PUBLICATION_ENABLED` absent/false and legacy access enabled. No environment, secret, DNS, auth, or cron changes are needed.
+4. Open a received private Web delivery and click **Check CMS Status**. Expect **CMS received; no current public projection** (or superseded for an older delivery), a last-checked timestamp, no public Story changes, and no Ready-to-Active transition. Repeating the check should succeed without duplicate delivery or content changes.
+5. Confirm contributors cannot access CMS delivery controls/API and existing public pages remain unchanged. Do not enable live publishing merely to test scheduled transitions: actual live/scheduled/stale/rollback-read cases are rehearsed in isolated local database fixtures.
+
+Local verification covers actual PostgreSQL schedule refresh with no presentation writes, stale revisions, service-only RPC permission checks, atomic initial and refreshed lifecycle confirmation, immutable original receipts/output revisions, rejected identity mismatches, and out-of-order checks. Delivery contract/transport tests cover read-only GET, canonical district host, redirects, authentication, contributor denial, and separation from sends. Playwright tests the actual delivery component at desktop/mobile widths, checking refresh, visible failure, retry, and overflow; screenshots were inspected.
 
 Local tests cover schedule boundaries, district-local Daily midnight, inclusive Alert starts/exclusive ends, ambiguous/stolen article identities, actual PostgreSQL RPC ID preservation/retries/stale revisions/unpublish/permissions, and private receipt regression. Keep the public flag off. For rollback, disable that flag and re-enable legacy editorial UI; retain projection data, aliases, and HTML-capable presentation. Redeploying a pre-HTML renderer after live activation can make newly delivered HTML-only articles appear blank and is not a safe content rollback.
 

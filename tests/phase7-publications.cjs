@@ -34,6 +34,11 @@ const hash = helper.publicationHash(envelope);
 const receipt = { schema_version: 1, request_id: id, kind: "web", source_id: source, district_key: "dlpc", revision: 1, content_hash: hash, state: "received_non_public", cms_projection_id: source, cms_article_id: null, public_url: null, published_at: null, received_at: "2026-09-17T17:00:00Z", current_projection_revision: 1 };
 assert.deepEqual(contract.verifyPublicationReceipt(receipt, envelope, hash), receipt);
 const draftReceipt = { ...receipt, state: "draft", cms_article_id: source };
+const confirmation = { receipt: draftReceipt, current: true, checked_at: "2026-09-17T18:00:00Z" };
+assert.deepEqual(contract.verifyPublicationConfirmation(confirmation, envelope, hash), confirmation);
+assert.throws(() => contract.verifyPublicationConfirmation({ ...confirmation, current: false }, envelope, hash), /Mismatched/);
+assert.throws(() => contract.verifyPublicationConfirmation({ ...confirmation, receipt: { ...draftReceipt, current_projection_revision: 2 } }, envelope, hash), /Mismatched/);
+assert.throws(() => contract.verifyPublicationConfirmation({ ...confirmation, checked_at: "invalid" }, envelope, hash), /timezone/);
 assert.deepEqual(contract.verifyPublicationReceipt(draftReceipt, envelope, hash, true), draftReceipt);
 assert.throws(() => contract.verifyPublicationReceipt(draftReceipt, envelope, hash), /mismatched/);
 const homeEnvelope = { ...envelope, kind: "homepage", source_id: "dlpc", payload: { timezone: "America/Chicago", hero_output_id: null, top_output_ids: [], daily: null } };
@@ -51,31 +56,41 @@ const originalFetch = global.fetch;
   try {
     global.fetch = async (_url, options) => { assert.equal(options.redirect, "manual"); assert.ok(options.signal); return Response.json({ ok: true, receipt }); };
     assert.deepEqual(await transport.transmitPublication(envelope, hash), receipt);
+    global.fetch = async (url, options) => {
+      assert.equal(options.method, "GET"); assert.equal(options.body, undefined);
+      assert.ok(url.includes(`request_id=${id}`)); assert.equal(options.redirect, "manual"); assert.ok(options.signal);
+      return Response.json({ ok: true, confirmation });
+    };
+    assert.deepEqual(await transport.inspectPublication(envelope, hash), confirmation);
     global.fetch = async () => new Response(null, { status: 308, headers: { Location: "https://other.invalid" } });
     await assert.rejects(transport.transmitPublication(envelope, hash), /redirected/);
+    await assert.rejects(transport.inspectPublication(envelope, hash), /redirected/);
     global.fetch = async () => Response.json({ ok: true, receipt: { ...receipt, source_id: id } });
     await assert.rejects(transport.transmitPublication(envelope, hash), /mismatched/);
     global.fetch = async () => Response.json({ error: "Unauthorized" }, { status: 401 });
     await assert.rejects(transport.transmitPublication(envelope, hash), /Unauthorized/);
     global.fetch = async () => { throw new DOMException("Timeout", "TimeoutError"); };
     await assert.rejects(transport.transmitPublication(envelope, hash), /Timeout/);
-    let staff = null, calls = 0;
+    let staff = null, calls = 0, checks = 0;
     const api = load("apps/nrcs/app/api/publications/route.ts", {
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
       "@/lib/auth": { getCurrentNrcsStaff: async () => staff },
       "@/lib/districts": { getNrcsDistrictContext: async () => ({ allowedDistricts: [{ district_key: "dlpc" }] }) },
-      "@/lib/publicationDelivery": { getDelivery: async () => null, sendPublication: async () => { calls++; return { status: "received", receipt }; } },
+      "@/lib/publicationDelivery": { getDelivery: async () => null, refreshPublication: async () => { checks++; return { status: "received", receipt, confirmation }; }, sendPublication: async () => { calls++; return { status: "received", receipt }; } },
     });
     const post = (body = { kind: "web", source_id: source, district_key: "dlpc", revision: 1 }) => api.POST(new Request("https://example.invalid/api/publications", { method: "POST", body: JSON.stringify(body) }));
     assert.equal((await post()).status, 401);
     staff = { profile: { role: "contributor" } };
     assert.equal((await post()).status, 403);
+    assert.equal((await post({ kind: "web", source_id: source, district_key: "dlpc", revision: 1, action: "refresh" })).status, 403);
     staff = { profile: { role: "editor" } };
     assert.equal((await post({ kind: "web", source_id: source, district_key: "other", revision: 1 })).status, 403);
     assert.equal((await post({ kind: "web", source_id: source, district_key: "dlpc", revision: 0 })).status, 400);
     assert.equal(calls, 0);
     assert.equal((await post()).status, 200);
     assert.equal(calls, 1);
+    assert.equal((await post({ kind: "web", source_id: source, district_key: "dlpc", revision: 1, action: "refresh" })).status, 200);
+    assert.equal(checks, 1); assert.equal(calls, 1, "Status check must not send instructions");
     let liveMode = false, receivingKind;
     const receive = load("app/api/nrcs/publications/route.ts", {
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
@@ -100,6 +115,21 @@ const originalFetch = global.fetch;
     assert.equal((await receivePost(alertEnvelope)).status, 200);
     assert.equal(receivingKind, "receive_nrcs_alert_publication");
     liveMode = false;
+    const statusApi = load("app/api/nrcs/publications/route.ts", {
+      "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
+      "@/lib/nrcsPublication": helper, "@/apps/nrcs/lib/editorialContract": contract,
+      "@/lib/editorialFeatureFlag": { nrcsPublishingEnabled: () => { throw new Error("Read-only status must not depend on write activation"); } },
+      "@/lib/supabase/admin": { createServiceClient: () => ({
+        from: () => ({ select() { return this; }, eq() { return this; }, single: async () => ({ data: { subdomain: "dlpc.example.invalid" }, error: null }) }),
+        rpc: async (name, args) => { assert.equal(name, "nrcs_web_publication_status"); assert.equal(args.p_request_id, id); return { data: { ...confirmation, receipt: { ...draftReceipt, public_url: "/stories/test" } }, error: null }; },
+      }) },
+    });
+    const statusGet = (token = "fixture-only-secret", requestId = id) => statusApi.GET(new Request(`https://example.invalid/api/nrcs/publications?request_id=${requestId}`, { headers: { Authorization: `Bearer ${token}` } }));
+    assert.equal((await statusGet("wrong")).status, 401);
+    assert.equal((await statusGet("fixture-only-secret", "invalid")).status, 400);
+    const checked = await statusGet();
+    assert.equal(checked.status, 200);
+    assert.equal((await checked.json()).confirmation.receipt.public_url, "https://dlpc.example.invalid/stories/test");
     let saved = { ...envelope, content_hash: hash, package: envelope, status: "failed", attempts: 0, lease_until: null, receipt: null, last_error: "Previous failure" };
     const rlsQuery = () => ({ select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: saved, error: null }) });
     const serviceQuery = () => ({ select() { return this; }, eq() { return this; }, single: async () => ({ data: saved, error: null }), maybeSingle: async () => ({ data: { request_id: id }, error: null }), update(changes) { saved = { ...saved, ...changes }; return this; }, upsert() { throw new Error("Retry rebuilt the snapshot"); } });

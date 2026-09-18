@@ -1,13 +1,13 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { canonicalPublication, validatePublication, verifyPublicationReceipt, type ImageReference, type VideoReference, type PublicationEnvelope, type PublicationKind, type PublicationReceipt } from "./editorialContract";
+import { canonicalPublication, validatePublication, verifyPublicationReceipt, verifyPublicationConfirmation, type PublicationConfirmation, type ImageReference, type VideoReference, type PublicationEnvelope, type PublicationKind, type PublicationReceipt } from "./editorialContract";
 import { createNrcsServerClient, createNrcsServiceClient } from "./server";
 import { getNrcsDistrictContext } from "./districts";
 import { getNrcsCmsApiEnv } from "./env";
 import { sanitizeRichTextHtml } from "./richText";
 
 type Asset = { id: string; title: string; asset_type: string; cloudinary_url: string | null; cloudinary_public_id: string | null; mux_status: string | null; mux_playback_id: string | null; mux_asset_id: string | null; thumbnail_url: string | null; metadata: Record<string, unknown> };
-export type DeliverySummary = { request_id: string; kind: PublicationKind; source_id: string; revision: number; district_key: string; status: string; attempts: number; lease_until: string | null; last_error: string | null; receipt: PublicationReceipt | null; updated_at: string };
+export type DeliverySummary = { request_id: string; kind: PublicationKind; source_id: string; revision: number; district_key: string; status: string; attempts: number; lease_until: string | null; last_error: string | null; receipt: PublicationReceipt | null; confirmation: PublicationConfirmation | null; updated_at: string };
 type Delivery = DeliverySummary & { package: PublicationEnvelope; content_hash: string };
 const assetSelect = "id,title,asset_type,cloudinary_url,cloudinary_public_id,mux_status,mux_playback_id,mux_asset_id,thumbnail_url,metadata";
 function media(asset: Asset): ImageReference | VideoReference {
@@ -68,7 +68,7 @@ export async function buildPublication(kind: PublicationKind, sourceId: string, 
 }
 export async function getDelivery(kind: PublicationKind, sourceId: string, revision: number, districtKey: string) {
   const supabase = await createNrcsServerClient();
-  const { data, error } = await supabase.from("nrcs_publication_deliveries").select("request_id,kind,source_id,revision,district_key,status,attempts,lease_until,last_error,receipt,updated_at").eq("kind", kind).eq("source_id", sourceId).eq("revision", revision).eq("district_key", districtKey).maybeSingle();
+  const { data, error } = await supabase.from("nrcs_publication_deliveries").select("request_id,kind,source_id,revision,district_key,status,attempts,lease_until,last_error,receipt,confirmation,updated_at").eq("kind", kind).eq("source_id", sourceId).eq("revision", revision).eq("district_key", districtKey).maybeSingle();
   if (error) throw new Error(error.message);
   return data as DeliverySummary | null;
 }
@@ -81,6 +81,30 @@ export async function transmitPublication(envelope: PublicationEnvelope, hash: s
   const data = await response.json().catch(() => null);
   if (!response.ok || data?.ok !== true) throw new Error(typeof data?.error === "string" ? data.error.slice(0, 2000) : `CMS rejected delivery (${response.status}).`);
   return verifyPublicationReceipt(data.receipt, envelope, hash, true);
+}
+export async function inspectPublication(envelope: PublicationEnvelope, hash: string): Promise<PublicationConfirmation> {
+  const env = getNrcsCmsApiEnv();
+  if (!env) throw new Error("NRCS CMS API configuration is missing.");
+  const endpoint = `${env.baseUrl}/api/nrcs/publications?${new URLSearchParams({ request_id: envelope.request_id })}`;
+  const response = await fetch(endpoint, { method: "GET", redirect: "manual", headers: { Authorization: `Bearer ${env.secret}` }, signal: AbortSignal.timeout(20000), cache: "no-store" });
+  if (response.status >= 300 && response.status < 400) throw new Error("CMS status endpoint redirected. Use the canonical CMS host.");
+  const data = await response.json().catch(() => null);
+  if (!response.ok || data?.ok !== true) throw new Error(typeof data?.error === "string" ? data.error.slice(0, 2000) : `CMS status check failed (${response.status}).`);
+  return verifyPublicationConfirmation(data.confirmation, envelope, hash);
+}
+export async function refreshPublication(kind: PublicationKind, sourceId: string, districtKey: string, revision: number) {
+  if (kind !== "web") throw new Error("Status refresh is available for Web Outputs only.");
+  const visible = await getDelivery(kind, sourceId, revision, districtKey);
+  if (!visible || visible.status !== "received") throw new Error("A confirmed delivery is required before checking CMS status.");
+  const service = createNrcsServiceClient();
+  const { data: stored, error: readError } = await service.from("nrcs_publication_deliveries").select("*")
+    .eq("request_id", visible.request_id).eq("district_key", districtKey).single();
+  if (readError || !stored) throw new Error("Delivery snapshot is unavailable.");
+  const delivery = stored as Delivery;
+  const confirmation = await inspectPublication(delivery.package, delivery.content_hash);
+  const { error } = await service.rpc("nrcs_record_publication_status", { p_request_id: delivery.request_id, p_confirmation: confirmation });
+  if (error) throw new Error("CMS status was checked but could not be recorded. Retry the status check.");
+  return getDelivery(kind, sourceId, revision, districtKey);
 }
 export async function sendPublication(kind: PublicationKind, sourceId: string, districtKey: string, revision: number) {
   const existing = await getDelivery(kind, sourceId, revision, districtKey);
