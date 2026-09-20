@@ -1,6 +1,7 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { getCurrentDistrict } from "@/lib/districtServer";
 import { absoluteUrl, markdownToDescription } from "@/lib/metadata";
+import { htmlToDescription } from "@/lib/storyDescription";
 
 function escapeXml(value: string) {
   return value
@@ -17,7 +18,7 @@ export async function GET() {
   const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
   const { data: stories, error } = await supabase
     .from("stories")
-    .select("id, slug, title, tease, body_markdown, published_at")
+    .select("id, slug, title, tease, body_markdown, body_html, editorial_origin, seo_description, published_at")
     .eq("district_key", district.key)
     .eq("status", "published")
     .or(publishVisibilityFilter)
@@ -32,7 +33,9 @@ export async function GET() {
     await Promise.all((stories || [])
       .map(async (story) => {
       const storyPath = `/stories/${story.slug || story.id}`;
-      const description = markdownToDescription(story.tease || story.body_markdown || "") || district.metadata.defaultDescription;
+      const description = story.seo_description || (story.editorial_origin === "nrcs"
+        ? story.tease || htmlToDescription(story.body_html)
+        : markdownToDescription(story.tease || story.body_markdown)) || district.metadata.defaultDescription;
       const storyUrl = await absoluteUrl(storyPath, district.key);
       return `\n      <item>\n        <title>${escapeXml(story.title)}</title>\n        <link>${escapeXml(storyUrl)}</link>\n        <guid>${escapeXml(storyUrl)}</guid>\n        <pubDate>${new Date(story.published_at || Date.now()).toUTCString()}</pubDate>\n        <description>${escapeXml(description)}</description>\n      </item>`;
     }))

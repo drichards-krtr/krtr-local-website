@@ -1,3 +1,4 @@
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -125,6 +126,7 @@ export default async function DailysPage({
 async function UnpublishButton({ dailyId, districtKey }: { dailyId: string; districtKey: DistrictKey }) {
   async function unpublish() {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     await supabase
       .from("dailys")

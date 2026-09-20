@@ -1,3 +1,4 @@
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import Link from "next/link";
 import { formatDateInTimeZone } from "@/lib/dates";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -152,6 +153,7 @@ export default async function StoriesPage({
 async function UnpublishButton({ storyId, districtKey }: { storyId: string; districtKey: DistrictKey }) {
   async function unpublish() {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     await supabase.from("stories").update({ status: "archived" }).eq("id", storyId).eq("district_key", districtKey);
     revalidatePath("/");
@@ -173,6 +175,7 @@ function renderSlotSelector(slot: string, districtKey: DistrictKey, slots: SlotR
 
   async function updateSlot(formData: FormData) {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     const slotValue = (formData.get("slot") as string) || slot;
     const storyId = (formData.get("storyId") as string) || "";

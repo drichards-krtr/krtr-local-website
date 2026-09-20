@@ -78,6 +78,7 @@ async function fetchMuxAsset(assetId: string): Promise<MuxWebhookData | null> {
       "Content-Type": "application/json",
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!response.ok) {
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
 
     for (const table of tables) {
       let query = supabase.from(table).update(update).select("id");
+      query = table === "stories" ? query.eq("editorial_origin", "cms") : query.is("nrcs_edition_id", null);
 
       if (mediaRef) {
         query = query.eq("id", mediaRef.id);

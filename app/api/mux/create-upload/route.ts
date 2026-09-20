@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { resolveDistrictFromHost } from "@/lib/districts";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 
 export async function POST(request: Request) {
+  const auth = await createServerSupabase();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: profile, error: profileError } = await auth.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
+  if (profileError || !profile?.is_admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try { await assertLegacyEditorialWrites(); }
+  catch { return NextResponse.json({ error: "Legacy editorial writes are disabled." }, { status: 403 }); }
   const districtKey = resolveDistrictFromHost(
     request.headers.get("x-forwarded-host") || request.headers.get("host")
   );
@@ -10,9 +19,14 @@ export async function POST(request: Request) {
   const mediaId = storyId || dailyId;
   const mediaTable = dailyId ? "dailys" : "stories";
   const passthrough = dailyId ? `daily:${dailyId}` : storyId;
-  if (!mediaId) {
+  if (!mediaId || storyId && dailyId || typeof mediaId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mediaId)) {
     return NextResponse.json({ error: "Missing storyId or dailyId" }, { status: 400 });
   }
+  const service = createServiceClient();
+  let target = service.from(mediaTable).select("id").eq("district_key", districtKey).eq("id", mediaId);
+  target = dailyId ? target.is("nrcs_edition_id", null) : target.eq("editorial_origin", "cms");
+  const { data: media, error: targetError } = await target.maybeSingle();
+  if (targetError || !media) return NextResponse.json({ error: "Legacy media target not found in this district." }, { status: 404 });
 
   const muxToken = process.env.MUX_TOKEN_ID;
   const muxSecret = process.env.MUX_TOKEN_SECRET;
@@ -33,6 +47,7 @@ export async function POST(request: Request) {
   let res: Response;
   try {
     res = await fetch("https://api.mux.com/video/v1/uploads", {
+      signal: AbortSignal.timeout(15000),
       method: "POST",
       headers: {
         Authorization:
@@ -90,8 +105,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = createServiceClient();
-  const { error: updateError } = await supabase
+  try { await assertLegacyEditorialWrites(); }
+  catch { return NextResponse.json({ error: "Editorial authority changed during upload creation; the upload was not attached." }, { status: 409 }); }
+  // Use the authenticated client so the database authority guard also covers a cutover race.
+  let update = auth
     .from(mediaTable)
     .update({
       mux_upload_id: uploadId,
@@ -101,13 +118,15 @@ export async function POST(request: Request) {
     })
     .eq("district_key", districtKey)
     .eq("id", mediaId);
+  update = dailyId ? update.is("nrcs_edition_id", null) : update.eq("editorial_origin", "cms");
+  const { error: updateError, data: updated } = await update.select("id").maybeSingle();
 
-  if (updateError) {
+  if (updateError || !updated) {
     console.error("[Mux] Failed to save direct upload", {
       mediaId,
       mediaTable,
       uploadId,
-      error: updateError.message,
+      error: updateError?.message || "Target changed during upload creation",
     });
     return NextResponse.json(
       { error: "Mux upload was created, but the media record could not be updated." },

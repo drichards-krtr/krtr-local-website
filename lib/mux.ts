@@ -58,6 +58,7 @@ async function fetchMuxData<T>(path: string): Promise<T | null> {
       "Content-Type": "application/json",
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
 
   if (response.status === 404) {
@@ -102,7 +103,9 @@ async function applyVideoPatch(table: VideoTable, id: string, patch: VideoPatch)
   }
 
   const supabase = createServiceClient();
-  const { error } = await supabase.from(table).update(patch).eq("id", id);
+  let query = supabase.from(table).update(patch).eq("id", id);
+  query = table === "stories" ? query.eq("editorial_origin", "cms") : query.is("nrcs_edition_id", null);
+  const { error } = await query;
   if (error) {
     throw new Error(`[Mux] Failed to update ${table} ${id}: ${error.message}`);
   }
@@ -114,7 +117,7 @@ async function syncVideoState(table: VideoTable, id: string) {
 
   const { data: row, error } = await supabase
     .from(table)
-    .select("id, district_key, mux_asset_id, mux_upload_id, mux_playback_id, mux_status")
+    .select(`id, district_key, mux_asset_id, mux_upload_id, mux_playback_id, mux_status,${table === "stories" ? "editorial_origin" : "nrcs_edition_id"}`)
     .eq("id", id)
     .maybeSingle();
 
@@ -125,6 +128,7 @@ async function syncVideoState(table: VideoTable, id: string) {
   if (!row) {
     return null;
   }
+  if (table === "stories" ? "editorial_origin" in row && row.editorial_origin === "nrcs" : "nrcs_edition_id" in row && row.nrcs_edition_id != null) return row as VideoRow;
 
   if (!credentials) {
     return row as VideoRow;

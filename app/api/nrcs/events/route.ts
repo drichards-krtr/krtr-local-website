@@ -10,6 +10,7 @@ export async function POST(request: Request) {
     const raw = await request.text();
     if (Buffer.byteLength(raw) > 1000000) throw new Error("Event exceeds size limit.");
     const payload = JSON.parse(raw);
+    if (payload?.cms_event_id != null && (typeof payload.cms_event_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.cms_event_id))) throw new Error("Invalid CMS Event ID.");
     if (!payload || !/^[0-9a-f-]{36}$/i.test(payload.id) || !/^[a-z0-9][a-z0-9-]*$/.test(payload.district_key) || typeof payload.title !== "string" || !payload.title.trim() || !Number.isFinite(Date.parse(payload.start_at)) || !["draft", "published", "archived"].includes(payload.status)) throw new Error("Invalid required event fields.");
     if (payload.classification && (!["sport", "extra_curricular", "event_type"].includes(payload.classification.kind) || typeof payload.classification.name !== "string" || !payload.classification.name.trim() || typeof payload.classification.enabled !== "boolean")) throw new Error("Invalid event classification.");
     if (payload.body_html !== null && typeof payload.body_html !== "string") throw new Error("Invalid event description.");

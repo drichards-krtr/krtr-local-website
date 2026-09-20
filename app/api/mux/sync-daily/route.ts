@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { syncDailyVideoState } from "@/lib/mux";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
+import { resolveDistrictFromHost } from "@/lib/districts";
 
 export async function POST(request: Request) {
   const { dailyId } = await request.json().catch(() => ({}));
@@ -27,7 +29,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  try { await assertLegacyEditorialWrites(); }
+  catch { return NextResponse.json({ error: "Legacy editorial writes are disabled." }, { status: 403 }); }
   try {
+    const district = resolveDistrictFromHost(request.headers.get("x-forwarded-host") || request.headers.get("host"));
+    const { data: target, error } = await supabase.from("dailys").select("id").eq("id", dailyId).eq("district_key", district).is("nrcs_edition_id", null).maybeSingle();
+    if (error || !target) return NextResponse.json({ error: "Legacy Daily not found in this district." }, { status: 404 });
     const daily = await syncDailyVideoState(dailyId);
     if (!daily) {
       return NextResponse.json({ error: "Daily not found" }, { status: 404 });

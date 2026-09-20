@@ -13,6 +13,8 @@ export type PublishedStory = {
   tease: string | null;
   body_markdown: string | null;
   body_html?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
   editorial_origin?: string;
   article_media?: ImageReference[];
   published_at: string | null;
@@ -22,7 +24,7 @@ export type PublishedStory = {
 };
 
 const STORY_SELECT =
-  "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id, video_orientation,body_html,editorial_origin,article_media";
+  "id, slug, title, tease, body_markdown, published_at, image_url, mux_playback_id, video_orientation,body_html,editorial_origin,article_media,seo_title,seo_description";
 
 const DATED_SLUG_SUFFIX_PATTERN = /-\d{2}-[a-z]+-\d{4}$/;
 

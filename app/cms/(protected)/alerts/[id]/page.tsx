@@ -1,3 +1,4 @@
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -19,6 +20,7 @@ export default async function EditAlertPage({ params }: { params: { id: string }
 
   async function updateAlert(formData: FormData) {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     const nextDistrictKey = String(formData.get("district_key") || alert.district_key);
     await supabase

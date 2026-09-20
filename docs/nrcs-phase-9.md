@@ -4,6 +4,8 @@
 
 The user verified Phase 8 dry-run and import in production. CMS editorial changes are frozen pending cutover. Delta/conflict cases have local regression coverage, not production acceptance coverage; artificial live edits are not required.
 
+The user confirmed the Web confirmation slice production checks passed, and reports both backups and launch content ready. The final source audit and activation/rollback sequence are recorded in `docs/nrcs-cutover-checklist.md`. The user approved fixes for legacy write enforcement, Mux upload authentication, imported Event identity, media refresh ownership, and HTML/SEO/feed completeness. These are implemented with new database/API regressions; activation remains on HOLD pending both CMS safety migrations, deployment acceptance, and explicit approval of the final cutover sequence. No production flag changes or public writes were performed by the agent.
+
 Phase 9 is integration/rehearsal, not the Phase 10 authority switch. Work remains on main, without agent commits/pushes. Separate Vercel applications, credentials, auth boundaries, and API-only communication remain mandatory. TipTap sanitized HTML and district awareness override original specification omissions.
 
 ## First Safety Step

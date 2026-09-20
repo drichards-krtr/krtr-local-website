@@ -1,3 +1,4 @@
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -33,6 +34,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
 
   async function updateEvent(formData: FormData) {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     const nextDistrictKey = String(formData.get("district_key") || event.district_key);
     const title = String(formData.get("title") || "").trim();

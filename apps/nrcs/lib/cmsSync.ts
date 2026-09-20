@@ -3,6 +3,7 @@ import type { EventClassificationKind } from "./eventClassifications";
 
 type SyncEventPayload = {
   id: string;
+  cms_event_id?: string | null;
   district_key: string;
   title: string;
   body_html: string | null;

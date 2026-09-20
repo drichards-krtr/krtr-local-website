@@ -12,6 +12,7 @@
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.48.1",
     "next": "^16.3.3",
+    "htmlparser2": "^10.1.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-markdown": "^9.0.1",

@@ -1,3 +1,4 @@
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -110,6 +111,7 @@ export default async function CalendarPage({
 
   async function addEvent(formData: FormData) {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     const title = String(formData.get("title") || "").trim();
     const description = String(formData.get("description") || "").trim();
@@ -238,6 +240,7 @@ export default async function CalendarPage({
 
   async function unpublishEvent(formData: FormData) {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     const id = String(formData.get("id"));
     await supabase.from("events").update({ status: "archived" }).eq("id", id);

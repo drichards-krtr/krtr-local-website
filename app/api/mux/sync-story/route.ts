@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { syncStoryVideoState } from "@/lib/mux";
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
+import { resolveDistrictFromHost } from "@/lib/districts";
 
 export async function POST(request: Request) {
   const { storyId } = await request.json().catch(() => ({}));
@@ -27,7 +29,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  try { await assertLegacyEditorialWrites(); }
+  catch { return NextResponse.json({ error: "Legacy editorial writes are disabled." }, { status: 403 }); }
   try {
+    const district = resolveDistrictFromHost(request.headers.get("x-forwarded-host") || request.headers.get("host"));
+    const { data: target, error } = await supabase.from("stories").select("id").eq("id", storyId).eq("district_key", district).eq("editorial_origin", "cms").maybeSingle();
+    if (error || !target) return NextResponse.json({ error: "Legacy Story not found in this district." }, { status: 404 });
     const story = await syncStoryVideoState(storyId);
     if (!story) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });

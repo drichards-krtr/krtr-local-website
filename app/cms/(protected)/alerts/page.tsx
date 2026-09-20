@@ -1,3 +1,4 @@
+import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -55,6 +56,7 @@ export default async function AlertsPage({
 
   async function addAlert(formData: FormData) {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     await supabase.from("alerts").insert({
       district_key: String(formData.get("district_key") || districtKey),
@@ -71,6 +73,7 @@ export default async function AlertsPage({
 
   async function toggleAlert(formData: FormData) {
     "use server";
+    await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     const id = String(formData.get("id"));
     const next = formData.get("next") === "true";

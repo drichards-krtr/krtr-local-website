@@ -12,6 +12,7 @@ import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
 import NrcsArticleMedia from "@/components/cms/NrcsArticleMedia";
 import { sanitizePublicationHtml } from "@/lib/nrcsPublication";
+import { htmlToDescription } from "@/lib/storyDescription";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +48,8 @@ export async function generateMetadata({
 
   return buildPageMetadata({
     districtKey,
-    title: story.title,
-    description: story.tease || markdownToDescription(story.body_markdown),
+    title: story.seo_title || story.title,
+    description: story.seo_description || story.tease || (story.editorial_origin === "nrcs" ? htmlToDescription(story.body_html) : markdownToDescription(story.body_markdown)),
     path: storyPath,
     image: getStoryPreviewImage(story),
     type: "article",
@@ -73,7 +74,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   }
 
   const syncedVideo =
-    story.mux_playback_id ? null : await syncStoryVideoState(story.id).catch(() => null);
+    story.editorial_origin === "nrcs" || story.mux_playback_id ? null : await syncStoryVideoState(story.id).catch(() => null);
   const playbackId = syncedVideo?.mux_playback_id || story.mux_playback_id;
   const nrcsArticle = story.editorial_origin === "nrcs" && typeof story.body_html === "string";
   const fallbackImage = !playbackId && !nrcsArticle ? story.image_url : null;

@@ -4,6 +4,7 @@ import type { EventClassificationKind } from "./eventClassifications";
 
 type EventWithTerm = {
   id: string;
+  cms_event_id: string | null;
   district_key: string;
   title: string;
   body_html: string | null;
@@ -36,7 +37,7 @@ export async function syncNrcsEventById(id: string): Promise<CmsSyncResult> {
   const { data, error } = await service
     .from("nrcs_events")
     .select(
-      "id, district_key, title, body_html, location_name, address, city, state, zip, location, start_at, end_at, image_url, status, nrcs_event_classification_terms(kind, name, enabled)"
+      "id, cms_event_id, district_key, title, body_html, location_name, address, city, state, zip, location, start_at, end_at, image_url, status, nrcs_event_classification_terms(kind, name, enabled)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -51,6 +52,7 @@ export async function syncNrcsEventById(id: string): Promise<CmsSyncResult> {
     : event.nrcs_event_classification_terms || null;
   return syncEventToCms({
     id: event.id,
+    cms_event_id: event.cms_event_id,
     district_key: event.district_key,
     title: event.title,
     body_html: event.body_html,
