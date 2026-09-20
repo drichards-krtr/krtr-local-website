@@ -55,7 +55,7 @@ async function storageFiles(path = ""): Promise<any[]> {
 export async function auditOrphanMedia(): Promise<MediaCleanupAudit> {
   const db = createNrcsServiceClient();
   const [cms, assets, schools, events, documents, cloudinary, mux, files] = await Promise.all([
-    cmsReferences(), db.from("nrcs_assets").select("cloudinary_public_id,cloudinary_url,mux_asset_id"), db.from("nrcs_schools").select("logo_url"), db.from("nrcs_events").select("image_url"), db.from("nrcs_source_documents").select("storage_bucket,storage_path"), cloudinaryResources(), muxResources(), storageFiles(),
+    cmsReferences(), db.from("nrcs_assets").select("cloudinary_public_id,cloudinary_url,mux_asset_id"), db.from("nrcs_school_identities").select("logo_url"), db.from("nrcs_events").select("image_url"), db.from("nrcs_source_documents").select("storage_bucket,storage_path"), cloudinaryResources(), muxResources(), storageFiles(),
   ]);
   const failed = [assets, schools, events, documents].find(result => result.error); if (failed?.error) throw new Error(failed.error.message);
   const cloudRefs = new Set<string>([...cms.cloudinary_public_ids, ...cms.cloudinary_urls.map(cloudinaryId).filter(Boolean), ...(assets.data || []).flatMap(row => [row.cloudinary_public_id, cloudinaryId(row.cloudinary_url || "")]), ...(schools.data || []).map(row => cloudinaryId(row.logo_url || "")), ...(events.data || []).map(row => cloudinaryId(row.image_url || ""))].filter(Boolean) as string[]);
