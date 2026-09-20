@@ -6,7 +6,7 @@ import { muxAuthHeader } from "./mux";
 
 const RETENTION_DAYS = 90;
 const cutoff = () => Date.now() - RETENTION_DAYS * 86400000;
-type Candidate = { provider: "cloudinary" | "mux" | "supabase"; id: string; created_at: string; bytes?: number };
+type Candidate = { provider: "cloudinary" | "mux" | "supabase"; id: string; created_at: string; bytes?: number; preview_kind?: "image" | "video" | "file"; preview_url?: string; thumbnail_url?: string };
 export type MediaCleanupAudit = { generated_at: string; retention_days: number; candidates: Candidate[]; protected_counts: { cloudinary: number; mux: number; documents: number }; scanned_counts: { cloudinary: number; mux: number; documents: number } };
 
 function cloudinaryId(raw: string) {
@@ -62,10 +62,24 @@ export async function auditOrphanMedia(): Promise<MediaCleanupAudit> {
   const muxRefs = new Set<string>([...cms.mux_asset_ids, ...(assets.data || []).map(row => row.mux_asset_id)].filter(Boolean) as string[]);
   const documentRefs = new Set((documents.data || []).filter(row => row.storage_bucket === "source-documents").map(row => row.storage_path));
   const old = cutoff(); const candidates: Candidate[] = [];
-  for (const asset of cloudinary) if (asset.public_id?.startsWith("krtr/") && Date.parse(asset.created_at) < old && !cloudRefs.has(asset.public_id)) candidates.push({ provider: "cloudinary", id: asset.public_id, created_at: asset.created_at, bytes: asset.bytes });
-  for (const asset of mux) if (String(asset.passthrough || "").startsWith("nrcs_asset:") && Number(asset.created_at) * 1000 < old && !muxRefs.has(asset.id)) candidates.push({ provider: "mux", id: asset.id, created_at: new Date(Number(asset.created_at) * 1000).toISOString() });
-  for (const file of files) if (Date.parse(file.created_at) < old && !documentRefs.has(file.path)) candidates.push({ provider: "supabase", id: file.path, created_at: file.created_at, bytes: file.metadata?.size });
-  return { generated_at: new Date().toISOString(), retention_days: RETENTION_DAYS, candidates: candidates.sort((a,b) => a.provider.localeCompare(b.provider) || a.id.localeCompare(b.id)), protected_counts: { cloudinary: cloudRefs.size, mux: muxRefs.size, documents: documentRefs.size }, scanned_counts: { cloudinary: cloudinary.length, mux: mux.length, documents: files.length } };
+  const managedCloudinary = cloudinary.filter(asset => asset.public_id?.startsWith("krtr/"));
+  const managedMux = mux.filter(asset => String(asset.passthrough || "").startsWith("nrcs_asset:"));
+  for (const asset of managedCloudinary) if (Date.parse(asset.created_at) < old && !cloudRefs.has(asset.public_id)) candidates.push({ provider: "cloudinary", id: asset.public_id, created_at: asset.created_at, bytes: asset.bytes, preview_kind: "image", preview_url: asset.secure_url });
+  for (const asset of managedMux) if (Number(asset.created_at) * 1000 < old && !muxRefs.has(asset.id)) {
+    const playbackId = asset.playback_ids?.find((playback: any) => playback.policy === "public")?.id || asset.playback_ids?.[0]?.id;
+    candidates.push({ provider: "mux", id: asset.id, created_at: new Date(Number(asset.created_at) * 1000).toISOString(), preview_kind: playbackId ? "video" : undefined, preview_url: playbackId ? `https://player.mux.com/${encodeURIComponent(playbackId)}` : undefined, thumbnail_url: playbackId ? `https://image.mux.com/${encodeURIComponent(playbackId)}/thumbnail.jpg?time=0` : undefined });
+  }
+  for (const file of files) if (Date.parse(file.created_at) < old && !documentRefs.has(file.path)) {
+    const mime = String(file.metadata?.mimetype || file.metadata?.contentType || "");
+    candidates.push({ provider: "supabase", id: file.path, created_at: file.created_at, bytes: file.metadata?.size, preview_kind: mime.startsWith("image/") ? "image" : mime.startsWith("video/") ? "video" : "file" });
+  }
+  const storageCandidates = candidates.filter(item => item.provider === "supabase");
+  if (storageCandidates.length) {
+    const { data: signed, error } = await db.storage.from("source-documents").createSignedUrls(storageCandidates.map(item => item.id), 3600);
+    if (error) throw new Error(error.message);
+    signed?.forEach((entry, index) => { if (entry.signedUrl) storageCandidates[index].preview_url = entry.signedUrl; });
+  }
+  return { generated_at: new Date().toISOString(), retention_days: RETENTION_DAYS, candidates: candidates.sort((a,b) => a.provider.localeCompare(b.provider) || a.id.localeCompare(b.id)), protected_counts: { cloudinary: managedCloudinary.filter(asset => cloudRefs.has(asset.public_id)).length, mux: managedMux.filter(asset => muxRefs.has(asset.id)).length, documents: files.filter(file => documentRefs.has(file.path)).length }, scanned_counts: { cloudinary: managedCloudinary.length, mux: managedMux.length, documents: files.length } };
 }
 export async function deleteOrphanMedia(expectedCount: number) {
   const audit = await auditOrphanMedia(); if (audit.candidates.length !== expectedCount) throw new Error("The candidate set changed. Run a new audit before deleting.");
