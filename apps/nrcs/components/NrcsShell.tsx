@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { label: "Taxonomy", href: "/taxonomy", minimumRole: "editor" },
   { label: "Users", href: "/users", minimumRole: "admin" },
   { label: "Migration", href: "/migrations", minimumRole: "admin" },
+  { label: "Media Cleanup", href: "/media-cleanup", minimumRole: "admin" },
 ] as const;
 
 export default function NrcsShell({

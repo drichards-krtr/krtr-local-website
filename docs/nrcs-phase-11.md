@@ -69,4 +69,4 @@ Status: On hold by user decision.
 - Dual-media Daily production acceptance will be completed when the next Daily is created.
 - Removing the legacy single-asset Daily compatibility fields is blocked until the user explicitly confirms that acceptance passed.
 - Updating the older Daily documentation and regression tests follows that schema cleanup.
-- Hosted orphan-media inventory and deletion remain on hold.
+- Hosted orphan-media cleanup is available to admins at `/media-cleanup`. It protects CMS and NRCS references, scans only KRTR-managed Cloudinary images, NRCS-identified Mux assets, and NRCS source documents, enforces a 90-day retention window, re-audits before deletion, and requires an exact typed confirmation.
