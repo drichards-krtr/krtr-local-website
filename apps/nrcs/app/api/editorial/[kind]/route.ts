@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getCurrentNrcsStaff } from "@/lib/auth";
 import { createNrcsServerClient } from "@/lib/server";
 import { getNrcsDistrictContext } from "@/lib/districts";
@@ -7,6 +7,7 @@ import { UUID_PATTERN } from "@/lib/graphics";
 import { SOCIAL_DESTINATIONS } from "@/lib/outputs";
 import { normalizeSlug } from "@/lib/stories";
 import { getCloudinaryCredentials } from "@/lib/cloudinary";
+import { processPublicationDelivery, queuePublication } from "@/lib/publicationDelivery";
 
 export const runtime = "nodejs";
 export async function GET(request: Request, context: { params: Promise<{ kind: string }> }) {
@@ -114,6 +115,20 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       return iso;
     }
     const supabase = await createNrcsServerClient();
+    async function queue(kind: "web" | "homepage" | "alert", sourceId: string, revision: number) {
+      try {
+        const delivery = await queuePublication(kind, sourceId, district!.district_key, revision);
+        after(async () => {
+          try { await processPublicationDelivery(delivery.request_id); }
+          catch (error) { console.error("Asynchronous CMS delivery failed", { requestId: delivery.request_id, error }); }
+        });
+        return { delivery, queueError: null };
+      } catch (error) {
+        const queueError = error instanceof Error ? error.message : "CMS delivery could not be queued.";
+        console.error("CMS delivery queue creation failed", { kind, sourceId, revision, error });
+        return { delivery: null, queueError };
+      }
+    }
     if (kind === "image") {
       if (body.edition_id && !editor) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
       const cloudinaryUrl = url(body.cloudinary_url);
@@ -153,7 +168,8 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
         if (error) throw new Error(error.message);
         const { data: output, error: readError } = await supabase.from("nrcs_web_outputs").select("*").eq("id", outputId).single();
         if (readError) throw new Error("Saved, but confirmation could not be loaded. Reload before retrying. " + readError.message);
-        return NextResponse.json({ ok: true, output, message: "Web Output instructions saved in NRCS. Not sent to CMS." });
+        const queued = await queue("web", output.id, output.revision);
+        return NextResponse.json({ ok: true, output, ...queued, message: queued.delivery ? "Web Output saved and queued for CMS delivery." : "Web Output saved, but CMS delivery could not be queued. Use Queue CMS Delivery below." });
       }
       if (!(SOCIAL_DESTINATIONS as readonly string[]).includes(body.destination)) throw new Error("Invalid social destination.");
       const id = uuid(body.id) as string;
@@ -173,7 +189,8 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       const { data: lineup, error } = await query.select("*").maybeSingle();
       if (error) throw new Error(error.message);
       if (!lineup) throw new Error("Lineup changed. Reload before saving.");
-      return NextResponse.json({ ok: true, lineup, message: "Homepage instructions saved in NRCS. Not sent to CMS." });
+      const queued = await queue("homepage", lineup.district_key, lineup.revision);
+      return NextResponse.json({ ok: true, lineup, ...queued, message: queued.delivery ? "Homepage instructions saved and queued for CMS delivery." : "Homepage instructions saved, but CMS delivery could not be queued. Use Queue CMS Delivery below." });
     }
     const id = uuid(body.id) as string;
     if (typeof body.active !== "boolean" || !["none", "story", "event", "external"].includes(body.target_type)) throw new Error("Invalid alert settings.");
@@ -184,7 +201,8 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
     const { data: alert, error } = await query.select("*").maybeSingle();
     if (error) throw new Error(error.message);
     if (!alert) throw new Error("Alert changed. Reload before saving.");
-    return NextResponse.json({ ok: true, alert, message: "Priority Alert instructions saved in NRCS. Not sent to CMS." });
+    const queued = await queue("alert", alert.id, alert.revision);
+    return NextResponse.json({ ok: true, alert, ...queued, message: queued.delivery ? "Priority Alert saved and queued for CMS delivery." : "Priority Alert saved, but CMS delivery could not be queued. Use Queue CMS Delivery below." });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save.";
     return NextResponse.json({ error: message }, { status: /changed|duplicate key/i.test(message) ? 409 : 400 });

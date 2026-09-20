@@ -50,7 +50,7 @@ const fakeDb = {
   async rpc(name, args) { calls.push({ name, args }); return { data: uid, error: rpcError }; },
 };
 const api = loadTs(path.join(root, "app/api/editorial/[kind]/route.ts"), {
-  "next/server": { NextResponse: { json: (data, options) => Response.json(data, options) } },
+  "next/server": { after: callback => { void callback(); }, NextResponse: { json: (data, options) => Response.json(data, options) } },
   "@/lib/auth": { getCurrentNrcsStaff: async () => staff },
   "@/lib/server": { createNrcsServerClient: async () => fakeDb },
   "@/lib/districts": { getNrcsDistrictContext: async () => ({ allowedDistricts: [{ district_key: "dlpc", timezone: "America/Chicago" }] }) },
@@ -59,6 +59,7 @@ const api = loadTs(path.join(root, "app/api/editorial/[kind]/route.ts"), {
   "@/lib/outputs": outputs,
   "@/lib/stories": { normalizeSlug: value => value.toLowerCase().replace(/\s+/g, "-") },
   "@/lib/cloudinary": { getCloudinaryCredentials: () => ({ cloudName: "fixture" }) },
+  "@/lib/publicationDelivery": { queuePublication: async (kind, sourceId, districtKey, revision) => ({ request_id: uid, kind, source_id: sourceId, district_key: districtKey, revision }), processPublicationDelivery: async () => {} },
 });
 const body = { revision: 0, district_key: "dlpc", story_id: storyId, copy_version_id: versionId, status: "draft", slug: "Test Story", media_ids: [] };
 const post = (kind, data = body) => api.POST(new Request(`http://localhost/api/editorial/${kind}`, { method: "POST", body: JSON.stringify(data) }), { params: Promise.resolve({ kind }) });
@@ -114,10 +115,12 @@ try {
   await page.route("https://res.cloudinary.com/fixture/image/upload/image.png", route => route.fulfill({ contentType: "image/png", body: readFileSync(path.join(root, "public/graphics/legacy/union-knights.png")) }));
   let posted = [], fail = false;
   let deliveryAttempts = 0;
+  let delivery = null;
   await page.route("**/api/publications**", route => {
-    if (route.request().method() === "GET") return route.fulfill({ json: { delivery: null } });
+    if (route.request().method() === "GET") return route.fulfill({ json: { delivery } });
     deliveryAttempts++;
-    return route.fulfill({ json: { delivery: { status: deliveryAttempts === 1 ? "failed" : "received", last_error: deliveryAttempts === 1 ? "CMS unavailable" : null, receipt: deliveryAttempts === 1 ? null : { cms_projection_id: uid } } } });
+    delivery = { status: "received", last_error: null, receipt: { cms_projection_id: uid } };
+    return route.fulfill({ json: { delivery } });
   });
   await page.route("**/api/editorial/**", async route => {
     const request = route.request(); const kind = new URL(request.url()).pathname.split("/").at(-1);
@@ -128,7 +131,9 @@ try {
     const data = request.postDataJSON(); posted.push(data);
     if (kind === "image") return route.fulfill({ json: { ok: true, asset: assets[0], message: "Cloudinary image attached." } });
     if (fail) return route.fulfill({ status: 409, json: { error: "Output changed. Reload before saving" } });
-    return route.fulfill({ json: { ok: true, message: "Instructions saved in NRCS. Not sent to CMS.", output: { ...data, id: data.id || uid, revision: data.revision + 1 }, lineup: { ...data, revision: data.revision + 1 }, alert: { ...data, revision: data.revision + 1 } } });
+    if (kind === "web") { deliveryAttempts++; delivery = { status: "failed", last_error: "CMS unavailable", receipt: null }; }
+    const message = kind === "web" ? "Web Output saved and queued for CMS delivery." : kind === "homepage" ? "Homepage instructions saved and queued for CMS delivery." : kind === "alert" ? "Priority Alert saved and queued for CMS delivery." : "Social output saved.";
+    return route.fulfill({ json: { ok: true, message, output: { ...data, id: data.id || uid, revision: data.revision + 1 }, lineup: { ...data, revision: data.revision + 1 }, alert: { ...data, revision: data.revision + 1 } } });
   });
   const url = `http://127.0.0.1:${server.address().port}`;
   await page.goto(url);
@@ -150,14 +155,13 @@ try {
   await web.getByLabel("Tease · Optional").fill("Public tease, not SEO description.");
   await web.getByRole("checkbox").nth(0).check(); await web.getByRole("checkbox").nth(1).check();
   await web.getByRole("button", { name: "Save Web Output", exact: true }).click();
-  await web.getByText("Instructions saved in NRCS. Not sent to CMS.", { exact: true }).waitFor(); assert.deepEqual(posted.at(-1).media_ids, [assets[0].id, assets[1].id]);
+  await web.getByText("Web Output saved and queued for CMS delivery.", { exact: true }).waitFor(); assert.deepEqual(posted.at(-1).media_ids, [assets[0].id, assets[1].id]);
   assert.equal(posted.at(-1).hero_asset_id, assets[0].id);
   assert.equal(posted.at(-1).copy_version_id, versionId);
   assert.equal(posted.at(-1).video_asset_id, assets[2].id);
   assert.equal(posted.at(-1).tease, "Public tease, not SEO description.");
-  await web.getByRole("button", { name: "Send to CMS", exact: true }).click();
   await web.getByText("CMS delivery failed", { exact: true }).waitFor();
-  await web.getByRole("button", { name: "Retry / Check CMS Receipt", exact: true }).click();
+  await web.getByRole("button", { name: "Retry CMS Delivery", exact: true }).click();
   await web.getByText("CMS received (non-public)", { exact: true }).waitFor();
   assert.equal(deliveryAttempts, 2);
   await web.getByRole("button", { name: "Preview Selected Copy" }).click(); await page.getByRole("dialog").waitFor();
@@ -180,7 +184,7 @@ try {
     await page.screenshot({ path: path.join(root, `.phase6-checks/outputs-${viewport.width}.png`), fullPage: true });
   }
   await page.goto(`${url}?page=homepage`);
-  await page.getByRole("button", { name: "Save Homepage Lineup", exact: true }).click(); await page.getByText("Instructions saved in NRCS. Not sent to CMS.", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Save Homepage Lineup", exact: true }).click(); await page.getByText("Homepage instructions saved and queued for CMS delivery.", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Daily Edition None selected", exact: true }).click();
   await page.getByRole("button", { name: "Selected Editorial Item published", exact: true }).click();
   await page.getByRole("button", { name: "Choose Image/Graphic", exact: true }).click();

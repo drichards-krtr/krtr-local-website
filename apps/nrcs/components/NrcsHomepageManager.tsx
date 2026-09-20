@@ -70,7 +70,7 @@ export default function NrcsHomepageManager({ districtKey, timezone, initialLine
       {active && <div className="border-l-4 border-yellow-500 bg-yellow-100 p-4 text-black"><h3 className="text-xl font-semibold break-words">{active.headline}</h3><p className="mt-2 whitespace-pre-wrap break-words">{active.message}</p></div>}
       {alertNotice && <p role="status" className="border-l-4 border-green-600 bg-green-50 p-3 text-sm">{alertNotice}</p>}
       <select aria-label="Select Priority Alert" value={selected || ""} className={input} onChange={e => { if (window.confirm("Switch alerts? Unsaved changes will be discarded.")) { setSelected(e.target.value || null); setAlertNotice(""); } }}><option value="">New alert</option>{alerts.map(a => <option key={a.id} value={a.id}>{a.headline} · {now && alertIsActive(a, now) ? "Active now" : a.active ? "Enabled" : "Disabled"}</option>)}</select>
-      <AlertEditor key={selected || `new-${newKey}`} districtKey={districtKey} timezone={timezone} alert={alerts.find(a => a.id === selected) || null} target={initialTarget} onSaved={a => { setAlerts(list => [a, ...list.filter(item => item.id !== a.id)]); setSelected(a.id); setAlertNotice("Priority Alert instructions saved in NRCS. Not sent to CMS."); }} />
+      <AlertEditor key={selected || `new-${newKey}`} districtKey={districtKey} timezone={timezone} alert={alerts.find(a => a.id === selected) || null} target={initialTarget} onSaved={a => { setAlerts(list => [a, ...list.filter(item => item.id !== a.id)]); setSelected(a.id); setAlertNotice("Priority Alert saved and queued for CMS delivery."); }} />
     </section>
   </div>;
 }

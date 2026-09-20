@@ -106,7 +106,7 @@ export async function refreshPublication(kind: PublicationKind, sourceId: string
   if (error) throw new Error("CMS status was checked but could not be recorded. Retry the status check.");
   return getDelivery(kind, sourceId, revision, districtKey);
 }
-export async function sendPublication(kind: PublicationKind, sourceId: string, districtKey: string, revision: number) {
+export async function queuePublication(kind: PublicationKind, sourceId: string, districtKey: string, revision: number) {
   const existing = await getDelivery(kind, sourceId, revision, districtKey);
   const service = createNrcsServiceClient();
   if (!existing) {
@@ -121,16 +121,26 @@ export async function sendPublication(kind: PublicationKind, sourceId: string, d
   }
   const { data: stored, error: readError } = await service.from("nrcs_publication_deliveries").select("*").eq("kind", kind).eq("source_id", sourceId).eq("revision", revision).eq("district_key", districtKey).single();
   if (readError) throw new Error(readError.message);
+  return stored as Delivery;
+}
+export async function processPublicationDelivery(requestId: string) {
+  const service = createNrcsServiceClient();
+  const { data: stored, error: readError } = await service.from("nrcs_publication_deliveries").select("*").eq("request_id", requestId).single();
+  if (readError || !stored) throw new Error(readError?.message || "Delivery snapshot is unavailable.");
   const delivery = stored as Delivery;
-  if (delivery.status === "received") return getDelivery(kind, sourceId, revision, districtKey);
+  if (delivery.status === "received") return;
   const { data: claimed, error: claimError } = await service.rpc("nrcs_claim_publication_delivery", { p_request_id: delivery.request_id });
   if (claimError) throw new Error(claimError.message);
-  if (!claimed) return getDelivery(kind, sourceId, revision, districtKey);
+  if (!claimed) return;
   const attempt = claimed as Delivery;
   let receipt: PublicationReceipt | null = null, lastError: string | null = null;
   try { receipt = await transmitPublication(attempt.package, attempt.content_hash); }
   catch (failure) { lastError = failure instanceof Error && failure.name === "TimeoutError" ? "CMS confirmation timed out. Retry reuses the same request; it may already have been received." : failure instanceof Error ? failure.message.slice(0, 2000) : "CMS delivery failed."; }
   const { data: completed, error: completeError } = await service.from("nrcs_publication_deliveries").update({ status: receipt ? "received" : "failed", receipt, last_error: lastError, lease_until: null }).eq("request_id", attempt.request_id).eq("attempts", attempt.attempts).select("request_id").maybeSingle();
   if (completeError || !completed) throw new Error("Delivery confirmation could not be recorded. Reload/retry; the same request will be reused.");
+}
+export async function sendPublication(kind: PublicationKind, sourceId: string, districtKey: string, revision: number) {
+  const delivery = await queuePublication(kind, sourceId, districtKey, revision);
+  await processPublicationDelivery(delivery.request_id);
   return getDelivery(kind, sourceId, revision, districtKey);
 }
