@@ -1,10 +1,10 @@
-# NRCS Cutover Checklist - HOLD
+# NRCS Phase 10 Authority Cutover Runbook
 
 ## Current Gate
 
-The user confirms both database backups and launch content are ready. Backup artifacts, restore access, Vercel environment values, and the actual production inventory have not been independently inspected by the agent. Phase 9 private production acceptance passed, including the confirmation slice. CMS editorial changes remain frozen. No live activation is authorized by these confirmations.
+The user confirms that backups and launch content are ready, both cutover-safety CMS migrations are applied, both applications are deployed, and the Phase 9 acceptance checks pass. The implementation gate is closed. Phase 10 may proceed through the operator-controlled stages below.
 
-Do not change publication/legacy-access flags yet. The audit fixes below are implemented and locally tested, but await user migration/deployment acceptance. This document is a proposed activation sequence for review, not permission to execute production writes.
+The agent does not operate Supabase or Vercel production controls. The user performs each production action and confirms its result before proceeding past a verification gate. Do not combine stages or enable publication before legacy write authority has been disabled and verified.
 
 ## Original Audit Findings
 
@@ -14,7 +14,7 @@ Do not change publication/legacy-access flags yet. The audit fixes below are imp
 4. **Legacy media refresh can resurrect removed video.** The Web adapter replaces playback/asset fields but leaves an old `mux_upload_id` on updates. The public Story renderer calls legacy `syncStoryVideoState` when playback is absent; that helper can recover the old asset and write playback fields back. Make NRCS-owned projections authoritative for media, clear obsolete legacy upload linkage, and prevent legacy refresh/webhooks from changing NRCS-controlled media. Public rendering must not wait on unbounded legacy Mux calls for NRCS content. Audit Daily paths too.
 5. **Public metadata/feed still assume Markdown.** NRCS sends SEO title/description, but the Web projection does not persist them for public reads. Story metadata ignores these values; RSS and description fallback read `body_markdown`, which is blank for new NRCS articles or stale for updated legacy articles. Persist/use public SEO fields and derive safe plain text from sanitized HTML for NRCS fallback, keeping legacy Markdown behavior. Verify social share metadata and feed XML escaping.
 
-These paragraphs record the original findings. The implementation and new coverage are described below; production acceptance is still required.
+These paragraphs record the original findings. Their fixes have been deployed and accepted for cutover.
 
 ## Implemented Safety Fixes
 
@@ -24,26 +24,51 @@ These paragraphs record the original findings. The implementation and new covera
 - NRCS Story/Daily applications clear obsolete legacy upload linkage. Legacy video sync skips NRCS ownership before provider requests and restricts any late patches to legacy rows. Signed CMS webhooks restrict updates to legacy-owned Stories/Dailys. Public NRCS Story rendering never invokes legacy video recovery.
 - CMS persists Web SEO fields on projection application. Public metadata uses those fields, and metadata/RSS derive fallback text from sanitized HTML with a structured parser for NRCS content. Legacy Markdown fallback remains intact. `htmlparser2` is explicitly a production dependency rather than relying on an incidental development/transitive install; the existing installed version is used.
 
-## Work Before User Activation
+## Completed Prerequisites
 
-1. The user approved implementation of the reversible database/server guard and all five fixes. Implementation stays on main; the agent does not commit/push.
-2. In **CMS Supabase only**, apply `supabase/migrations/20260920000100_cutover_safety.sql`, then `supabase/migrations/20260920000200_event_projection_identity.sql`, after existing Phase 9 migrations. There is **no new NRCS SQL** for this slice. Confirm `select legacy_writes_enabled from public.editorial_authority where singleton=true;` returns true and `select to_regprocedure('public.receive_nrcs_event(jsonb)');` is non-null. If any migration fails, stop and return the exact error; do not deploy first.
-3. User commits/pushes and deploys **both apps**. Leave `CMS_NRCS_PUBLICATION_ENABLED` absent/false and `CMS_LEGACY_EDITORIAL_ENABLED` absent/true. Do not toggle the database switch yet. New columns/control table must exist before CMS deployment. No secret, auth, DNS, or cron change is needed.
-4. Complete non-public regression checks: public navigation/content/feed, district contact/timezone and District Configuration access, existing intake images/video, private Web/Homepage/Alert receipts and status checks. To verify the imported Event round trip, record the original CMS UUID and row, save one launch-approved imported upcoming Event unchanged in NRCS, and confirm the receipt uses that same CMS UUID with no second row. Events already sync live; this check is not authorization for a mass resend or test-content publication. Anonymous legacy Mux upload POST must return 401 without creating an upload. Do not fake CMS edits to test the disabled guard in production: off/re-enabled/direct-write cases are covered in isolated actual database fixtures.
-5. Record the deployed CMS/NRCS deployment identifiers and database backup timestamps. Refresh the CMS backup after these schema migrations so the restore schema matches the deployed code; preserve the earlier backup too. Recheck launch inventory if it changed after backup; obtain explicit approval of the final, updated sequence.
+1. The reversible authority guard and all five audit fixes are implemented on main.
+2. CMS migrations `20260920000100_cutover_safety.sql` and `20260920000200_event_projection_identity.sql` are applied.
+3. Both applications are deployed with the safety fixes.
+4. Phase 9 production acceptance and confirmation checks pass.
+5. Backups and the launch-approved content inventory are ready.
 
-## Proposed Activation Order - NOT YET EXECUTABLE
+Before Stage 1, record the CMS and NRCS production deployment identifiers and the latest CMS and NRCS backup timestamps in the cutover log.
+
+## Activation Order
 
 1. Announce the short editorial freeze; stop all staff publishing/sync actions while flags and database controls are coordinated. Record current configuration. Close legacy editor tabs. Public submissions should remain operational through the established NRCS intake path.
-2. In CMS SQL Editor, disable legacy writes with `update public.editorial_authority set legacy_writes_enabled=false where singleton=true;`. Verify the one row now reads false. Hide legacy Story/Event/Daily/Alert pages with `CMS_LEGACY_EDITORIAL_ENABLED=false` on CMS and redeploy. Do not hide District Configuration or disable public reads, intake, authenticated NRCS receivers, or necessary media callbacks. Verify stale/direct legacy writes are refused. Both controls matter: the environment flag alone cannot block direct authenticated Supabase writes.
-3. Enable `CMS_NRCS_PUBLICATION_ENABLED=true` on the **CMS Vercel project only** and redeploy CMS. Do not move secrets or set this flag on NRCS as a substitute. This flag does not enable/disable Event sync, which is already live.
-4. Apply only current, launch-approved Web Outputs first. For a source whose current revision already has a received non-public delivery, review its instructions, save the Web Output to create a new revision, and send that new revision. Do not reset/delete old receipts, mutate immutable snapshots, replay the whole historical queue, or silently advance obsolete revisions. A failed new delivery retries the same request safely. Confirm CMS article ID and existing URL for a migrated Story, then verify HTML, listing image, carousel, video, tags, SEO, and feed before continuing. If a source can no longer be saved unchanged, stop and resolve the validation issue rather than editing content merely to bypass it.
-5. Continue approved Web Outputs in small reviewed batches. Include deliberate draft/unpublish instructions only where they are part of the launch plan; those instructions can remove an existing article from public view. Check schedules against the district timezone and confirm scheduled content remains hidden until due.
-6. Verify imported Event identity fixes before any mass Event send. No blanket Event resend is required merely because the Web flag changed. When an imported Event is edited, it must update the original CMS ID without duplication.
-7. Apply the current Homepage lineup only after every referenced Web Output has a valid CMS projection in that district. Review all five slots and the explicit Daily/date/asset before saving/sending a new revision where a private receipt already exists. Empty selections are real clears. Keep historical Daily pages; do not fall back to prior Dailys on the homepage.
-8. Review legacy custom alerts so they do not remain unexpectedly active alongside the new alert system. Resolve them through the approved cutover controls. Then apply current launch-approved Priority Alerts after any linked Story/Event destinations are ready. Review window, target, and district. New alerts occupy Hero space without changing saved Hero; weather remains separate.
-9. Check public homepage, migrated URLs/aliases, tag navigation, article media/metadata/feed, calendar list/load-more/filter/popover, Daily expiry, active-alert takeover and eligible Hero restoration. Use **Check CMS Status** for elapsed Web schedules; Ready-to-Active confirmation is staff-triggered, not a cron transition.
-10. Unfreeze editorial work in NRCS only after all relevant acceptance gates pass. Retain legacy code and backups; destructive cleanup belongs to Phase 11, not this switch.
+2. Confirm the starting state in **CMS Supabase**:
+
+   ```sql
+   select legacy_writes_enabled
+   from public.editorial_authority
+   where singleton = true;
+
+   select
+     to_regprocedure('public.receive_nrcs_event(jsonb)') as event_receiver,
+     to_regprocedure('public.receive_nrcs_publication(jsonb,text)') as publication_receiver;
+   ```
+
+   Expect exactly one authority row with `legacy_writes_enabled = true` and non-null receiver functions. Confirm CMS Vercel still has `CMS_NRCS_PUBLICATION_ENABLED` absent/false and `CMS_LEGACY_EDITORIAL_ENABLED` absent/true. Stop if any expectation fails.
+3. In CMS SQL Editor, disable legacy writes and verify the returned row:
+
+   ```sql
+   update public.editorial_authority
+   set legacy_writes_enabled = false
+   where singleton = true
+   returning legacy_writes_enabled;
+   ```
+
+   Expect exactly one row containing `false`. Then set `CMS_LEGACY_EDITORIAL_ENABLED=false` on the **CMS Vercel project** and redeploy CMS. Keep `CMS_NRCS_PUBLICATION_ENABLED=false`. Confirm legacy Story/Event/Daily/Alert management routes are unavailable, District Configuration remains available, and public pages and submission intake still work. Stop on any regression.
+4. Set `CMS_NRCS_PUBLICATION_ENABLED=true` on the **CMS Vercel project only** and redeploy CMS. Do not set this flag on NRCS. Reconfirm `legacy_writes_enabled=false` after deployment. This flag does not control Event sync, which is already live.
+5. Apply one current, launch-approved migrated Story as the Web canary. If its current revision already has a non-public receipt, review and save the Web Output to create a new revision, then send that revision. Confirm the same CMS article ID and public URL are retained, then verify HTML, listing image, carousel, video, tags, SEO/social metadata, feed output, and requested publication state. Stop before any batch on a duplicate, changed URL, missing content, or incorrect media.
+   - If an imported image URL survives but its Cloudinary public ID is cleared, stop. Apply the NRCS imported-Cloudinary-identity backfill, deploy the corrected CMS migration export contract, save a new Web revision, and repeat the canary before continuing.
+6. Continue approved Web Outputs in small reviewed batches. Do not replay the historical queue. Include deliberate draft/unpublish instructions only where they are part of the launch plan. Check schedules against the district timezone and confirm scheduled content remains hidden until due.
+7. Do not mass-resend Events. Event sync is already live. When an imported Event is next edited, confirm that it updates the original CMS UUID without creating a duplicate.
+8. Apply the current Homepage lineup only after every referenced Web Output has a valid CMS projection in that district. Review all five slots and the explicit Daily/date/asset before saving and sending a new revision. Empty selections are real clears. Keep historical Daily pages; do not fall back to prior Dailys on the homepage.
+9. Review legacy custom alerts so they do not remain unexpectedly active alongside the new alert system. Resolve them through the approved cutover controls. Then apply current launch-approved Priority Alerts after linked Story/Event destinations are ready. Review window, target, and district. New alerts occupy Hero space without changing the saved Hero; weather remains separate.
+10. Check the public homepage, migrated URLs/aliases, tag navigation, article media/metadata/feed, calendar list/load-more/filter/popover, Daily expiry, active-alert takeover, and eligible Hero restoration. Use **Check CMS Status** for elapsed Web schedules; Ready-to-Active confirmation is staff-triggered, not a cron transition.
+11. Unfreeze editorial work in NRCS only after all relevant acceptance gates pass. Retain legacy code and backups; destructive cleanup belongs to Phase 11, not this switch.
 
 ## Stop and Roll Back
 

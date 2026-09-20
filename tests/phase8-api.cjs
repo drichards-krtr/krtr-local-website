@@ -20,7 +20,7 @@ const uuid = number => `f7000000-0000-0000-0000-${String(number).padStart(12, "0
 const records = {
   event_classification_terms: Array.from({ length: 12 }, (_, index) => ({ id: uuid(index + 1), district_key: "dlpc", name: `Sport ${index}`, kind: "sport", enabled: true })),
   profiles: [{ id: uuid(100), email: "editor@example.test" }],
-  stories: [{ id: uuid(200), district_key: "dlpc", title: "Story", created_by: uuid(100), body_markdown: "# Headline\n\n**Copy**", tags: ["dysart"], submitter_id: uuid(300) }],
+  stories: [{ id: uuid(200), district_key: "dlpc", title: "Story", created_by: uuid(100), body_markdown: "# Headline\n\n**Copy**", tags: ["dysart"], submitter_id: uuid(300), image_url: "https://res.cloudinary.com/fixture/image/upload/v1/legacy/story.png", cloudinary_public_id: "legacy/story", cloudinary_width: 1920, cloudinary_height: 1080 }],
   story_submitters: [{ id: uuid(300), name: "Private contact", email: "private@example.test", submitted_story_id: uuid(200) }],
   districts: [{ district_key: "dlpc", timezone: "America/Chicago" }],
   events: [
@@ -67,6 +67,9 @@ const runner = load("apps/nrcs/app/api/migrations/route.ts", { "@/lib/auth": { g
     assert.equal(story.submitters.length, 1, "Reciprocal links must not duplicate submitters");
     assert.equal(story.author.email, "editor@example.test");
     assert.match(story.converted_html, /<strong>Copy<\/strong>/);
+    assert.equal(story.image_public_id, "legacy/story");
+    assert.equal(story.image_width, 1920);
+    assert.equal(story.image_height, 1080);
     assert.equal((await migration.fetchLegacy("slots", "dlpc")).rows[0].slots.length, 0);
     const events = await migration.fetchLegacy("events", "dlpc");
     assert.equal(events.remaining, 2, "Counts must exclude past Events");

@@ -66,6 +66,9 @@ export async function GET(request: Request) {
           row.converted_html = conversion.html;
           row.conversion_issues = conversion.issues;
           row.tag_definitions = (row.tags || []).map((slug: string) => ({ slug, name: getTagBySlug(district as DistrictKey, slug)?.label || slug }));
+          row.image_public_id = row.cloudinary_public_id || null;
+          row.image_width = row.cloudinary_width || null;
+          row.image_height = row.cloudinary_height || null;
         } else {
           row.classification = assignments.find(assignment => assignment.event_id === row.id)?.event_classification_terms || null;
         }
