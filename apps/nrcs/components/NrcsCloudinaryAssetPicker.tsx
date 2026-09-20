@@ -94,6 +94,7 @@ function getAssetUrl(asset: MediaLibraryAsset) {
 export default function NrcsCloudinaryAssetPicker({
   action,
   storyId,
+  editionId,
   districtKey,
   categoryId,
   label = "Choose Image/Graphic",
@@ -101,7 +102,8 @@ export default function NrcsCloudinaryAssetPicker({
   submitLabel = "Attach Selected",
 }: {
   action: (formData: FormData) => Promise<void>;
-  storyId: string;
+  storyId?: string;
+  editionId?: string;
   districtKey: string;
   categoryId?: string | null;
   label?: string;
@@ -171,7 +173,8 @@ export default function NrcsCloudinaryAssetPicker({
 
   return (
     <form action={clientSubmit ? undefined : action} onSubmit={clientSubmit ? event => { event.preventDefault(); void action(new FormData(event.currentTarget)); } : undefined} className="grid gap-3 rounded border border-neutral-200 p-4">
-      <input type="hidden" name="story_id" value={storyId} />
+      <input type="hidden" name="story_id" value={storyId || ""} />
+      <input type="hidden" name="edition_id" value={editionId || ""} />
       <input type="hidden" name="district_key" value={districtKey} />
       <input type="hidden" name="category_id" value={categoryId || ""} />
       <input type="hidden" name="asset_type" value="image" />

@@ -7,6 +7,7 @@ export async function POST(request: Request) {
   const { profile } = await requireNrcsStaff("contributor");
   const body = await request.json().catch(() => ({}));
   const storyId = String(body.storyId || "").trim();
+  const editionId = String(body.editionId || "").trim();
   const districtKey = String(body.districtKey || "").trim().toLowerCase();
   const title = String(body.title || "Untitled video").trim() || "Untitled video";
   const categoryId = String(body.categoryId || "").trim() || null;
@@ -14,8 +15,8 @@ export async function POST(request: Request) {
     ? body.tagIds.map((tagId: unknown) => String(tagId || "").trim()).filter(Boolean)
     : [];
 
-  if (!storyId || !districtKey) {
-    return NextResponse.json({ error: "Story and district are required." }, { status: 400 });
+  if ((!storyId && !editionId) || (storyId && editionId) || !districtKey) {
+    return NextResponse.json({ error: "Exactly one Story or Program Edition and a district are required." }, { status: 400 });
   }
 
   const authorization = muxAuthHeader();
@@ -31,6 +32,11 @@ export async function POST(request: Request) {
   const corsOrigin = request.headers.get("origin") || (host ? `${proto}://${host}` : process.env.NEXT_PUBLIC_NRCS_SITE_URL || "*");
 
   const supabase = await createNrcsServerClient();
+  if (editionId) {
+    if (profile.role === "contributor") return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+    const { data: edition } = await supabase.from("nrcs_editions").select("district_key").eq("id", editionId).maybeSingle();
+    if (!edition || edition.district_key !== districtKey) return NextResponse.json({ error: "Program Edition is not accessible." }, { status: 403 });
+  }
   const { data: asset, error: assetError } = await supabase
     .from("nrcs_assets")
     .insert({
@@ -107,11 +113,10 @@ export async function POST(request: Request) {
     );
   }
 
-  await supabase.from("nrcs_story_assets").insert({
-    story_id: storyId,
-    asset_id: asset.id,
-    relationship: "video",
-  });
+  const attachment = editionId
+    ? await supabase.from("nrcs_edition_assets").insert({ edition_id: editionId, asset_id: asset.id })
+    : await supabase.from("nrcs_story_assets").insert({ story_id: storyId, asset_id: asset.id, relationship: "video" });
+  if (attachment.error) return NextResponse.json({ error: "Mux upload was created, but it could not be attached. " + attachment.error.message }, { status: 500 });
 
   if (tagIds.length) {
     await supabase.from("nrcs_asset_tags").insert(

@@ -26,12 +26,14 @@ type VideoResult = {
 
 export function NrcsMuxUploader({
   storyId,
+  editionId,
   districtKey,
   categoryId,
   categories,
   tags,
 }: {
-  storyId: string;
+  storyId?: string;
+  editionId?: string;
   districtKey: string;
   categoryId?: string | null;
   categories: CategoryOption[];
@@ -54,6 +56,7 @@ export function NrcsMuxUploader({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storyId,
+          editionId,
           districtKey,
           title: title || file.name,
           categoryId: selectedCategoryId || null,
@@ -132,11 +135,13 @@ export function NrcsMuxUploader({
 
 export function NrcsMuxLibraryPicker({
   storyId,
+  editionId,
   districtKey,
   categories,
   tags,
 }: {
-  storyId: string;
+  storyId?: string;
+  editionId?: string;
   districtKey: string;
   categories: CategoryOption[];
   tags: TagOption[];
@@ -177,10 +182,10 @@ export function NrcsMuxLibraryPicker({
 
   async function insertVideo(assetId: string) {
     setError(null);
-    const response = await fetch(`/api/stories/${storyId}/assets`, {
+    const response = await fetch(editionId ? "/api/editorial/edition-media" : `/api/stories/${storyId}/assets`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assetId, relationship: "video" }),
+      body: JSON.stringify(editionId ? { edition_id: editionId, asset_id: assetId, district_key: districtKey, revision: 0 } : { assetId, relationship: "video" }),
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {

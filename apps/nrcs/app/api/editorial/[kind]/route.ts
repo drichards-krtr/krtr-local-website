@@ -147,11 +147,11 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       const editionId = uuid(body.edition_id) as string;
       const assetId = uuid(body.asset_id) as string;
       const { data: edition } = await supabase.from("nrcs_editions").select("district_key").eq("id", editionId).maybeSingle();
-      const { data: asset } = await supabase.from("nrcs_assets").select("asset_type,cloudinary_url,mux_status,mux_playback_id,district_key").eq("id", assetId).maybeSingle();
+      const { data: asset } = await supabase.from("nrcs_assets").select("id,title,asset_type,cloudinary_url,thumbnail_url,mux_status,mux_playback_id,district_key").eq("id", assetId).maybeSingle();
       if (!edition || edition.district_key !== district.district_key || !asset || !(["image", "graphic"].includes(asset.asset_type) && asset.cloudinary_url || asset.asset_type === "video" && asset.district_key === district.district_key && asset.mux_status === "ready" && asset.mux_playback_id)) throw new Error("Select ready district video or shared image/graphic media for this Edition.");
       const { error } = await supabase.from("nrcs_edition_assets").upsert({ edition_id: editionId, asset_id: assetId }, { onConflict: "edition_id,asset_id", ignoreDuplicates: true });
       if (error) throw new Error(error.message);
-      return NextResponse.json({ ok: true, message: "Media attached to Edition." });
+      return NextResponse.json({ ok: true, asset: { id: asset.id, title: asset.title, asset_type: asset.asset_type, thumbnail_url: asset.cloudinary_url || asset.thumbnail_url }, message: "Media attached to Edition." });
     }
     if (kind === "web" || kind === "social") {
       const storyId = uuid(body.story_id) as string;
@@ -195,9 +195,10 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
     if (kind === "daily") {
       const id = uuid(body.id) as string;
       const editionId = uuid(body.edition_id) as string;
-      const assetId = uuid(body.asset_id) as string;
+      const heroAssetId = uuid(body.hero_asset_id) as string;
+      const videoAssetId = uuid(body.video_asset_id) as string;
       if (!["draft", "scheduled", "published", "archived"].includes(body.status)) throw new Error("Invalid Daily status.");
-      const payload = { id, district_key: district.district_key, edition_id: editionId, asset_id: assetId, status: body.status, scheduled_at: date(body.scheduled_at) };
+      const payload = { id, district_key: district.district_key, edition_id: editionId, hero_asset_id: heroAssetId, video_asset_id: videoAssetId, asset_id: heroAssetId, status: body.status, scheduled_at: date(body.scheduled_at) };
       if (!payload.scheduled_at) throw new Error("Daily publication date/time is required.");
       const query = body.revision === 0 ? supabase.from("nrcs_dailies").insert(payload) : supabase.from("nrcs_dailies").update(payload).eq("id", id).eq("district_key", district.district_key).eq("revision", body.revision);
       const { data: daily, error } = await query.select("*").maybeSingle();

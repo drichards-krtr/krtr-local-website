@@ -2,7 +2,7 @@
 
 ## Mandatory Deployment Gate
 
-**HOLD: No further code or schema development until the user explicitly confirms this gate passes.** Planning and cleanup-list review may continue.
+**COMPLETE:** The user confirmed on September 20, 2026 that both migrations were applied, both applications were deployed, and the First-Class Dailies acceptance tests passed. Development may resume.
 
 1. Apply `supabase/nrcs/migrations/20260920000200_first_class_dailies.sql` in NRCS Supabase.
 2. Apply `supabase/migrations/20260920000300_daily_publication.sql` in CMS Supabase.
@@ -14,7 +14,7 @@
 8. Confirm its historical public URL remains available as appropriate for its publication state.
 9. Confirm Homepage and Alerts contains no Daily controls.
 
-Do not begin Alert lifecycle cleanup, delivery automation follow-ups, legacy removal, or any other implementation until all nine steps are confirmed.
+All nine steps are confirmed.
 
 ## Asynchronous Publication Delivery
 
@@ -43,7 +43,7 @@ Redeploy the prior NRCS version. Existing queued/received delivery snapshots and
 
 ## First-Class Dailies
 
-Dailies are independently managed at `/dailies`; Homepage and Alerts no longer owns Daily selection. Each district-scoped Daily selects one Program Edition, one ready asset attached to that Edition, a mandatory district-local publication date/time, and Draft/Scheduled/Published/Archived status. Saves use the asynchronous publication outbox.
+Dailies are independently managed at `/dailies`; Homepage and Alerts no longer owns Daily selection. Each district-scoped Daily selects one Program Edition, one Cloudinary Hero graphic and one ready Mux video attached to that Edition, a mandatory district-local publication date/time, and Draft/Scheduled/Published/Archived status. The Daily page provides the Cloudinary library plus Mux upload/search controls. Saves use the asynchronous publication outbox.
 
 The CMS stores each Daily as a public presentation projection with a stable NRCS source identity and historical URL. Scheduled and Published Dailies become Homepage-eligible only when their scheduled instant arrives. The Homepage selects the latest eligible Daily for the district and stops showing it at the next local midnight. A later eligible Daily on the same date replaces an earlier one. There is no prior-day or legacy fallback when no NRCS Daily is eligible.
 

@@ -31,9 +31,11 @@ export async function buildPublication(kind: PublicationKind, sourceId: string, 
   if (kind === "alert") return validatePublication({ ...base, payload: { headline: source.headline, message: source.message, active: source.active, start_at: source.start_at, end_at: source.end_at, target_type: source.target_type, target_id: source.target_id, external_url: source.external_url } });
   if (kind === "daily") {
     const { data: edition, error: editionError } = await supabase.from("nrcs_editions").select("id,title,district_key").eq("id", source.edition_id).single();
-    const { data: asset, error: assetError } = await supabase.from("nrcs_assets").select(assetSelect).eq("id", source.asset_id).single();
-    if (editionError || assetError || !edition || edition.district_key !== districtKey || !asset) throw new Error("Daily Edition/media is unavailable.");
-    return validatePublication({ ...base, payload: { edition_id: edition.id, title: edition.title, scheduled_at: source.scheduled_at, status: source.status, timezone: district.timezone, asset: media(asset as Asset) } });
+    const { data: assets, error: assetError } = await supabase.from("nrcs_assets").select(assetSelect).in("id", [source.hero_asset_id, source.video_asset_id]);
+    const byId = new Map((assets || []).map(asset => [asset.id, asset as Asset]));
+    const hero = byId.get(source.hero_asset_id); const video = byId.get(source.video_asset_id);
+    if (editionError || assetError || !edition || edition.district_key !== districtKey || !hero || !video) throw new Error("Daily Hero graphic or video is unavailable.");
+    return validatePublication({ ...base, payload: { edition_id: edition.id, title: edition.title, scheduled_at: source.scheduled_at, status: source.status, timezone: district.timezone, hero: media(hero), video: media(video) } });
   }
   if (kind === "homepage") {
     let daily = null;

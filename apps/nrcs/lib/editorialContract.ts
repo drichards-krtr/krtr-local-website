@@ -3,7 +3,7 @@ export type VideoReference = { id: string; title: string; asset_type: "video"; p
 export type WebPackage = { cms_article_id?: string | null; story_id: string; copy_version_id: string | null; title: string; body_html: string; tease: string | null; slug: string | null; status: "draft" | "scheduled" | "published" | "unpublished"; scheduled_at: string | null; published_at: string | null; seo_title: string | null; seo_description: string | null; category: { id: string; name: string; slug: string } | null; tags: Array<{ id: string; name: string; slug: string; tag_type: string }>; hero: ImageReference | null; article_media: ImageReference[]; video: VideoReference | null };
 export type HomepagePackage = { timezone: string; hero_output_id: string | null; top_output_ids: string[]; daily: { edition_id: string; title: string; program_id: string; program_name: string; publication_date: string; asset: ImageReference | VideoReference } | null };
 export type AlertPackage = { headline: string; message: string; active: boolean; start_at: string | null; end_at: string | null; target_type: "none" | "story" | "event" | "external"; target_id: string | null; external_url: string | null };
-export type DailyPackage = { edition_id: string; title: string; scheduled_at: string; status: "draft" | "scheduled" | "published" | "archived"; timezone: string; asset: ImageReference | VideoReference };
+export type DailyPackage = { edition_id: string; title: string; scheduled_at: string; status: "draft" | "scheduled" | "published" | "archived"; timezone: string; hero: ImageReference; video: VideoReference };
 export type PublicationKind = "web" | "homepage" | "alert" | "daily";
 export type PublicationEnvelope = { schema_version: 1; request_id: string; district_key: string; source_id: string; revision: number } & ({ kind: "web"; payload: WebPackage } | { kind: "homepage"; payload: HomepagePackage } | { kind: "alert"; payload: AlertPackage } | { kind: "daily"; payload: DailyPackage });
 export type PublicationReceipt = { schema_version: 1; request_id: string; kind: PublicationKind; source_id: string; district_key: string; revision: number; content_hash: string; state: "received_non_public" | "applied" | "draft" | "scheduled" | "published" | "unpublished"; cms_projection_id: string; cms_article_id: string | null; public_url: string | null; published_at: string | null; received_at: string; current_projection_revision: number };
@@ -79,10 +79,9 @@ export function validatePublication(value: unknown): PublicationEnvelope {
     return { ...base, kind, payload: { timezone, hero_output_id: optionalId(p.hero_output_id), top_output_ids: top, daily: parsedDaily } };
   }
   if (kind === "daily") {
-    const p = object(e.payload, ["edition_id", "title", "scheduled_at", "status", "timezone", "asset"]);
+    const p = object(e.payload, ["edition_id", "title", "scheduled_at", "status", "timezone", "hero", "video"]);
     const timezone = string(p.timezone, 100); new Intl.DateTimeFormat("en-US", { timeZone: timezone });
-    const asset = p.asset as Record<string, unknown>;
-    return { ...base, kind, payload: { edition_id: id(p.edition_id), title: string(p.title, 1000, true), scheduled_at: time(p.scheduled_at)!, status: choice(p.status, ["draft", "scheduled", "published", "archived"]), timezone, asset: asset?.asset_type === "video" ? video(asset) : image(asset) } };
+    return { ...base, kind, payload: { edition_id: id(p.edition_id), title: string(p.title, 1000, true), scheduled_at: time(p.scheduled_at)!, status: choice(p.status, ["draft", "scheduled", "published", "archived"]), timezone, hero: image(p.hero), video: video(p.video) } };
   }
   const p = object(e.payload, ["headline", "message", "active", "start_at", "end_at", "target_type", "target_id", "external_url"]);
   if (typeof p.active !== "boolean") throw new Error("Invalid alert enabled state.");
