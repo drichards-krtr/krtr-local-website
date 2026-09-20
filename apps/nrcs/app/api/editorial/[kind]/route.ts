@@ -208,6 +208,19 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       return NextResponse.json({ ok: true, daily, ...queued, message: queued.delivery ? "Daily saved and queued for CMS delivery." : "Daily saved, but CMS delivery could not be queued. Use Queue CMS Delivery below." });
     }
     const id = uuid(body.id) as string;
+    if (body.operation === "delete") {
+      const { data: deleted, error } = await supabase.rpc("nrcs_delete_undelivered_alert", { p_id: id, p_revision: body.revision });
+      if (error) throw new Error(error.message);
+      if (!deleted) throw new Error("Alert changed or no longer exists. Reload before deleting.");
+      return NextResponse.json({ ok: true, deleted: id, message: "Undelivered Alert deleted." });
+    }
+    if (body.operation === "archive") {
+      const { data: alert, error } = await supabase.from("nrcs_priority_alerts").update({ active: false, archived_at: new Date().toISOString() }).eq("id", id).eq("district_key", district.district_key).eq("revision", body.revision).is("archived_at", null).select("*").maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!alert) throw new Error("Alert changed or is already archived. Reload before archiving.");
+      const queued = await queue("alert", alert.id, alert.revision);
+      return NextResponse.json({ ok: true, alert, ...queued, message: queued.delivery ? "Alert archived and its disabled revision queued for CMS delivery." : "Alert archived, but CMS delivery could not be queued. Use Queue CMS Delivery below." });
+    }
     if (typeof body.active !== "boolean" || !["none", "story", "event", "external"].includes(body.target_type)) throw new Error("Invalid alert settings.");
     const headline = text(body.headline, 240);
     if (!headline) throw new Error("Headline is required.");

@@ -61,3 +61,12 @@ After the mandatory Daily deployment gate passes, replace the rundown editor's *
 - Use smooth programmatic scrolling for segment jumps and smooth CSS scrolling where supported. Do not add automatic scrolling in this slice.
 - Persist font size and horizontal/vertical flip settings in browser-local storage and restore them when the Prompter is reopened in that browser.
 - The Prompter is read-only and always renders the latest saved rundown version. Draft form state and other in-progress, unsaved editor changes are never included.
+
+Status: On hold by user decision.
+
+## Deferred Cleanup Dependencies
+
+- Dual-media Daily production acceptance will be completed when the next Daily is created.
+- Removing the legacy single-asset Daily compatibility fields is blocked until the user explicitly confirms that acceptance passed.
+- Updating the older Daily documentation and regression tests follows that schema cleanup.
+- Hosted orphan-media inventory and deletion remain on hold.
