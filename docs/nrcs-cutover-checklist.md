@@ -2,9 +2,9 @@
 
 ## Current Gate
 
-The user confirms that backups and launch content are ready, both cutover-safety CMS migrations are applied, both applications are deployed, and the Phase 9 acceptance checks pass. The implementation gate is closed. Phase 10 may proceed through the operator-controlled stages below.
+Phase 10 is complete. The user confirmed that backups and launch content were ready, both cutover-safety CMS migrations were applied, both applications were deployed, and every activation and production acceptance gate passed.
 
-The agent does not operate Supabase or Vercel production controls. The user performs each production action and confirms its result before proceeding past a verification gate. Do not combine stages or enable publication before legacy write authority has been disabled and verified.
+NRCS is now editorial authority. CMS remains the public presentation projection. CMS legacy editorial access is disabled, CMS NRCS publication is enabled, and the database authority guard remains disabled for legacy writes. Editorial work may proceed in NRCS. Retain this document as the activation and rollback record.
 
 ## Original Audit Findings
 
@@ -69,6 +69,13 @@ Before Stage 1, record the CMS and NRCS production deployment identifiers and th
 9. Review legacy custom alerts so they do not remain unexpectedly active alongside the new alert system. Resolve them through the approved cutover controls. Then apply current launch-approved Priority Alerts after linked Story/Event destinations are ready. Review window, target, and district. New alerts occupy Hero space without changing the saved Hero; weather remains separate.
 10. Check the public homepage, migrated URLs/aliases, tag navigation, article media/metadata/feed, calendar list/load-more/filter/popover, Daily expiry, active-alert takeover, and eligible Hero restoration. Use **Check CMS Status** for elapsed Web schedules; Ready-to-Active confirmation is staff-triggered, not a cron transition.
 11. Unfreeze editorial work in NRCS only after all relevant acceptance gates pass. Retain legacy code and backups; destructive cleanup belongs to Phase 11, not this switch.
+
+## Post-Cutover Follow-Up
+
+- Add Alert archiving so expired or obsolete Alerts can be removed from the default working view without deleting delivery receipts or publication history.
+- Support duplicating a useful archived Alert into a new draft as the template workflow.
+- Consider permanent deletion only for never-delivered drafts. Delivered Alerts should remain auditable and must not be hard-deleted through normal editorial controls.
+- Replace routine manual publication sends with a reviewed asynchronous transactional-outbox workflow while keeping CMS as the public presentation projection and NRCS as editorial authority.
 
 ## Stop and Roll Back
 
