@@ -13,7 +13,7 @@ async function handle(request: Request, send: boolean) {
     const body = send ? await request.json() : Object.fromEntries(new URL(request.url).searchParams);
     const { kind, source_id: sourceId, district_key: districtKey } = body;
     const revision = Number(body.revision);
-    if (!["web", "homepage", "alert"].includes(kind) || typeof districtKey !== "string" || !Number.isSafeInteger(revision) || revision < 1 || typeof sourceId !== "string" || (kind === "homepage" ? sourceId !== districtKey : !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceId))) throw new Error("Invalid delivery request.");
+    if (!["web", "homepage", "alert", "daily"].includes(kind) || typeof districtKey !== "string" || !Number.isSafeInteger(revision) || revision < 1 || typeof sourceId !== "string" || (kind === "homepage" ? sourceId !== districtKey : !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceId))) throw new Error("Invalid delivery request.");
     const context = await getNrcsDistrictContext();
     if (!context.allowedDistricts.some(d => d.district_key === districtKey)) return NextResponse.json({ error: "District is not accessible." }, { status: 403 });
     if (send && body.action !== undefined && !["send", "refresh"].includes(body.action)) throw new Error("Invalid delivery action.");

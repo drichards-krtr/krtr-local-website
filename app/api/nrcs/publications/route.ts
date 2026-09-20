@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       if (host.username || host.password || host.pathname !== "/" || host.search || host.hash) throw new Error("CMS district public host is invalid; publication not applied.");
       publicOrigin = host.origin;
     }
-    const liveReceiver = { web: "receive_nrcs_web_publication", homepage: "receive_nrcs_homepage_publication", alert: "receive_nrcs_alert_publication" }[envelope.kind];
+    const liveReceiver = { web: "receive_nrcs_web_publication", homepage: "receive_nrcs_homepage_publication", alert: "receive_nrcs_alert_publication", daily: "receive_nrcs_daily_publication" }[envelope.kind];
     const { data, error } = await service.rpc(live ? liveReceiver : "receive_nrcs_publication", { p_package: stored, p_hash: hash });
     if (error) return NextResponse.json({ error: error.message }, { status: /conflict|stale|cannot change/i.test(error.message) ? 409 : 422 });
     const enriched = data?.public_url === "/" || data?.public_url?.startsWith("/stories/") ? { ...data, public_url: new URL(data.public_url, publicOrigin).toString() } : data;

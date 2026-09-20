@@ -18,6 +18,10 @@ export function publicationEligibility(envelope: PublicationEnvelope, now = new 
     const alert = envelope.payload;
     return { visible: alert.active && (!alert.start_at || Date.parse(alert.start_at) <= now.getTime()) && (!alert.end_at || now.getTime() < Date.parse(alert.end_at)), effectiveAt: alert.start_at };
   }
+  if (envelope.kind === "daily") {
+    const daily = envelope.payload;
+    return { visible: ["scheduled", "published"].includes(daily.status) && Date.parse(daily.scheduled_at) <= now.getTime() && districtCalendarDay(daily.timezone, now) === districtCalendarDay(daily.timezone, new Date(daily.scheduled_at)), effectiveAt: daily.scheduled_at };
+  }
   const home = envelope.payload;
   return { visible: !!home.daily && home.daily.publication_date === districtCalendarDay(home.timezone, now), effectiveAt: home.daily?.publication_date || null };
 }

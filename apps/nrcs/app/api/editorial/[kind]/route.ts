@@ -96,7 +96,7 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
   if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { kind } = await context.params;
-    if (!["web", "social", "homepage", "alert", "edition-media", "image"].includes(kind)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!["web", "social", "homepage", "alert", "daily", "edition-media", "image"].includes(kind)) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const raw = await request.text();
     if (raw.length > 32000) throw new Error("Request is too large.");
     const body = JSON.parse(raw);
@@ -106,7 +106,7 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
     const district = districts.allowedDistricts.find(d => d.district_key === body.district_key);
     if (!district) return NextResponse.json({ error: "District is not accessible." }, { status: 403 });
     const editor = staff.profile.role !== "contributor";
-    if (["homepage", "alert", "edition-media"].includes(kind) && !editor) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+    if (["homepage", "alert", "daily", "edition-media"].includes(kind) && !editor) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
     function date(value: unknown) {
       if (!value) return null;
       const local = text(value, 19);
@@ -115,7 +115,7 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       return iso;
     }
     const supabase = await createNrcsServerClient();
-    async function queue(kind: "web" | "homepage" | "alert", sourceId: string, revision: number) {
+    async function queue(kind: "web" | "homepage" | "alert" | "daily", sourceId: string, revision: number) {
       try {
         const delivery = await queuePublication(kind, sourceId, district!.district_key, revision);
         after(async () => {
@@ -191,6 +191,20 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       if (!lineup) throw new Error("Lineup changed. Reload before saving.");
       const queued = await queue("homepage", lineup.district_key, lineup.revision);
       return NextResponse.json({ ok: true, lineup, ...queued, message: queued.delivery ? "Homepage instructions saved and queued for CMS delivery." : "Homepage instructions saved, but CMS delivery could not be queued. Use Queue CMS Delivery below." });
+    }
+    if (kind === "daily") {
+      const id = uuid(body.id) as string;
+      const editionId = uuid(body.edition_id) as string;
+      const assetId = uuid(body.asset_id) as string;
+      if (!["draft", "scheduled", "published", "archived"].includes(body.status)) throw new Error("Invalid Daily status.");
+      const payload = { id, district_key: district.district_key, edition_id: editionId, asset_id: assetId, status: body.status, scheduled_at: date(body.scheduled_at) };
+      if (!payload.scheduled_at) throw new Error("Daily publication date/time is required.");
+      const query = body.revision === 0 ? supabase.from("nrcs_dailies").insert(payload) : supabase.from("nrcs_dailies").update(payload).eq("id", id).eq("district_key", district.district_key).eq("revision", body.revision);
+      const { data: daily, error } = await query.select("*").maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!daily) throw new Error("Daily changed. Reload before saving.");
+      const queued = await queue("daily", daily.id, daily.revision);
+      return NextResponse.json({ ok: true, daily, ...queued, message: queued.delivery ? "Daily saved and queued for CMS delivery." : "Daily saved, but CMS delivery could not be queued. Use Queue CMS Delivery below." });
     }
     const id = uuid(body.id) as string;
     if (typeof body.active !== "boolean" || !["none", "story", "event", "external"].includes(body.target_type)) throw new Error("Invalid alert settings.");

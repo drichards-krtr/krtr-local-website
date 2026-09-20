@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DeliverySummary } from "@/lib/publicationDelivery";
 
-export default function NrcsPublicationDelivery({ kind, sourceId, districtKey, revision, disabled = false }: { kind: "web" | "homepage" | "alert"; sourceId: string; districtKey: string; revision: number; disabled?: boolean }) {
+export default function NrcsPublicationDelivery({ kind, sourceId, districtKey, revision, disabled = false }: { kind: "web" | "homepage" | "alert" | "daily"; sourceId: string; districtKey: string; revision: number; disabled?: boolean }) {
   const [delivery, setDelivery] = useState<DeliverySummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

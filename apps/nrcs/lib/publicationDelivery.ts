@@ -23,12 +23,18 @@ export async function buildPublication(kind: PublicationKind, sourceId: string, 
   const context = await getNrcsDistrictContext();
   const district = context.allowedDistricts.find(d => d.district_key === districtKey);
   if (!district) throw new Error("District is not accessible.");
-  const table = kind === "web" ? "nrcs_web_outputs" : kind === "homepage" ? "nrcs_homepage_lineups" : "nrcs_priority_alerts";
+  const table = kind === "web" ? "nrcs_web_outputs" : kind === "homepage" ? "nrcs_homepage_lineups" : kind === "daily" ? "nrcs_dailies" : "nrcs_priority_alerts";
   const { data: source, error } = await supabase.from(table).select("*").eq(kind === "homepage" ? "district_key" : "id", sourceId).maybeSingle();
   if (error) throw new Error(error.message);
   if (!source || source.district_key !== districtKey || source.revision !== revision) throw new Error("Source changed or is not accessible. Save/reload before sending.");
   const base = { schema_version: 1, request_id: randomUUID(), kind, source_id: sourceId, district_key: districtKey, revision };
   if (kind === "alert") return validatePublication({ ...base, payload: { headline: source.headline, message: source.message, active: source.active, start_at: source.start_at, end_at: source.end_at, target_type: source.target_type, target_id: source.target_id, external_url: source.external_url } });
+  if (kind === "daily") {
+    const { data: edition, error: editionError } = await supabase.from("nrcs_editions").select("id,title,district_key").eq("id", source.edition_id).single();
+    const { data: asset, error: assetError } = await supabase.from("nrcs_assets").select(assetSelect).eq("id", source.asset_id).single();
+    if (editionError || assetError || !edition || edition.district_key !== districtKey || !asset) throw new Error("Daily Edition/media is unavailable.");
+    return validatePublication({ ...base, payload: { edition_id: edition.id, title: edition.title, scheduled_at: source.scheduled_at, status: source.status, timezone: district.timezone, asset: media(asset as Asset) } });
+  }
   if (kind === "homepage") {
     let daily = null;
     if (source.daily_edition_id) {
@@ -112,7 +118,7 @@ export async function queuePublication(kind: PublicationKind, sourceId: string, 
   if (!existing) {
     const envelope = await buildPublication(kind, sourceId, districtKey, revision);
     const supabase = await createNrcsServerClient();
-    const table = kind === "web" ? "nrcs_web_outputs" : kind === "homepage" ? "nrcs_homepage_lineups" : "nrcs_priority_alerts";
+    const table = kind === "web" ? "nrcs_web_outputs" : kind === "homepage" ? "nrcs_homepage_lineups" : kind === "daily" ? "nrcs_dailies" : "nrcs_priority_alerts";
     const { data: current, error: currentError } = await supabase.from(table).select("revision").eq(kind === "homepage" ? "district_key" : "id", sourceId).single();
     if (currentError || current?.revision !== revision) throw new Error("Source changed while preparing delivery. Reload before sending.");
     const hash = createHash("sha256").update(canonicalPublication(envelope)).digest("hex");

@@ -1,5 +1,21 @@
 # NRCS Phase 11 Stabilization
 
+## Mandatory Deployment Gate
+
+**HOLD: No further code or schema development until the user explicitly confirms this gate passes.** Planning and cleanup-list review may continue.
+
+1. Apply `supabase/nrcs/migrations/20260920000200_first_class_dailies.sql` in NRCS Supabase.
+2. Apply `supabase/migrations/20260920000300_daily_publication.sql` in CMS Supabase.
+3. Commit/push and deploy both applications.
+4. Confirm a Draft Daily reaches CMS but remains non-public.
+5. Confirm a future Scheduled Daily is hidden before its scheduled instant and appears afterward.
+6. Confirm a later eligible Daily on the same date replaces the earlier Daily.
+7. Confirm archiving the active Daily removes it from the Homepage with no fallback.
+8. Confirm its historical public URL remains available as appropriate for its publication state.
+9. Confirm Homepage and Alerts contains no Daily controls.
+
+Do not begin Alert lifecycle cleanup, delivery automation follow-ups, legacy removal, or any other implementation until all nine steps are confirmed.
+
 ## Asynchronous Publication Delivery
 
 Status: Implemented; awaiting production deployment and acceptance.
@@ -24,3 +40,24 @@ This implementation does not require a cron job, database migration, new environ
 ## Rollback
 
 Redeploy the prior NRCS version. Existing queued/received delivery snapshots and CMS projections remain valid. The prior manual Send/Retry UI can process any failed or pending snapshot using the same request ID. No database rollback or CMS content reversal is required.
+
+## First-Class Dailies
+
+Dailies are independently managed at `/dailies`; Homepage and Alerts no longer owns Daily selection. Each district-scoped Daily selects one Program Edition, one ready asset attached to that Edition, a mandatory district-local publication date/time, and Draft/Scheduled/Published/Archived status. Saves use the asynchronous publication outbox.
+
+The CMS stores each Daily as a public presentation projection with a stable NRCS source identity and historical URL. Scheduled and Published Dailies become Homepage-eligible only when their scheduled instant arrives. The Homepage selects the latest eligible Daily for the district and stops showing it at the next local midnight. A later eligible Daily on the same date replaces an earlier one. There is no prior-day or legacy fallback when no NRCS Daily is eligible.
+
+Apply `supabase/nrcs/migrations/20260920000200_first_class_dailies.sql` in NRCS Supabase and `supabase/migrations/20260920000300_daily_publication.sql` in CMS Supabase before deploying either application.
+
+## Prompter Backlog
+
+After the mandatory Daily deployment gate passes, replace the rundown editor's **Script View** action with **Launch Prompter**.
+
+- Open the Prompter in a new browser tab using a standalone route with no NRCS header, sidebar, or application wrapper.
+- Render a flat black background with white script text.
+- Show a bottom control bar on click or pointer movement and hide it after five seconds of inactivity.
+- Controls adjust text size and independently flip the script horizontally and vertically. Keep controls outside the transformed script surface so the controls themselves remain normally oriented.
+- `Page Up` and `Page Down` move to the beginning of the previous or next rundown segment. `Home` moves to the top of the script.
+- Use smooth programmatic scrolling for segment jumps and smooth CSS scrolling where supported. Do not add automatic scrolling in this slice.
+- Persist font size and horizontal/vertical flip settings in browser-local storage and restore them when the Prompter is reopened in that browser.
+- The Prompter is read-only and always renders the latest saved rundown version. Draft form state and other in-progress, unsaved editor changes are never included.

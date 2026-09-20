@@ -12,16 +12,16 @@ function load(file, mocks) {
   return module.exports;
 }
 const rehearsal = load("lib/nrcsRehearsal.ts", {});
-let managed = true, selectedDaily = "daily", dailyDate = rehearsal.districtCalendarDay("America/Chicago", new Date());
-let dailyReads = 0;
+let eligibleDaily = true;
 const dailyLib = load("lib/dailys.ts", {
   react: { cache: fn => fn },
   "@/lib/dates": { KRTR_TIMEZONE: "America/Chicago" },
   "@/lib/nrcsRehearsal": rehearsal,
   "next/cache": { unstable_noStore() {} },
   "@/lib/supabase/public": { createPublicClient: () => ({ from(table) {
-    const q = { select() { return this; }, eq() { return this; }, or() { return this; }, order() { return this; }, limit() { return this; },
-      async maybeSingle() { if (table === "story_slots") return { data: { nrcs_managed: managed, nrcs_daily_id: selectedDaily }, error: null }; dailyReads++; return { data: { id: "daily", title: "Daily", nrcs_publication_date: dailyDate, nrcs_timezone: "America/Chicago" }, error: null }; }
+    const q = { select() { return this; }, eq() { return this; }, not() { return this; }, lte() { return this; }, order() { return this; }, limit() { return this; },
+      async single() { return { data: { timezone: "America/Chicago" }, error: null }; },
+      async maybeSingle() { return { data: eligibleDaily ? { id: "daily", title: "Daily" } : null, error: null }; }
     }; return q;
   } }) },
 });
@@ -53,11 +53,8 @@ const weather = load("components/public/AlertBanner.tsx", {
 });
 (async () => {
   assert.equal((await dailyLib.getLatestPublishedDaily("dlpc")).id, "daily");
-  dailyDate = "2000-01-01";
-  assert.equal(await dailyLib.getLatestPublishedDaily("dlpc"), null, "Expired selected Daily must not fall back to older content");
-  selectedDaily = null; dailyReads = 0;
-  assert.equal(await dailyLib.getLatestPublishedDaily("dlpc"), null);
-  assert.equal(dailyReads, 0, "Cleared managed Daily must not query legacy latest Daily");
+  eligibleDaily = false;
+  assert.equal(await dailyLib.getLatestPublishedDaily("dlpc"), null, "No eligible Daily must not fall back to older content");
   const postcss = require("postcss"), tailwind = require("tailwindcss");
   const css = (await postcss([tailwind({ content: ["components/public/HomePageContent.tsx", "components/public/AlertBanner.tsx"], theme: { extend: { maxWidth: { site: "1200px" }, colors: { krtrRed: "#d82028" } } } })]).process("@tailwind base; @tailwind components; @tailwind utilities;", { from: undefined })).css;
   const runtime = process.env.KRTR_TEST_NODE_MODULES;
@@ -81,5 +78,5 @@ const weather = load("components/public/AlertBanner.tsx", {
       await page.close();
     }
   } finally { await browser.close(); }
-  console.log("Phase 9 managed Daily selection and desktop/mobile Hero/Priority Alert/weather renderer checks passed.");
+    console.log("Daily eligibility and desktop/mobile Hero/Priority Alert/weather renderer checks passed.");
 })().catch(error => { console.error(error); process.exitCode = 1; });
