@@ -11,7 +11,14 @@ export async function POST(request: Request) {
     if (Buffer.byteLength(raw) > 1000000) throw new Error("Event exceeds size limit.");
     const payload = JSON.parse(raw);
     if (payload?.cms_event_id != null && (typeof payload.cms_event_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.cms_event_id))) throw new Error("Invalid CMS Event ID.");
-    if (!payload || !/^[0-9a-f-]{36}$/i.test(payload.id) || !/^[a-z0-9][a-z0-9-]*$/.test(payload.district_key) || typeof payload.title !== "string" || !payload.title.trim() || !Number.isFinite(Date.parse(payload.start_at)) || !["draft", "published", "archived"].includes(payload.status)) throw new Error("Invalid required event fields.");
+    if (!payload || !/^[0-9a-f-]{36}$/i.test(payload.id) || !/^[a-z0-9][a-z0-9-]*$/.test(payload.district_key) || !["draft", "published", "archived"].includes(payload.status)) throw new Error("Invalid required event fields.");
+    if (payload.status !== "published") {
+      const { data: hidden, error } = await createServiceClient().rpc("hide_nrcs_event", { p_id: payload.id, p_district: payload.district_key, p_status: payload.status, p_cms_event_id: payload.cms_event_id || null });
+      if (error) throw new Error(error.message);
+      if (hidden?.nrcs_source_id !== payload.id || hidden?.status !== payload.status || hidden?.district_key !== payload.district_key) throw new Error("CMS visibility receipt could not be verified.");
+      return NextResponse.json({ ok: true, table: "events", cms_event_id: hidden.id, nrcs_source_id: hidden.nrcs_source_id, status: hidden.status, no_public_projection: !hidden.id }, { headers: { "Cache-Control": "no-store" } });
+    }
+    if (typeof payload.title !== "string" || !payload.title.trim() || typeof payload.start_at !== "string" || !Number.isFinite(Date.parse(payload.start_at))) throw new Error("Published Events require title and start time.");
     if (payload.classification && (!["sport", "extra_curricular", "event_type"].includes(payload.classification.kind) || typeof payload.classification.name !== "string" || !payload.classification.name.trim() || typeof payload.classification.enabled !== "boolean")) throw new Error("Invalid event classification.");
     if (payload.body_html !== null && typeof payload.body_html !== "string") throw new Error("Invalid event description.");
     const bodyHtml = payload.body_html ? sanitizePublicationHtml(payload.body_html) : null;

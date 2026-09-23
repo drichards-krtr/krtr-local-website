@@ -5,15 +5,15 @@ type SyncEventPayload = {
   id: string;
   cms_event_id?: string | null;
   district_key: string;
-  title: string;
+  title: string | null;
   body_html: string | null;
-  location_name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
+  location_name: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   location: string | null;
-  start_at: string;
+  start_at: string | null;
   end_at: string | null;
   image_url: string | null;
   status: "draft" | "published" | "archived";
@@ -109,6 +109,7 @@ export async function syncEventToCms(payload: SyncEventPayload) {
     status?: unknown;
     nrcs_source_id?: unknown;
     table?: unknown;
+    no_public_projection?: unknown;
   } = {};
 
   try {
@@ -134,7 +135,7 @@ export async function syncEventToCms(payload: SyncEventPayload) {
   const cmsTable = typeof responseData.table === "string" ? responseData.table : null;
   const cmsApiUrl = `${env.baseUrl}/api/nrcs/events`;
 
-  if (cmsTable !== "events" || !cmsEventId) {
+  if (cmsTable !== "events" || (!cmsEventId && !(payload.status !== "published" && responseData.no_public_projection === true && responseData.nrcs_source_id === payload.id && responseData.status === payload.status))) {
     return {
       ok: false,
       skipped: false,

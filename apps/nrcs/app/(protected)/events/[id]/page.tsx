@@ -42,8 +42,8 @@ async function updateEvent(formData: FormData) {
     redirect(`/events/${id}?district=${fallbackDistrictKey}&error=${encodeURIComponent(payloadError || "Invalid event")}`);
   }
 
-  const service = createNrcsServiceClient();
-  const { error } = await service.from("nrcs_events").update(payload).eq("id", id);
+  const service = await createNrcsServerClient();
+  const { error } = await service.from("nrcs_events").update(payload).eq("id", id).select("id").single();
 
   if (error) {
     redirect(`/events/${id}?district=${payload.district_key}&error=${encodeURIComponent(error.message)}`);
@@ -114,7 +114,7 @@ export default async function EditEventPage({
     href: `/events/${id}?district=${event.district_key}`,
     objectId: id,
     objectType: "event",
-    title: event.title,
+    title: event.title || "Untitled draft",
   });
 
   return (
@@ -208,7 +208,7 @@ export default async function EditEventPage({
         <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
           <FollowUpCreateForm
             contextId={id}
-            contextLabel={event.title}
+            contextLabel={event.title || "Untitled draft"}
             contextType="event"
             districtKey={event.district_key}
             returnTo={`/events/${id}?district=${event.district_key}`}

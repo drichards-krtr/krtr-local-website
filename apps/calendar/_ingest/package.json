@@ -1,0 +1,8 @@
+{
+  "name": "krtr-calendar-ingestion",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": { "dev": "next dev --port 3002", "build": "next build", "start": "next start --port 3002", "typecheck": "tsc --noEmit" },
+  "dependencies": { "next": "^16.3.3", "react": "18.2.0", "react-dom": "18.2.0" },
+  "devDependencies": { "@types/node": "^26.3.0", "@types/react": "^18.3.31", "@types/react-dom": "^18.3.7", "typescript": "^5.5.4" }
+}

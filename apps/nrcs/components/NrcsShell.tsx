@@ -17,6 +17,8 @@ const NAV_ITEMS = [
   { label: "Follow-Ups", href: "/follow-ups" },
   { label: "Search", href: "/search" },
   { label: "Intake", href: "/intake", minimumRole: "editor" },
+  { label: "Calendar Intake", href: "/calendar-intake", minimumRole: "editor" },
+  { label: "Calendar Sources", href: "/calendar-sources", minimumRole: "editor" },
   { label: "Taxonomy", href: "/taxonomy", minimumRole: "editor" },
   { label: "Users", href: "/users", minimumRole: "admin" },
   { label: "Migration", href: "/migrations", minimumRole: "admin" },

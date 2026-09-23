@@ -173,8 +173,9 @@ async function deactivateInvitation(formData: FormData) {
 export default async function NrcsUsersPage({
   searchParams,
 }: {
-  searchParams?: { error?: string; success?: string };
+  searchParams?: Promise<{ error?: string; success?: string }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   await requireNrcsStaff("admin");
   const service = createNrcsServiceClient();
   const [{ data: staff }, { data: invitations }, { data: districts }, { data: staffDistricts }] =
@@ -222,12 +223,12 @@ export default async function NrcsUsersPage({
         </p>
       </header>
 
-      {searchParams?.error && (
+      {resolvedSearchParams?.error && (
         <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {searchParams.error}
+          {resolvedSearchParams.error}
         </p>
       )}
-      {searchParams?.success && (
+      {resolvedSearchParams?.success && (
         <p className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
           Saved.
         </p>

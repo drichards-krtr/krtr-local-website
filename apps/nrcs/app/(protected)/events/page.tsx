@@ -60,7 +60,7 @@ async function duplicateEvent(formData: FormData) {
     .from("nrcs_events")
     .insert({
       ...event,
-      title: `${event.title} Copy`,
+      title: event.title ? `${event.title} Copy` : null,
       status: "draft",
     })
     .select("id, district_key")
@@ -250,7 +250,7 @@ export default async function NrcsEventsPage({
           <div key={event.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
             <div>
               <Link href={`/events/${event.id}?district=${districtKey}`} className="font-medium underline">
-                {event.title}
+                {event.title || "Untitled draft"}
               </Link>
               <div className="text-xs capitalize text-neutral-500">{event.status}</div>
             </div>

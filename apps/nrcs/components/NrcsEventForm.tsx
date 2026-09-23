@@ -6,14 +6,14 @@ import { sortClassificationTerms, type EventClassificationTerm } from "@/lib/eve
 export type NrcsEventFormValue = {
   id?: string;
   district_key: string;
-  title: string;
+  title: string | null;
   body_html: string | null;
-  location_name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  start_at: string;
+  location_name: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  start_at: string | null;
   end_at: string | null;
   image_url: string | null;
   status: string;
@@ -51,6 +51,7 @@ export default function NrcsEventForm({
 
   return (
     <form action={action} className="grid gap-4 rounded border border-neutral-200 bg-white p-6">
+      <p className="text-sm text-neutral-600">Drafts may be incomplete. Publishing requires title, start time, location name, address, city, state, and ZIP.</p>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-1 text-sm">
           <span className="font-medium">District</span>
@@ -63,7 +64,7 @@ export default function NrcsEventForm({
           </select>
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">Status</span>
+          <span className="font-medium">Status (select Published only after review)</span>
           <select name="status" defaultValue={event?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">
             <option value="draft">Draft</option>
             <option value="published">Published</option>
@@ -74,13 +75,13 @@ export default function NrcsEventForm({
 
       <label className="grid gap-1 text-sm">
         <span className="font-medium">Title</span>
-        <input name="title" defaultValue={event?.title || ""} required className="rounded border border-neutral-300 px-3 py-2" />
+        <input name="title" defaultValue={event?.title || ""} className="rounded border border-neutral-300 px-3 py-2" />
       </label>
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Start</span>
-          <input name="start_at" type="datetime-local" defaultValue={dateTimeLocalValue(event?.start_at)} required className="rounded border border-neutral-300 px-3 py-2" />
+          <input name="start_at" type="datetime-local" defaultValue={dateTimeLocalValue(event?.start_at)} className="rounded border border-neutral-300 px-3 py-2" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">End</span>
@@ -91,23 +92,23 @@ export default function NrcsEventForm({
       <div className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Location Name</span>
-          <input name="location_name" defaultValue={event?.location_name || ""} required className="rounded border border-neutral-300 px-3 py-2" />
+          <input name="location_name" defaultValue={event?.location_name || ""} className="rounded border border-neutral-300 px-3 py-2" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Address</span>
-          <input name="address" defaultValue={event?.address || ""} required className="rounded border border-neutral-300 px-3 py-2" />
+          <input name="address" defaultValue={event?.address || ""} className="rounded border border-neutral-300 px-3 py-2" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">City</span>
-          <input name="city" defaultValue={event?.city || ""} required className="rounded border border-neutral-300 px-3 py-2" />
+          <input name="city" defaultValue={event?.city || ""} className="rounded border border-neutral-300 px-3 py-2" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">State</span>
-          <input name="state" defaultValue={event?.state || "IA"} required className="rounded border border-neutral-300 px-3 py-2" />
+          <input name="state" defaultValue={event?.state || ""} className="rounded border border-neutral-300 px-3 py-2" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Zip</span>
-          <input name="zip" defaultValue={event?.zip || ""} required className="rounded border border-neutral-300 px-3 py-2" />
+          <input name="zip" defaultValue={event?.zip || ""} className="rounded border border-neutral-300 px-3 py-2" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Classification</span>
