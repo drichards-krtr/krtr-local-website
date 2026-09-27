@@ -94,6 +94,8 @@ async function updateStaff(formData: FormData) {
   await requireNrcsStaff("admin");
 
   const id = String(formData.get("id") || "");
+  const displayNameInput = String(formData.get("display_name") || "").trim();
+  const displayName = displayNameInput || null;
   const role = getRole(formData.get("role"));
   const active = formData.get("active") === "on";
   const districtKeys = formData
@@ -101,10 +103,14 @@ async function updateStaff(formData: FormData) {
     .map((value) => String(value || "").trim().toLowerCase())
     .filter(Boolean);
 
+  if (!id || displayNameInput.length > 120) {
+    redirect(`/users?error=${encodeURIComponent("A valid user and display name are required.")}`);
+  }
+
   const service = createNrcsServiceClient();
   const { error } = await service
     .from("nrcs_staff_profiles")
-    .update({ role, active })
+    .update({ display_name: displayName, role, active })
     .eq("id", id);
 
   if (error) {
@@ -283,7 +289,16 @@ export default async function NrcsUsersPage({
               <div>{row.email}</div>
               <div className="text-xs text-neutral-500">Last seen: {row.last_seen_at || "-"}</div>
             </div>
-            <div>{row.display_name || "-"}</div>
+            <label className="grid content-start gap-1">
+              <span className="sr-only">Display name for {row.email}</span>
+              <input
+                name="display_name"
+                defaultValue={row.display_name || ""}
+                maxLength={120}
+                placeholder="Display name"
+                className="min-w-0 rounded border border-neutral-300 px-2 py-1 text-sm"
+              />
+            </label>
             <select name="role" defaultValue={row.role} className="rounded border border-neutral-300 px-2 py-1 text-sm">
               {NRCS_ROLES.map((role) => (
                 <option key={role} value={role}>
@@ -312,7 +327,7 @@ export default async function NrcsUsersPage({
               Active
             </label>
             <div className="flex flex-wrap gap-3">
-              <button className="underline">Save</button>
+              <button className="font-semibold underline">Save Changes</button>
               <button formAction={sendPasswordReset} name="email" value={row.email} className="underline">
                 Reset
               </button>
