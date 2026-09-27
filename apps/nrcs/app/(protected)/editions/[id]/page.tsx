@@ -19,6 +19,7 @@ import {
 } from "@/lib/programs";
 import { createNrcsServerClient } from "@/lib/server";
 import NrcsEditionGraphics from "@/components/NrcsEditionGraphics";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -78,7 +79,8 @@ const SEGMENT_KINDS = ["Intro", "News", "Events", "Weather", "Sports Scores", "U
 
 export default async function NrcsEditionPage({ params, searchParams }: PageProps) {
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
+  const canDeleteItems = hasNrcsRoleAtLeast(profile.role, "editor");
   const supabase = await createNrcsServerClient();
 
   const [{ data: edition, error: editionError }, { data: rundownItems, error: rundownError }] = await Promise.all([
@@ -191,7 +193,7 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
               <label className="grid gap-1 text-sm">
                 <span className="font-medium">Status</span>
                 <select name="status" defaultValue={editionRow.status} className="rounded border border-neutral-300 px-3 py-2">
-                  {EDITION_STATUSES.map((status) => (
+                  {EDITION_STATUSES.filter((status) => status !== "archived" || canDeleteItems).map((status) => (
                     <option key={status} value={status}>{status}</option>
                   ))}
                 </select>
@@ -370,11 +372,11 @@ export default async function NrcsEditionPage({ params, searchParams }: PageProp
                         </form>
                       </>
                     )}
-                    <form action={deleteRundownItem}>
+                    {canDeleteItems && <form action={deleteRundownItem}>
                       <input type="hidden" name="edition_id" value={editionRow.id} />
                       <input type="hidden" name="item_id" value={item.id} />
                       <button className="rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-700">Remove Item</button>
-                    </form>
+                    </form>}
                   </div>
                 </article>
               );

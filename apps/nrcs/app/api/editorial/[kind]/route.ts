@@ -8,12 +8,13 @@ import { SOCIAL_DESTINATIONS } from "@/lib/outputs";
 import { normalizeSlug } from "@/lib/stories";
 import { getCloudinaryCredentials } from "@/lib/cloudinary";
 import { processPublicationDelivery, queuePublication } from "@/lib/publicationDelivery";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export async function GET(request: Request, context: { params: Promise<{ kind: string }> }) {
   const staff = await getCurrentNrcsStaff();
   if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (staff.profile.role === "contributor") return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+  if (!hasNrcsRoleAtLeast(staff.profile.role, "editor")) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
   if ((await context.params).kind !== "homepage") return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {
     const params = new URL(request.url).searchParams;
@@ -105,8 +106,10 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
     const districts = await getNrcsDistrictContext();
     const district = districts.allowedDistricts.find(d => d.district_key === body.district_key);
     if (!district) return NextResponse.json({ error: "District is not accessible." }, { status: 403 });
-    const editor = staff.profile.role !== "contributor";
-    if (["homepage", "alert", "daily", "edition-media"].includes(kind) && !editor) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+    const editor = hasNrcsRoleAtLeast(staff.profile.role, "editor");
+    const producer = hasNrcsRoleAtLeast(staff.profile.role, "producer");
+    if (["homepage", "alert", "daily"].includes(kind) && !editor) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+    if (kind === "edition-media" && !producer) return NextResponse.json({ error: "Producers, editors, or admins only." }, { status: 403 });
     function date(value: unknown) {
       if (!value) return null;
       const local = text(value, 19);

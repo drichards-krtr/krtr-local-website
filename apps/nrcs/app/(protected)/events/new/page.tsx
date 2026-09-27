@@ -7,6 +7,7 @@ import { getEventPayloadFromForm } from "@/lib/eventForms";
 import type { EventClassificationTerm } from "@/lib/eventClassifications";
 import { syncNrcsEventById } from "@/lib/eventSyncServer";
 import { createNrcsServiceClient, createNrcsServerClient } from "@/lib/server";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
   if (syncResult.ok) {
@@ -56,7 +57,7 @@ export default async function NewEventPage({
   searchParams?: Promise<{ district?: string; error?: string }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  await requireNrcsStaff("contributor");
+  const { profile } = await requireNrcsStaff("contributor");
   const { activeDistrict, allowedDistricts } = await getNrcsDistrictContext();
   const districtKey =
     resolvedSearchParams?.district && allowedDistricts.some((district) => district.district_key === resolvedSearchParams.district)
@@ -86,6 +87,7 @@ export default async function NewEventPage({
         selectedDistrictKey={districtKey}
         terms={(terms || []) as EventClassificationTerm[]}
         submitLabel="Save Event"
+        canArchive={hasNrcsRoleAtLeast(profile.role, "editor")}
       />
     </div>
   );

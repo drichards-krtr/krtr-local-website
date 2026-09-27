@@ -557,7 +557,7 @@ export default async function EditStoryPage({
   const { profile } = await requireNrcsStaff("contributor");
   const { allowedDistricts } = await getNrcsDistrictContext();
   const supabase = await createNrcsServerClient();
-  const canManageProduction = hasNrcsRoleAtLeast(profile.role, "editor");
+  const canManageProduction = hasNrcsRoleAtLeast(profile.role, "producer");
 
   const { data: story, error: storyError } = await supabase
     .from("nrcs_stories")

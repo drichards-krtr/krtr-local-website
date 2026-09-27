@@ -5,6 +5,7 @@ import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
 import { formatDateTimeInTimeZone, getDateTextInTimeZone, getDayRangeInTimeZone } from "@/lib/localDates";
 import { createNrcsServerClient } from "@/lib/server";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 import {
   createProgram,
   getNextLiveEditionToday,
@@ -61,7 +62,8 @@ export default async function NrcsProgramsPage({
   searchParams?: Promise<{ district?: string; program?: string; week?: string; error?: string; success?: string }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
-  await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
+  const canManagePrograms = hasNrcsRoleAtLeast(profile.role, "editor");
   const { activeDistrict, allowedDistricts } = await getNrcsDistrictContext();
   const districtKey =
     resolvedSearchParams.district && allowedDistricts.some((district) => district.district_key === resolvedSearchParams.district)
@@ -177,7 +179,7 @@ export default async function NrcsProgramsPage({
         <NrcsEditionCalendar editions={calendarItems} weekStart={weekStart} />
       </section>
 
-      <section className="rounded border border-neutral-200 bg-white p-5">
+      {canManagePrograms && <section className="rounded border border-neutral-200 bg-white p-5">
         <h2 className="text-lg font-semibold">Create Program</h2>
         <form action={createProgram} className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]">
           <input type="hidden" name="district_key" value={districtKey} />
@@ -188,14 +190,14 @@ export default async function NrcsProgramsPage({
           </label>
           <button className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Create Program</button>
         </form>
-      </section>
+      </section>}
 
       <section className="grid gap-4">
         {programRows.map((program) => {
           const programTemplates = templatesByProgram.get(program.id) || [];
           return (
             <article key={program.id} className="grid gap-5 rounded border border-neutral-200 bg-white p-5">
-              <form action={updateProgram} className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+              {canManagePrograms ? <form action={updateProgram} className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
                 <input type="hidden" name="program_id" value={program.id} />
                 <input type="hidden" name="district_key" value={districtKey} />
                 <label className="grid gap-1 text-sm">
@@ -207,16 +209,16 @@ export default async function NrcsProgramsPage({
                   Enabled
                 </label>
                 <button className="self-end rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Save Program</button>
-              </form>
+              </form> : <h2 className="text-lg font-semibold">{program.name}</h2>}
 
               <div className="grid gap-3 border-t border-neutral-100 pt-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="font-semibold">Templates</h3>
-                  <Link href={`/templates/new?program=${program.id}`} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Create Template</Link>
+                  {canManagePrograms && <Link href={`/templates/new?program=${program.id}`} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Create Template</Link>}
                 </div>
                 {programTemplates.map((template) => (
                   <div key={template.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 py-3">
-                    <Link href={`/templates/${template.id}`} className="font-medium underline">{template.name}</Link>
+                    {canManagePrograms ? <Link href={`/templates/${template.id}`} className="font-medium underline">{template.name}</Link> : <span className="font-medium">{template.name}</span>}
                     <div className="flex flex-wrap items-center gap-3">
                       {!template.enabled && <span className="text-sm text-neutral-500">Disabled</span>}
                       {template.enabled && program.enabled && <Link href={`/editions/new?template=${template.id}`} className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Create Rundown from Template</Link>}

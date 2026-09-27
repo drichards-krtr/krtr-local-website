@@ -16,7 +16,7 @@ function one<T>(value: T | T[] | null | undefined) {
 }
 
 export async function GET(request: Request) {
-  await requireNrcsStaff("editor");
+  await requireNrcsStaff("producer");
 
   const url = new URL(request.url);
   const districtKey = String(url.searchParams.get("district") || "").trim().toLowerCase();

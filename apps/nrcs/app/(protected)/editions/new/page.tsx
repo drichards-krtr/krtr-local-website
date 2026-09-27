@@ -5,7 +5,7 @@ import { createEdition, EDITION_PRODUCTION_MODES } from "@/lib/programs";
 import { createNrcsServerClient } from "@/lib/server";
 
 export default async function NewEditionPage({ searchParams }: { searchParams: Promise<{ template?: string }> }) {
-  await requireNrcsStaff("editor");
+  await requireNrcsStaff("producer");
   const query = await searchParams;
   const supabase = await createNrcsServerClient();
   const { data: template, error } = await supabase.from("nrcs_program_templates").select("id, program_id, name, enabled").eq("id", query.template || "").maybeSingle();

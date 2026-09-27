@@ -10,6 +10,7 @@ import { syncNrcsEventById } from "@/lib/eventSyncServer";
 import { createNrcsServerClient, createNrcsServiceClient } from "@/lib/server";
 import { FollowUpCreateForm, FollowUpList, type FollowUpRow } from "@/components/NrcsWorkflowPanels";
 import { recordRecentItem } from "@/lib/workflow";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
   if (syncResult.ok) {
@@ -40,6 +41,9 @@ async function updateEvent(formData: FormData) {
 
   if (payloadError || !payload) {
     redirect(`/events/${id}?district=${fallbackDistrictKey}&error=${encodeURIComponent(payloadError || "Invalid event")}`);
+  }
+  if (payload.status === "archived" && !hasNrcsRoleAtLeast(profile.role, "editor")) {
+    redirect(`/events/${id}?district=${fallbackDistrictKey}&error=${encodeURIComponent("Only editors or admins can archive an Event.")}`);
   }
 
   const service = await createNrcsServerClient();
@@ -202,6 +206,7 @@ export default async function EditEventPage({
         selectedDistrictKey={event.district_key}
         terms={(terms || []) as EventClassificationTerm[]}
         submitLabel="Save Changes"
+        canArchive={hasNrcsRoleAtLeast(profile.role, "editor")}
       />
       <section className="grid gap-4">
         <h2 className="text-lg font-semibold">Workflow</h2>

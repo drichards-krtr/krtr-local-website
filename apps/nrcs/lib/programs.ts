@@ -11,6 +11,7 @@ import {
 } from "./localDates";
 import { plainTextToHtml, sanitizeRichTextHtml } from "./richText";
 import { createNrcsServerClient } from "./server";
+import { hasNrcsRoleAtLeast } from "./roles";
 
 export const EDITION_STATUSES = ["draft", "ready", "recorded", "aired", "archived"] as const;
 export const EDITION_PRODUCTION_MODES = ["live", "recorded"] as const;
@@ -76,7 +77,7 @@ async function nextSortOrder(editionId: string) {
 export async function createEdition(formData: FormData) {
   "use server";
 
-  const { profile } = await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
   const programId = String(formData.get("program_id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
   const airAtInput = String(formData.get("air_at") || "").trim();
@@ -169,9 +170,12 @@ export async function createEdition(formData: FormData) {
 export async function updateEdition(formData: FormData) {
   "use server";
 
-  const { profile } = await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
   const id = String(formData.get("edition_id") || "");
   const status = String(formData.get("status") || "draft");
+  if (status === "archived" && !hasNrcsRoleAtLeast(profile.role, "editor")) {
+    redirect(`/editions/${id}?error=${encodeURIComponent("Only editors or admins can archive an Edition.")}`);
+  }
   const productionMode = String(formData.get("production_mode") || "recorded");
   const airAtInput = String(formData.get("air_at") || "").trim();
   const recordingAtInput = String(formData.get("recording_at") || "").trim() || null;
@@ -201,7 +205,7 @@ export async function updateEdition(formData: FormData) {
 export async function addRundownItem(formData: FormData) {
   "use server";
 
-  const { profile } = await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
   const editionId = String(formData.get("edition_id") || "");
   const itemType = String(formData.get("item_type") || "script") as RundownItemType;
   let title = String(formData.get("title") || "").trim();
@@ -447,7 +451,7 @@ export async function deleteTemplateItem(formData: FormData) {
 export async function addStoryToRundown(formData: FormData) {
   "use server";
 
-  const { profile } = await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
   const editionId = String(formData.get("edition_id") || "");
   const storyId = String(formData.get("story_id") || "");
   const copyVersionId = String(formData.get("copy_version_id") || "");
@@ -502,7 +506,7 @@ export async function addStoryToRundown(formData: FormData) {
 export async function updateRundownItem(formData: FormData) {
   "use server";
 
-  const { profile } = await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
   const editionId = String(formData.get("edition_id") || "");
   const itemId = String(formData.get("item_id") || "");
   const itemType = String(formData.get("item_type") || "");
@@ -543,7 +547,7 @@ export async function deleteRundownItem(formData: FormData) {
 export async function moveRundownItem(formData: FormData) {
   "use server";
 
-  await requireNrcsStaff("editor");
+  await requireNrcsStaff("producer");
   const editionId = String(formData.get("edition_id") || "");
   const itemId = String(formData.get("item_id") || "");
   const direction = String(formData.get("direction") || "up");
@@ -571,7 +575,7 @@ export async function moveRundownItem(formData: FormData) {
 export async function carryStoryItemToTomorrow(formData: FormData) {
   "use server";
 
-  const { profile } = await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
   const editionId = String(formData.get("edition_id") || "");
   const itemId = String(formData.get("item_id") || "");
   const mode = String(formData.get("carry_mode") || "same");

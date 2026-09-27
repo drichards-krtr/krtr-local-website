@@ -1,4 +1,4 @@
-export const NRCS_ROLES = ["admin", "editor", "contributor"] as const;
+export const NRCS_ROLES = ["admin", "editor", "producer", "contributor"] as const;
 
 export type NrcsRole = (typeof NRCS_ROLES)[number];
 
@@ -18,8 +18,9 @@ export function isNrcsRole(value: string): value is NrcsRole {
 }
 
 export function roleRank(role: NrcsRole) {
-  if (role === "admin") return 3;
-  if (role === "editor") return 2;
+  if (role === "admin") return 4;
+  if (role === "editor") return 3;
+  if (role === "producer") return 2;
   return 1;
 }
 

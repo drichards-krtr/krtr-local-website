@@ -3,6 +3,7 @@ import { getCurrentNrcsStaff } from "@/lib/auth";
 import { createNrcsServerClient } from "@/lib/server";
 import { uploadGeneratedImage } from "@/lib/cloudinary";
 import { GRAPHIC_BUILDERS, UUID_PATTERN } from "@/lib/graphics";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   const staff = await getCurrentNrcsStaff();
@@ -30,11 +31,11 @@ export async function POST(request: Request) {
     if (!canAccess) return NextResponse.json({ error: "District is not accessible." }, { status: 403 });
     if (storyId) {
       const { data: story } = await supabase.from("nrcs_stories").select("district_key, created_by").eq("id", storyId).maybeSingle();
-      if (!story || story.district_key !== district || staff.profile.role === "contributor" && story.created_by !== staff.profile.id) return NextResponse.json({ error: "Story is not editable." }, { status: 403 });
+      if (!story || story.district_key !== district || !hasNrcsRoleAtLeast(staff.profile.role, "producer") && story.created_by !== staff.profile.id) return NextResponse.json({ error: "Story is not editable." }, { status: 403 });
     }
     if (editionId) {
       const { data: edition } = await supabase.from("nrcs_editions").select("district_key").eq("id", editionId).maybeSingle();
-      if (!edition || edition.district_key !== district || staff.profile.role === "contributor") return NextResponse.json({ error: "Edition is not editable." }, { status: 403 });
+      if (!edition || edition.district_key !== district || !hasNrcsRoleAtLeast(staff.profile.role, "producer")) return NextResponse.json({ error: "Edition is not editable." }, { status: 403 });
     }
     if (itemId) {
       const { data: item } = await supabase.from("nrcs_rundown_items").select("edition_id").eq("id", itemId).maybeSingle();

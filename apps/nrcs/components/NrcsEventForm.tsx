@@ -32,6 +32,7 @@ type Props = {
   selectedDistrictKey: string;
   terms: EventClassificationTerm[];
   submitLabel: string;
+  canArchive?: boolean;
 };
 
 function dateTimeLocalValue(value: string | null | undefined) {
@@ -45,6 +46,7 @@ export default function NrcsEventForm({
   selectedDistrictKey,
   terms,
   submitLabel,
+  canArchive = false,
 }: Props) {
   const districtKey = event?.district_key || selectedDistrictKey;
   const sortedTerms = sortClassificationTerms(terms);
@@ -68,7 +70,7 @@ export default function NrcsEventForm({
           <select name="status" defaultValue={event?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">
             <option value="draft">Draft</option>
             <option value="published">Published</option>
-            <option value="archived">Archived</option>
+            {(canArchive || event?.status === "archived") && <option value="archived">Archived</option>}
           </select>
         </label>
       </div>

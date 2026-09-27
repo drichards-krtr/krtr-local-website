@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { label: "Homepage & Alerts", href: "/homepage", minimumRole: "editor" },
   { label: "Dailies", href: "/dailies", minimumRole: "editor" },
   { label: "CMS Deliveries", href: "/publishing", minimumRole: "editor" },
-  { label: "Programs", href: "/programs", minimumRole: "editor" },
+  { label: "Programs", href: "/programs", minimumRole: "producer" },
   { label: "Events", href: "/events" },
   { label: "Graphics", href: "/graphics" },
   { label: "Schools & Co-ops", href: "/schools", minimumRole: "editor" },

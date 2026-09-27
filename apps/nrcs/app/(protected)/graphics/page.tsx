@@ -6,6 +6,7 @@ import { getNrcsDistrictContext } from "@/lib/districts";
 import { generatorDocument } from "@/lib/generators/document";
 import { GRAPHIC_BUILDERS, type GraphicBuilder, type GraphicContext, type SchoolIdentity } from "@/lib/graphics";
 import NrcsGraphicBuilder from "@/components/NrcsGraphicBuilder";
+import { hasNrcsRoleAtLeast } from "@/lib/roles";
 
 export default async function GraphicsPage({searchParams}: {searchParams:Promise<{district?:string;builder?:string;story?:string;edition?:string;item?:string}>}) {
   const {profile} = await requireNrcsStaff();
@@ -20,13 +21,13 @@ export default async function GraphicsPage({searchParams}: {searchParams:Promise
   if(query.story) {
     const {data:story,error} = await supabase.from("nrcs_stories").select("title,district_key,created_by").eq("id",query.story).maybeSingle();
     if(error) throw new Error(error.message);
-    if(!story || story.district_key!==districtKey || profile.role==="contributor" && story.created_by!==profile.id) notFound();
+    if(!story || story.district_key!==districtKey || !hasNrcsRoleAtLeast(profile.role,"producer") && story.created_by!==profile.id) notFound();
     context.label=story.title;
   }
   if(query.edition) {
     const {data:edition,error} = await supabase.from("nrcs_editions").select("title,district_key").eq("id",query.edition).maybeSingle();
     if(error) throw new Error(error.message);
-    if(!edition || edition.district_key!==districtKey || profile.role==="contributor") notFound();
+    if(!edition || edition.district_key!==districtKey || !hasNrcsRoleAtLeast(profile.role,"producer")) notFound();
     context.label=edition.title;
     if(query.item) {
       const {data:item,error:itemError} = await supabase.from("nrcs_rundown_items").select("title,edition_id").eq("id",query.item).maybeSingle();

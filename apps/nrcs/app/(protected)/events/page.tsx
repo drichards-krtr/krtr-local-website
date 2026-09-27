@@ -77,7 +77,7 @@ async function duplicateEvent(formData: FormData) {
 
 async function archiveEvent(formData: FormData) {
   "use server";
-  await requireNrcsStaff("contributor");
+  await requireNrcsStaff("editor");
 
   const id = String(formData.get("id") || "");
   const districtKey = String(formData.get("district_key") || "dlpc");
@@ -266,11 +266,11 @@ export default async function NrcsEventsPage({
                 <input type="hidden" name="id" value={event.id} />
                 <button className="underline">Duplicate</button>
               </form>
-              <form action={archiveEvent}>
+              {hasNrcsRoleAtLeast(staff.profile.role, "editor") && <form action={archiveEvent}>
                 <input type="hidden" name="id" value={event.id} />
                 <input type="hidden" name="district_key" value={districtKey} />
                 <button className="underline">Archive</button>
-              </form>
+              </form>}
             </div>
           </div>
         ))}
