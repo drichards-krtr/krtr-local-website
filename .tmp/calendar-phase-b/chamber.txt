@@ -1,0 +1,1481 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:LPC Chamber of Commerce
+X-WR-TIMEZONE:America/Chicago
+X-WR-CALDESC:This calendar is home to events and activities held by members
+  and sponsors of the La Porte City Chamber of Commerce. To submit an event\
+ , email the Chamber at membership@lpccommerce.com.
+BEGIN:VTIMEZONE
+TZID:America/Chicago
+X-LIC-LOCATION:America/Chicago
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0600
+TZOFFSETTO:-0500
+TZNAME:CDT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0600
+TZNAME:CST
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTART:20260720T230000Z
+DTEND:20260721T010000Z
+DTSTAMP:20260923T205330Z
+UID:7jt1i7hi6hv7bkacufg3k3smr7@google.com
+CREATED:20260530T204827Z
+DESCRIPTION:<p>Open to the public\, board meetings are held monthly in the 
+ library beginning at 6:00PM. Public comments are welcome at the beginning o
+ f the meeting but limited to three minutes per speaker. To view the agenda 
+ and accompanying material\, visit <a href="https://www.lpcpubliclibrary.org
+ /board-of-trustees.">https://www.lpcpubliclibrary.org/board-of-trustees.</a
+ ></p><p>To join the meeting via Zoom\, click the link below:</p><p><a href=
+ "https://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVbRHq1L2uaQ2SYX.1
+ ">https://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVbRHq1L2uaQ2SYX.
+ 1</a><br>Meeting ID: 835 1694 1639<br>Passcode: 120867</p><p><strong>ACCESS
+ IBILITY:</strong> For accessibility requests or questions\, please contact 
+ library staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org
+ .</p>
+LAST-MODIFIED:20260530T204827Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Library Board Meeting
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260618T220000Z
+DTEND:20260619T000000Z
+DTSTAMP:20260923T205330Z
+UID:2phdp1h78rgvegasr3spkcqbg2@google.com
+CREATED:20260530T202458Z
+DESCRIPTION:<p>The library is thrilled to help kick off the Festival of Tra
+ ils with a fun-filled evening at City Park. We’ve planned a variety of acti
+ vities to keep the energy high and the smiles wide.</p><p>A highlight of th
+ e event will be the Kids' Parade—a chance for the little ones to show off t
+ heir spirit! While you're there\, enjoy some fresh popcorn on us and challe
+ nge your friends to a variety of yard games. It’s the perfect way to start 
+ the festival weekend with community\, food\, and games. </p><p><strong>ACCE
+ SSIBILITY:</strong> For accessibility requests or questions\, please contac
+ t library staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.o
+ rg.</p>
+LAST-MODIFIED:20260530T202458Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Festivities in City Park | Kids' Parade
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260620T150000Z
+DTEND:20260620T190000Z
+DTSTAMP:20260923T205330Z
+UID:0uagrt7q9e9clk7fh86gk290bq@google.com
+CREATED:20260530T202556Z
+DESCRIPTION:<p>Get ready for some serious outdoor fun! The library is excit
+ ed to host The Dealt Hand for a special day of yard games.</p><p>Forget the
+  standard board games for a day and step outside to enjoy a curated collect
+ ion of oversized and high-energy yard games. Whether you're a fan of the cl
+ assics or looking to discover a new competitive favorite\, the experts from
+  The Dealt Hand will be there to facilitate the fun and ensure everyone kno
+ ws the rules. It’s the perfect way to soak up the sun\, stay active\, and e
+ njoy some friendly competition with your community.</p><p><strong>ACCESSIBI
+ LITY:</strong> For accessibility requests or questions\, please contact lib
+ rary staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.</
+ p>
+LAST-MODIFIED:20260530T202556Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Yard Games With The Dealt Hand
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260513T210000Z
+DTEND:20260513T220000Z
+DTSTAMP:20260923T205330Z
+UID:5km5jgppcjl6t7d3p8valh66vm@google.com
+CREATED:20260427T193041Z
+DESCRIPTION:Calling all young innovators and aspiring engineers! Our STEM L
+ ab for Tweens &amp\; Teens invites kids aged 8 to 17 to turn imagination in
+ to reality. Using the library’s fully-stocked STEM cart—packed with everyth
+ ing from basic circuits to structural engineering supplies—participants are
+  challenged to design and build their own unique inventions.<br><br>This ha
+ nds-on program encourages critical thinking\, problem-solving\, and creativ
+ e experimentation in a collaborative environment. Whether you're building a
+  bridge\, a motorized gadget\, or a secret machine\, the only limit is your
+  curiosity! No prior engineering experience is required—just bring your big
+  ideas and get ready to create.<br><br><strong>ACCESSIBILITY:</strong> For 
+ accessibility requests or questions\, please contact library staff by calli
+ ng 319-342-3025 or emailing info@lpcpubliclibrary.org.  <br><br><b>FOR DETA
+ ILS\, VISIT:</b> <a href="https://www.lpcpubliclibrary.org/calendar">https:
+ //www.lpcpubliclibrary.org/calendar</a>
+LAST-MODIFIED:20260427T193502Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:STEM Lab For Tweens & Teens | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_STEMLab.jpg;FMTTYPE=image/jpeg:https://drive.
+ google.com/open?id=1fJB7ZKPY5yuXBF0Hm5wdQSG2g97cxFxV
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260706T140000Z
+DTEND:20260706T200000Z
+DTSTAMP:20260923T205330Z
+UID:15llgkf9qpnofja9jb204brogo@google.com
+CREATED:20260530T204411Z
+DESCRIPTION:<p>Enjoy a full day at the library with movies all day! You'll 
+ pick popular\, family-friendly movies rated G or PG\, making it the perfect
+  outing for viewers of all ages. Grab a comfortable seat\, settle in\, and 
+ enjoy a cinematic experience with your community.</p><p><strong>ACCESSIBILI
+ TY:</strong> For accessibility requests or questions\, please contact libra
+ ry staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T204411Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Movies All
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260526T230000Z
+DTEND:20260527T000000Z
+DTSTAMP:20260923T205330Z
+UID:5mlsfsjcv3u7h17p7b0ktn9sp3@google.com
+CREATED:20260427T194026Z
+DESCRIPTION:<p>Expand your reading palate with the Novel Notions Book Club\
+ , an adult-oriented group that meets on the fourth Tuesday of every month. 
+ We typically dive into fiction titles\, exploring a variety of cozy\, comfo
+ rtable\, and contemporary reads. Whether you're a long-time reader or looki
+ ng for a new community\, join us for an engaging monthly discussion.</p><p>
+ <strong>THIS MONTH'S BOOK: </strong><i>The Cat Who Saved the Library</i> (2
+ 025) by Sosuke Natsukama</p><p><strong>JOIN US REMOTELY VIA ZOOM: </strong>
+ <a href="https://us06web.zoom.us/j/83962334648?pwd=ab8SF3E4bFjheF9I8VrT0raD
+ OxKnAf.1">https://us06web.zoom.us/j/83962334648?pwd=ab8SF3E4bFjheF9I8VrT0ra
+ DOxKnAf.1</a></p><p><strong>ACCESSIBILITY:</strong> For accessibility reque
+ sts or questions\, please contact library staff by calling 319-342-3025 or 
+ emailing info@lpcpubliclibrary.org.</p><p><b>FOR DETAILS\, VISIT: </b><a hr
+ ef="https://www.lpcpubliclibrary.org/calendar">https://www.lpcpubliclibrary
+ .org/calendar</a></p>
+LAST-MODIFIED:20260427T212732Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Novel Notions Book Club | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_EventActivity.jpg;FMTTYPE=image/jpeg:https://
+ drive.google.com/open?id=13ClSk6XZj7ZUgykxWiwc2Y_T4kz8TZYf
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260619T210000Z
+DTEND:20260619T230000Z
+DTSTAMP:20260923T205330Z
+UID:0p4fg74lqeso113eqblvgh7nfc@google.com
+CREATED:20260512T155917Z
+DESCRIPTION:We will have CR Xpress playing bluegrass\, country\, or folk mu
+ sic upon request and for the kids we will have face painting! Free will don
+ ation at the door is appreciated.<br><br>For details\, visit <a href="https
+ ://www.laportecitymuseum.org/event-details/festival-of-trails-at-the-ffa-mu
+ seum"><u>https://www.laportecitymuseum.org/event-details/festival-of-trails
+ -at-the-ffa-museum</u></a>.
+LAST-MODIFIED:20260512T155917Z
+LOCATION:408 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Festival of Trails at the Museum
+TRANSP:OPAQUE
+ATTACH;FILENAME=CR Xpress.png;FMTTYPE=image/png:https://drive.google.com/op
+ en?id=1nTlyavln7qS7uCnKcCSUlTfyBR9ddt8Y
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260609T203000Z
+DTEND:20260609T223000Z
+DTSTAMP:20260923T205330Z
+UID:6tf5124fmdid4321dsk49k2114@google.com
+CREATED:20260530T201516Z
+DESCRIPTION:<p>Calling all young innovators and aspiring engineers! Our STE
+ M Lab for Tweens &amp\; Teens invites kids aged 8 to 17 to turn imagination
+  into reality. Using the library’s fully stocked STEM cart—packed with ever
+ ything from basic circuits to structural engineering supplies—participants 
+ are challenged to design and build their own unique inventions.</p><p>This 
+ hands-on program encourages critical thinking\, problem-solving\, and creat
+ ive experimentation in a collaborative environment. Whether you're building
+  a bridge\, a motorized gadget\, or a secret machine\, the only limit is yo
+ ur curiosity! No prior engineering experience is required—just bring your b
+ ig ideas and get ready to create.</p><p><strong>ACCESSIBILITY:</strong> For
+  accessibility requests or questions\, please contact library staff by call
+ ing 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T201516Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:STEM Lab For Tweens & Teens
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260630T210000Z
+DTEND:20260630T220000Z
+DTSTAMP:20260923T205330Z
+UID:09tme7atmiiaqu4skjd4u8o5qf@google.com
+CREATED:20260530T203637Z
+DESCRIPTION:<p>Are you passionate about a specific series\, game\, movie\, 
+ or niche hobby? Now is your chance to take the stage at the Academy of Fand
+ oms!</p><p>This program is designed for teens and young adults to share the
+ ir expertise and enthusiasm with a like-minded community. Participants are 
+ invited to deliver a presentation on a topic of their choosing—whether it’s
+  a deep dive into lore\, a character analysis\, or a history of your favori
+ te franchise.</p><p>To kick things off\, our first session will feature a s
+ taff member demonstration to show you exactly how it’s done and provide som
+ e inspiration for your own future presentations. Best of all? Snacks will b
+ e provided to fuel your fandom-fueled discussions!</p><p><strong>ACCESSIBIL
+ ITY:</strong> For accessibility requests or questions\, please contact libr
+ ary staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.</p
+ >
+LAST-MODIFIED:20260530T203637Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Academy Of Fandoms
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260722T230000Z
+DTEND:20260723T000000Z
+DTSTAMP:20260923T205330Z
+UID:742sc4gov2vgj18c6pu5edkpvv@google.com
+CREATED:20260530T204902Z
+DESCRIPTION:<p>Ready to enjoy the fruits of your labor? Join us for Harvest
+ ing Basics\, a specialized workshop featuring expert presenters from the Io
+ wa State University Master Gardeners. This session is designed to help gard
+ eners of all levels learn the best practices for gathering their homegrown 
+ produce. The Master Gardeners will cover essential techniques for timing yo
+ ur harvest\, proper handling of different plant varieties\, and tips for pr
+ eserving your bounty.</p><p><strong>ACCESSIBILITY:</strong> For accessibili
+ ty requests or questions\, please contact library staff by calling 319-342-
+ 3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T204903Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Harvesting Basics With Master Gardeners
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260615T230000Z
+DTEND:20260616T010000Z
+DTSTAMP:20260923T205330Z
+UID:5bbhn02n4pqovff9nj7lu6e90i@google.com
+CREATED:20260530T202253Z
+DESCRIPTION:<p>Open to the public\, board meetings are held monthly in the 
+ library beginning at 6:00PM. Public comments are welcome at the beginning o
+ f the meeting but limited to three minutes per speaker. To view the agenda 
+ and accompanying material\, visit <a href="https://www.lpcpubliclibrary.org
+ /board-of-trustees.">https://www.lpcpubliclibrary.org/board-of-trustees.</a
+ ></p><p>To join the meeting via Zoom\, click the link below:</p><p><a href=
+ "https://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVbRHq1L2uaQ2SYX.1
+ ">https://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVbRHq1L2uaQ2SYX.
+ 1</a><br>Meeting ID: 835 1694 1639<br>Passcode: 120867</p><p><strong>ACCESS
+ IBILITY:</strong> For accessibility requests or questions\, please contact 
+ library staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org
+ .</p>
+LAST-MODIFIED:20260530T202253Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Library Board Meeting
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260514T210000Z
+DTEND:20260514T214500Z
+DTSTAMP:20260923T205330Z
+UID:2lb2igbi12s541o5io6mbekbp8@google.com
+CREATED:20260427T191600Z
+DESCRIPTION:Spark a love for reading at Family Storytime! Designed for chil
+ dren aged 3 to 6 and their caregivers\, this engaging program brings storie
+ s to life through lively read-alouds\, music\, and movement. After the stor
+ ies\, stay for interactive activities and a hands-on craft that kids can ta
+ ke home. It’s a wonderful way to build early literacy skills and meet other
+  families in the community. Join us for imagination and play!<br><br><stron
+ g>ACCESSIBILITY:</strong> For accessibility requests or questions\, please 
+ contact library staff by calling 319-342-3025 or emailing <a href="mailto:i
+ nfo@lpcpubliclibrary.org" target="_blank">info@lpcpubliclibrary.org</a>.<br
+ ><br><b>FOR DETAILS\, VISIT: </b><a href="https://www.lpcpubliclibrary.org/
+ calendar"><u>https://www.lpcpubliclibrary.org/calendar</u></a>
+LAST-MODIFIED:20260513T222027Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Family StoryTime | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_FamilyStoryTime.jpg;FMTTYPE=image/jpeg:https:
+ //drive.google.com/open?id=1orU71z7Qz-YKo4g1l3ZziaogW63DPDsw
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260601T140000Z
+DTEND:20260601T200000Z
+DTSTAMP:20260923T205330Z
+UID:5oj65oo6159if59bi1epjrglun@google.com
+CREATED:20260530T200954Z
+DESCRIPTION:<p>Join us at the library for the Plant a Seed\, Read Launch Pa
+ rty! Kick off a season of growth and discovery with a day dedicated to natu
+ re and stories.</p><p>Participants can enjoy a variety of crafts available 
+ throughout the day. We’ll also have exciting prizes to win for those who si
+ gn up for the Summer Reading Challenge and special take-home kits so you ca
+ n continue the planting and reading fun in your own backyard!</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T200954Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Plant A Seed\, Read Launch Party
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260713T180000Z
+DTEND:20260713T190000Z
+DTSTAMP:20260923T205330Z
+UID:0hf2bhpi5kf43p0um03l5rk3cr@google.com
+CREATED:20260530T204709Z
+DESCRIPTION:<p>This exciting\, multi-generational event is perfect for all 
+ ages\, offering a fun-filled hour of community connection and friendly comp
+ etition. Whether you're a seasoned pro or a first-time player\, come enjoy 
+ this interactive program designed to bring families together.</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T204709Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BINGO For Families
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260619T190000Z
+DTEND:20260619T220000Z
+DTSTAMP:20260923T205330Z
+UID:4cnmqv5bp2990uaqqf3mnmcdpm@google.com
+CREATED:20260530T202522Z
+LAST-MODIFIED:20260530T202522Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Closing Early
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260611T200000Z
+DTEND:20260611T220000Z
+DTSTAMP:20260923T205330Z
+UID:152b9p3o7sga5jjs7t596dqtfp@google.com
+CREATED:20260530T202159Z
+DESCRIPTION:<p>Enjoy a fun afternoon at the library with our Family Film pr
+ ogram held monthly! We’ll show a popular\, family-friendly movie rated G or
+  PG\, making it the perfect outing for viewers of all ages. Grab a comforta
+ ble seat\, settle in\, and enjoy a cinematic experience with your community
+ .</p><p><strong>ACCESSIBILITY:</strong> For accessibility requests or quest
+ ions\, please contact library staff by calling 319-342-3025 or emailing inf
+ o@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T202159Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Family Film
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260826T230000Z
+DTEND:20260827T010000Z
+DTSTAMP:20260923T205330Z
+UID:6ilh7p3kn2tp6irr386hue67lq@google.com
+CREATED:20260530T205436Z
+DESCRIPTION:<p>Expand your reading palate with a movie pairing! Having read
+  and discussed Heartburn by Nora Ephron\, enjoy the film. Even if you did n
+ ot attend the book discussion\, the film viewing is a great chance to engag
+ e with one another through film-appreciation discussion.</p><p><strong>ACCE
+ SSIBILITY:</strong> For accessibility requests or questions\, please contac
+ t library staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.o
+ rg.</p>
+LAST-MODIFIED:20260530T205436Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Heartburn (1986) Movie Viewing | Ages 17+
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260518T230000Z
+DTEND:20260519T010000Z
+DTSTAMP:20260923T205330Z
+UID:3uh8a6dk1b522ishnvpdg039um@google.com
+CREATED:20260427T193222Z
+DESCRIPTION:Open to the public\, board meetings are held monthly in the lib
+ rary beginning at 6:00PM. Public comments are welcome at the beginning of t
+ he meeting but limited to three minutes per speaker. To view the agenda and
+  accompanying material\, visit <a href="https://www.lpcpubliclibrary.org/bo
+ ard-of-trustees.">https://www.lpcpubliclibrary.org/board-of-trustees.</a><b
+ r><br>To join the meeting via Zoom\, click the link below:<br>Join Zoom Mee
+ ting: <a href="https://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVbR
+ Hq1L2uaQ2SYX.1">https://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVb
+ RHq1L2uaQ2SYX.1</a><br>Meeting ID: 835 1694 1639<br>Passcode: 120867<br><br
+ ><strong>ACCESSIBILITY:</strong> For accessibility requests or questions\, 
+ please contact library staff by calling 319-342-3025 or emailing info@lpcpu
+ bliclibrary.org.<br><br><b>FOR DETAILS\, VISIT:</b>  <a href="https://www.l
+ pcpubliclibrary.org/calendar">https://www.lpcpubliclibrary.org/calendar</a>
+LAST-MODIFIED:20260427T193504Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Board Meeting | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_BoardMtg.jpg;FMTTYPE=image/jpeg:https://drive
+ .google.com/open?id=147Bt_riX5t-d_B6WrsEE-D7YRXAvW5BF
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260812T200000Z
+DTEND:20260812T220000Z
+DTSTAMP:20260923T205330Z
+UID:49r7ohqgcfdrog0kk3h8gh22ej@google.com
+CREATED:20260530T205240Z
+DESCRIPTION:<p>Calling all young innovators and aspiring engineers! Our STE
+ M Lab for Tweens &amp\; Teens invites kids aged 8 to 17 to turn imagination
+  into reality. Using the library’s fully stocked STEM cart—packed with ever
+ ything from basic circuits to structural engineering supplies—participants 
+ are challenged to design and build their own unique inventions.</p><p>This 
+ hands-on program encourages critical thinking\, problem-solving\, and creat
+ ive experimentation in a collaborative environment. Whether you're building
+  a bridge\, a motorized gadget\, or a secret machine\, the only limit is yo
+ ur curiosity! No prior engineering experience is required—just bring your b
+ ig ideas and get ready to create.</p><p><strong>ACCESSIBILITY:</strong> For
+  accessibility requests or questions\, please contact library staff by call
+ ing 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T205240Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:STEM Lab For Tweens & Teens
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260708T200000Z
+DTEND:20260708T220000Z
+DTSTAMP:20260923T205330Z
+UID:00oojdbdhsbl754ec7bcrfbpvp@google.com
+CREATED:20260530T204608Z
+DESCRIPTION:<p>Calling all young innovators and aspiring engineers! Our STE
+ M Lab for Tweens &amp\; Teens invites kids aged 8 to 17 to turn imagination
+  into reality. Using the library’s fully stocked STEM cart—packed with ever
+ ything from basic circuits to structural engineering supplies—participants 
+ are challenged to design and build their own unique inventions.</p><p>This 
+ hands-on program encourages critical thinking\, problem-solving\, and creat
+ ive experimentation in a collaborative environment. Whether you're building
+  a bridge\, a motorized gadget\, or a secret machine\, the only limit is yo
+ ur curiosity! No prior engineering experience is required—just bring your b
+ ig ideas and get ready to create.</p><p><strong>ACCESSIBILITY:</strong> For
+  accessibility requests or questions\, please contact library staff by call
+ ing 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T204609Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:STEM Lab For Tweens & Teens
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260716T200000Z
+DTEND:20260716T220000Z
+DTSTAMP:20260923T205330Z
+UID:4mlkmp6mf07cbml8n2eade26s6@google.com
+CREATED:20260530T204756Z
+DESCRIPTION:<p>Enjoy a fun afternoon at the library with our Family Film pr
+ ogram held monthly! We’ll show a popular\, family-friendly movie rated G or
+  PG\, making it the perfect outing for viewers of all ages. Grab a comforta
+ ble seat\, settle in\, and enjoy a cinematic experience with your community
+ .</p><p><strong>ACCESSIBILITY:</strong> For accessibility requests or quest
+ ions\, please contact library staff by calling 319-342-3025 or emailing inf
+ o@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T204756Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Family Film
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260715T230000Z
+DTEND:20260716T010000Z
+DTSTAMP:20260923T205330Z
+UID:037l96pauvgf1be2emtv8slbfg@google.com
+CREATED:20260530T204736Z
+DESCRIPTION:<p>Join us for a Makerspace Drop-In session and unlock your cre
+ ativity! This program is designed for patrons who want to learn the ropes o
+ f our crafting technology in a relaxed\, low-pressure environment.</p><p>Du
+ ring this session\, we will provide a tutorial on how to use the Cricut mac
+ hine located in the Forge. Whether you're interested in custom vinyl decals
+ \, card making\, or heat-transfer designs\, our staff will be on hand to sh
+ ow you how to navigate the software and get the most out of the machine. No
+  registration is required—just stop by and start making!</p><p><strong>ACCE
+ SSIBILITY:</strong> For accessibility requests or questions\, please contac
+ t library staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.o
+ rg.</p>
+LAST-MODIFIED:20260530T204736Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Makerspace Drop-in
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260805T230000Z
+DTEND:20260805T234500Z
+DTSTAMP:20260923T205330Z
+UID:4clmimqtohffnl968kl3aktgam@google.com
+CREATED:20260530T205139Z
+DESCRIPTION:<p>Get ready for the coziest event of the season! Join us at th
+ e library for a special evening of Pajama Storytime. Kids are encouraged to
+  come dressed in their favorite pajamas and to bring along a stuffed animal
+  friend for stories and evening fun.</p><p>The adventure doesn't end when t
+ he stories are over! After storytime\, kids can tuck their stuffed animals 
+ in for a library sleepover. Our staff will capture photos of the animals’ o
+ vernight escapades around the library so you can see what they got into whi
+ le the building was closed.</p><p>Pick up your stuffed friends the next day
+  and see all the fun they had! </p><p><strong>ACCESSIBILITY:</strong> For a
+ ccessibility requests or questions\, please contact library staff by callin
+ g 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T205139Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Pajama StoryTime Sleepover
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260509T150000Z
+DTEND:20260509T190000Z
+DTSTAMP:20260923T205330Z
+UID:5dp40fluldi69ds26k486gte80@google.com
+CREATED:20260427T192827Z
+DESCRIPTION:Add a splash of color to your home or garden in our Painting Ce
+ ramic Pots workshop! This creative session invites participants of all ages
+  to transform a simple terracotta pot into a personalized work of art. Whet
+ her you prefer bold geometric patterns\, delicate floral designs\, or whims
+ ical characters\, this is your chance to let your imagination bloom.<br><br
+ >We provide the pots\, a vibrant palette of acrylic paints\, and all the br
+ ushes you’ll need. Our staff will be on hand to offer tips on layering colo
+ rs and sealing your design to ensure it stays bright\, whether it’s sitting
+  on a sunny windowsill or tucked into a flower bed. It’s the perfect way to
+  prep for spring planting!<br><br><strong>ACCESSIBILITY:</strong> For acces
+ sibility requests or questions\, please contact library staff by calling 31
+ 9-342-3025 or emailing info@lpcpubliclibrary.org.  <br><br><b>FOR DETAILS\,
+  VISIT: </b><a href="https://www.lpcpubliclibrary.org/calendar">https://www
+ .lpcpubliclibrary.org/calendar</a>
+LAST-MODIFIED:20260427T193422Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Painting Ceramics: A Craft Workshop | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=_LPCPL_MAY2026_PaintingCeramics.jpg;FMTTYPE=image/jpeg:http
+ s://drive.google.com/open?id=1SfrGUYSqFB-dWoFqa-6CxsczBeCfWx59
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260725T150000Z
+DTEND:20260725T190000Z
+DTSTAMP:20260923T205330Z
+UID:242mnr8l9defrmra1vn4a3orgp@google.com
+CREATED:20260530T204952Z
+DESCRIPTION:<p>Celebrate your summer achievements at our Ice Cream Party! T
+ his sweet event marks the official wrap-up of our Summer Learning Program\,
+  and we want to celebrate all the hard work our community has put into thei
+ r reading goals. Ice cream and crafts will be provided. </p><p><strong>ACCE
+ SSIBILITY:</strong> For accessibility requests or questions\, please contac
+ t library staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.o
+ rg.</p>
+LAST-MODIFIED:20260530T204952Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Ice Cream Party
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260618
+DTEND;VALUE=DATE:20260621
+DTSTAMP:20260923T205330Z
+UID:2if9td4vqp1su0i3apgdmqolvu@google.com
+CREATED:20260530T202429Z
+DESCRIPTION:<p>Tee off between the titles! Join us for Miniature Golf In Th
+ e Stacks\, where we transform the library aisles into a one-of-a-kind putti
+ ng green.</p><p>This program is available to play all day\, so you can drop
+  in whenever it fits your schedule. Navigate through the bookshelves\, dodg
+ e literary "hazards\," and aim for a hole-in-one right next to your favorit
+ e genres. It’s a fun\, unique way for golfers of all ages to explore the li
+ brary and enjoy some friendly competition.</p><p>No equipment is necessary—
+ we'll provide everything you need to play!</p><p><strong>ACCESSIBILITY:</st
+ rong> For accessibility requests or questions\, please contact library staf
+ f by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T202429Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Miniature Golf In The Stacks
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260819T200000Z
+DTEND:20260819T220000Z
+DTSTAMP:20260923T205330Z
+UID:2d8jvi19k3dfoadcj1c0l2r324@google.com
+CREATED:20260530T205347Z
+DESCRIPTION:<p>Capture the delicate beauty of nature in this unique hands-o
+ n session! At our Bleach Leaf Printing Workshop\, you’ll learn the artistic
+  process of using a gentle bleaching technique to strip away the color from
+  natural leaves\, leaving behind stunning\, lace-like skeletal structures.<
+ /p><p>This workshop is perfect for crafters looking to create one-of-a-kind
+  home decor\, botanical art\, or unique embellishments for journals and car
+ ds. We will provide all the necessary materials\, including a variety of le
+ aves and safety equipment. Whether you're a seasoned DIY-er or a curious be
+ ginner\, you'll leave with beautiful\, preserved specimens and the skills t
+ o continue the craft at home.</p><p><strong>ACCESSIBILITY:</strong> For acc
+ essibility requests or questions\, please contact library staff by calling 
+ 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T205347Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bleach Leaf Printing: A Craft Workshop
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Chicago:20260603T110000
+DTEND;TZID=America/Chicago:20260603T120000
+RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20260724T045959Z;BYDAY=WE
+DTSTAMP:20260923T205330Z
+UID:5rgm0se9413kfdbg23s5b48p3j@google.com
+CREATED:20260530T201145Z
+DESCRIPTION:<p>Pack your appetite and your imagination for Picnic in the Pa
+ rk! Join us at the City Park shelter for a perfect summer afternoon designe
+ d for kids and families.</p><p>We are proud to present this event as part o
+ f The Nourished Reader Project\, an initiative dedicated to feeding both th
+ e bodies and the minds of our community's youth. We’ll start with a delicio
+ us lunch under the trees\, followed by a read aloud by our library staff or
+  an outside presenter. To wrap up the fun\, everyone will gather at the pic
+ nic tables for a hands-on craft project where kids can get creative. It’s t
+ he ultimate combination of fresh air\, food\, and friendship!</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T201145Z
+LOCATION:City Park\, 600 4th St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Picnic In The Park
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260714T210000Z
+DTEND:20260714T220000Z
+DTSTAMP:20260923T205330Z
+UID:1cpt49rta5d9ko5a0asirkss4t@google.com
+CREATED:20260530T204444Z
+DESCRIPTION:<p>Are you passionate about a specific series\, game\, movie\, 
+ or niche hobby? Now is your chance to take the stage at the Academy of Fand
+ oms!</p><p>This program is designed for teens and young adults to share the
+ ir expertise and enthusiasm with a like-minded community. Participants are 
+ invited to deliver a presentation on a topic of their choosing—whether it’s
+  a deep dive into lore\, a character analysis\, or a history of your favori
+ te franchise.</p><p>To kick things off\, our first session will feature a s
+ taff member demonstration to show you exactly how it’s done and provide som
+ e inspiration for your own future presentations. Best of all? Snacks will b
+ e provided to fuel your fandom-fueled discussions!</p><p><strong>ACCESSIBIL
+ ITY:</strong> For accessibility requests or questions\, please contact libr
+ ary staff by calling 319-342-3025 or emailing <a href="mailto:info@lpcpubli
+ clibrary.org" target="_blank">info@lpcpubliclibrary.org</a>.</p>
+LAST-MODIFIED:20260530T204444Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Academy Of Fandoms
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260519T230000Z
+DTEND:20260520T010000Z
+DTSTAMP:20260923T205330Z
+UID:0l02h4vg5b3big2q5pq04gh4o7@google.com
+CREATED:20260427T193319Z
+DESCRIPTION:Join us for a relaxing drop-in session where creativity meets c
+ ommunity! Whether you’re working on a detailed coloring project or a person
+ al craft\, this is the perfect space to unwind and connect with others. No 
+ project? No problem! We provide high-quality supplies and intricate colorin
+ g pages to get you started. Enjoy a pressure-free\, supportive environment 
+ where you can share advice\, ask questions\, and create at your own pace. A
+ ll skill levels are welcome!<br><br><strong>ACCESSIBILITY:</strong> For acc
+ essibility requests or questions\, please contact library staff by calling 
+ 319-342-3025 or emailing info@lpcpubliclibrary.org.  <br><br><b>FOR DETAILS
+ \, VISIT: </b><a href="https://www.lpcpubliclibrary.org/calendar">https://w
+ ww.lpcpubliclibrary.org/calendar</a>
+LAST-MODIFIED:20260427T193547Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Color\, Craft\, & Connect | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_ColorCraftConnect.jpg;FMTTYPE=image/jpeg:http
+ s://drive.google.com/open?id=1gdFNvaHa1gsZLg8_P-ccvGbmJoyQu7C_
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260505T210000Z
+DTEND:20260505T220000Z
+DTSTAMP:20260923T205330Z
+UID:6rrbuek47vbdm0uus3s0a47jhv@google.com
+CREATED:20260427T191415Z
+DESCRIPTION:This exciting\, multi-generational event is perfect for all age
+ s\, offering a fun-filled hour of community connection and friendly competi
+ tion. Whether you're a seasoned pro or a first-time player\, come enjoy thi
+ s interactive program designed to bring families together.<br><br><strong>A
+ CCESSIBILITY:</strong> For accessibility requests or questions\, please con
+ tact library staff by calling 319-342-3025 or emailing <a href="mailto:info
+ @lpcpubliclibrary.org" target="_blank">info@lpcpubliclibrary.org</a>.<br><b
+ r><b>FOR DETAILS\, VISIT: </b><a href="https://www.lpcpubliclibrary.org/cal
+ endar"><u>https://www.lpcpubliclibrary.org/calendar</u></a>
+LAST-MODIFIED:20260427T193410Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BINGO For Families | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_Bingo.jpg;FMTTYPE=image/jpeg:https://drive.go
+ ogle.com/open?id=1VIBAlWiJ9LrhZQSJ72XatWUUwlCuJznC
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260527T230000Z
+DTEND:20260528T000000Z
+DTSTAMP:20260923T205330Z
+UID:0rdinpn1lo1bjvio1f75jbgd11@google.com
+CREATED:20260427T200032Z
+DESCRIPTION:Preserve the fleeting beauty of the season in our hands-on Flow
+ er Pressing Workshop! This program invites nature lovers of all ages to lea
+ rn the delicate art of botanical preservation. We will guide you through th
+ e best techniques for selecting\, preparing\, and pressing various blooms a
+ nd foliage to maintain their vibrant colors and intricate shapes.<br><br>Wh
+ ether you want to create unique bookmarks\, framed art\, or personalized st
+ ationery\, you'll leave with the skills to turn your garden favorites into 
+ lasting keepsakes. We provide all the necessary materials\, including a var
+ iety of fresh flowers and pressing supplies. Come capture a moment in time 
+ and take a piece of spring home with you!<br><br><strong>ACCESSIBILITY:</st
+ rong> For accessibility requests or questions\, please contact library staf
+ f by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.  <br><br><
+ b>FOR DETAILS\, VISIT: </b><a href="https://www.lpcpubliclibrary.org/calend
+ ar">https://www.lpcpubliclibrary.org/calendar</a>
+LAST-MODIFIED:20260427T212725Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Flower Pressing: A Craft Workshop | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_FlowerPressing.jpg;FMTTYPE=image/jpeg:https:/
+ /drive.google.com/open?id=1Z2owyP1J-cznKsHBX7QYZgOOVCXyDyeZ
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260730
+DTEND;VALUE=DATE:20260802
+DTSTAMP:20260923T205330Z
+UID:6sbgdt7304fird1io2n6a9kq12@google.com
+CREATED:20260530T205049Z
+DESCRIPTION:<p>Unleash your inner artist at our Perler Beads All Day event!
+  We’re putting out colorful fuse beads\, pegboards\, and patterns for you t
+ o design and create your very own pixel art masterpieces.</p><p>Whether you
+  want to make a keychain of your favorite character\, a colorful coaster\, 
+ or a unique 3D creation\, the possibilities are endless. Once your design i
+ s complete\, library staff will be on hand to help you iron and fuse your b
+ eads together so you can take your creation home the same day! This is a dr
+ op-in program\, so feel free to stop by anytime during library hours to get
+  crafting.</p><p><strong>ACCESSIBILITY:</strong> For accessibility requests
+  or questions\, please contact library staff by calling 319-342-3025 or ema
+ iling info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T205049Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Perler Beads All Day
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260615T180000Z
+DTEND:20260615T190000Z
+DTSTAMP:20260923T205330Z
+UID:1053304pmhtg29so4ho3pp7unk@google.com
+CREATED:20260530T202223Z
+DESCRIPTION:<p>This exciting\, multi-generational event is perfect for all 
+ ages\, offering a fun-filled hour of community connection and friendly comp
+ etition. Whether you're a seasoned pro or a first-time player\, come enjoy 
+ this interactive program designed to bring families together.</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T202223Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BINGO For Families
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260522T000000Z
+DTEND:20260522T010000Z
+DTSTAMP:20260923T205330Z
+UID:6cbi41luv1d90f1i80mhsornk6@google.com
+CREATED:20260512T155343Z
+DESCRIPTION:Learn all about butterflies from our very own Charlene Heiar. A
+ dmission is $5 for adults and $1 for students cash at the door. Cash or che
+ ck accepted. For details\, visit <a href="https://www.laportecitymuseum.org
+ /event-details/fragile-wings-of-wonder"><u>https://www.laportecitymuseum.or
+ g/event-details/fragile-wings-of-wonder</u></a>.
+LAST-MODIFIED:20260512T155343Z
+LOCATION:408 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Fragile Wings of Wonder
+TRANSP:OPAQUE
+ATTACH;FILENAME=Fragile Wings of Wonder (1).png;FMTTYPE=image/png:https://d
+ rive.google.com/open?id=1wcElYmwU7Zc4d25fq8L7Leq3eHylbQTN
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Chicago:20260626T170000
+DTEND;TZID=America/Chicago:20260626T200000
+RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20260823T045959Z;BYDAY=FR
+EXDATE;TZID=America/Chicago:20260703T170000
+DTSTAMP:20260923T205330Z
+UID:6ko4s7o0lrsmiokibnr2ce9boo@google.com
+CREATED:20260530T200826Z
+DESCRIPTION:<ul><li>June 26th: Dragon Express &amp\; Sonny's Burgers with B
+ ernie &amp\; Denny</li><li>July 10th: Diner 49er &amp\; Fryer Tucks with Be
+ auty &amp\; the Beat</li><li>July 17th: Vets BBQ &amp\; Fat Roy's Mexican w
+ ith Robert Yeltman</li><li>July 24th: Boyd's with Mya Burgart</li><li>July 
+ 31st: Sonny's Burgers &amp\; Chick-fil-A with Mic &amp\; Gerry Staebel</li>
+ <li>August 7th: Timmy's Tacos &amp\; Old Stone Bistro with Steel Snafu</li>
+ <li>August 14th: Vets BBQ &amp\; Old Stone Bistro with Mike Staebel &amp\; 
+ The Grifters</li><li>August 21st: Timmy's Tacos &amp\; Chick-fil-A with Mya
+  Burgart</li></ul>
+LAST-MODIFIED:20260530T203727Z
+LOCATION:200 Block of Downtown La Porte City\, Iowa
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Brick Street Market
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260902T230000Z
+DTEND:20260903T010000Z
+DTSTAMP:20260923T205330Z
+UID:0e57p5m1f81mo14qhp0iqtfra0@google.com
+CREATED:20260530T205500Z
+DESCRIPTION:<p>Step back in time and explore a traditional folk art! Join u
+ s for a Corn Husk Dolls Craft Workshop\, where you’ll learn how to transfor
+ m simple\, dried corn husks into charming\, handcrafted figures.</p><p>This
+  tactile\, hands-on workshop covers the foundational techniques of soaking\
+ , folding\, and tying husks to create unique dolls. You’ll have the opportu
+ nity to personalize your creation with different styles\, accessories\, and
+  natural materials. It’s a wonderful way to connect with heritage crafts an
+ d create a beautiful\, sustainable piece of autumn-inspired decor.</p><p><s
+ trong>ACCESSIBILITY:</strong> For accessibility requests or questions\, ple
+ ase contact library staff by calling 319-342-3025 or emailing info@lpcpubli
+ clibrary.org.</p>
+LAST-MODIFIED:20260530T205501Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Corn Husk Dolls: A Craft Workshop
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260610T230000Z
+DTEND:20260611T000000Z
+DTSTAMP:20260923T205330Z
+UID:5psq76prsnsvcd86srgae0j2ub@google.com
+CREATED:20260530T202130Z
+DESCRIPTION:<p>Join us for a Makerspace Drop-In session and unlock your cre
+ ativity! This program is designed for patrons who want to learn the ropes o
+ f our crafting technology in a relaxed\, low-pressure environment.</p><p>Du
+ ring this session\, we will provide a tutorial on how to use the Cricut mac
+ hine located in the Forge. Whether you're interested in custom vinyl decals
+ \, card making\, or heat-transfer designs\, our staff will be on hand to sh
+ ow you how to navigate the software and get the most out of the machine. No
+  registration is required—just stop by and start making!</p><p><strong>ACCE
+ SSIBILITY:</strong> For accessibility requests or questions\, please contac
+ t library staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.o
+ rg.</p>
+LAST-MODIFIED:20260530T202131Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Makerspace Drop-in
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260701T230000Z
+DTEND:20260702T010000Z
+DTSTAMP:20260923T205330Z
+UID:362mh6cf2uau9v6e6f87f6iltb@google.com
+CREATED:20260530T204343Z
+DESCRIPTION:<p>Join us for a special screening of the powerful documentary\
+ , From Iowa and Back: The Vietnam Era\, directed by Jeremy Glazier.</p><p>T
+ his deeply moving film explores the untold stories of Iowans who served dur
+ ing the Vietnam era. It captures the personal journeys of local veterans\, 
+ tracing their lives from their Iowa roots to the immense challenges of war 
+ and the complexities of life after returning home.</p><p>By highlighting th
+ ese firsthand accounts\, the documentary underscores the vital urgency of d
+ ocumenting these experiences\, ensuring that the voices\, sacrifices\, and 
+ legacies of our Iowan veterans are preserved for future generations. Follow
+ ing the film\, there will be an opportunity for community reflection and di
+ scussion.</p><p><strong>ACCESSIBILITY:</strong> For accessibility requests 
+ or questions\, please contact library staff by calling 319-342-3025 or emai
+ ling info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T204344Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Film Viewing | From Iowa And Back
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260824T190000Z
+DTEND:20260824T200000Z
+DTSTAMP:20260923T205330Z
+UID:7pigjh63f832k2kcrmsb3gm1b9@google.com
+CREATED:20260530T205402Z
+DESCRIPTION:<p>This exciting\, multi-generational event is perfect for all 
+ ages\, offering a fun-filled hour of community connection and friendly comp
+ etition. Whether you're a seasoned pro or a first-time player\, come enjoy 
+ this interactive program designed to bring families together.</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T205414Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BINGO For Families
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260603T210000Z
+DTEND:20260603T220000Z
+DTSTAMP:20260923T205330Z
+UID:59aura1ee6qqrn6gmurdstrb3j@google.com
+CREATED:20260530T201430Z
+DESCRIPTION:<p>This exciting\, multi-generational event is perfect for all 
+ ages\, offering a fun-filled hour of community connection and friendly comp
+ etition. Whether you're a seasoned pro or a first-time player\, come enjoy 
+ this interactive program designed to bring families together.</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T201430Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BINGO For Families
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260502T150000Z
+DTEND:20260502T190000Z
+DTSTAMP:20260923T205330Z
+UID:2qmm8q0ev3quhg0efrosepur2b@google.com
+CREATED:20260427T191006Z
+DESCRIPTION:<p>Celebrate the magic of the Wizarding World at the library wi
+ th our International Harry Potter Day marathon! Whether you’re a lifelong G
+ ryffindor or a curious Muggle\, join us for a spellbinding day dedicated to
+  the boy who lived.</p><p>We will be hosting a back-to-back screening of th
+ e first two cinematic masterpieces: <i>Harry Potter and the Sorcerer’s Ston
+ e</i> and <i>Harry Potter and the Chamber of Secrets</i>. Relive the wonder
+  of Harry’s first journey to Hogwarts\, from his discovery of Platform 9 ¾ 
+ to the mysteries hidden within the school’s ancient walls.</p><p>While the 
+ movies play\, fans of all ages can enjoy various passive crafts available t
+ hroughout the room. Station yourself at our "DIY Wand Workshop\," design yo
+ ur own house crest\, or try your hand at some magical coloring pages. These
+  self-paced activities are perfect for staying engaged while you immerse yo
+ urself in the films.</p><p>No registration is required\, and fans are encou
+ raged to wear their favorite robes or house colors. Grab some popcorn\, set
+ tle into the Great Hall (also known as the Roy Hawkins Community Room)\, an
+ d let the magic begin!</p><p><strong>ACCESSIBILITY:</strong> For accessibil
+ ity requests or questions\, please contact library staff by calling 319-342
+ -3025 or emailing <a href="mailto:info@lpcpubliclibrary.org" target="_blank
+ ">info@lpcpubliclibrary.org</a>.</p><p><b>FOR DETAILS\, VISIT: </b><a href=
+ "https://www.lpcpubliclibrary.org/calendar"><u>https://www.lpcpubliclibrary
+ .org/calendar</u></a></p>
+LAST-MODIFIED:20260427T193419Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:International Harry Potter Day | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_HarryPotterDay.jpg;FMTTYPE=image/jpeg:https:/
+ /drive.google.com/open?id=13V92ZSdCoD9FXrdPOVoSm15w_iJTsv2Q
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Chicago:20260623T180000
+DTEND;TZID=America/Chicago:20260623T190000
+RRULE:FREQ=MONTHLY;UNTIL=20270901T045959Z;BYDAY=4TU
+DTSTAMP:20260923T205330Z
+UID:7o0c6miq84510r2ukl6epldjbl@google.com
+CREATED:20260530T202740Z
+DESCRIPTION:<p>Expand your reading palate with the Novel Notions Book Club\
+ , an adult-oriented group that meets on the fourth Tuesday of every month. 
+ We typically dive into fiction titles\, exploring a variety of cozy\, comfo
+ rtable\, and contemporary reads. Whether you're a long-time reader or looki
+ ng for a new community\, join us for an engaging monthly discussion.</p><p>
+ <strong>ACCESSIBILITY:</strong> For accessibility requests or questions\, p
+ lease contact library staff by calling 319-342-3025 or emailing info@lpcpub
+ liclibrary.org.</p>
+LAST-MODIFIED:20260530T202740Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Novel Notions Book Club
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260707T210000Z
+DTEND:20260707T220000Z
+DTSTAMP:20260923T205330Z
+UID:0ca0rpnp7b3dgf8kbi4jlbluni@google.com
+CREATED:20260530T204436Z
+DESCRIPTION:<p>Are you passionate about a specific series\, game\, movie\, 
+ or niche hobby? Now is your chance to take the stage at the Academy of Fand
+ oms!</p><p>This program is designed for teens and young adults to share the
+ ir expertise and enthusiasm with a like-minded community. Participants are 
+ invited to deliver a presentation on a topic of their choosing—whether it’s
+  a deep dive into lore\, a character analysis\, or a history of your favori
+ te franchise.</p><p>To kick things off\, our first session will feature a s
+ taff member demonstration to show you exactly how it’s done and provide som
+ e inspiration for your own future presentations. Best of all? Snacks will b
+ e provided to fuel your fandom-fueled discussions!</p><p><strong>ACCESSIBIL
+ ITY:</strong> For accessibility requests or questions\, please contact libr
+ ary staff by calling 319-342-3025 or emailing <a href="mailto:info@lpcpubli
+ clibrary.org" target="_blank">info@lpcpubliclibrary.org</a>.</p>
+LAST-MODIFIED:20260530T204436Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Academy Of Fandoms
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260707T200000Z
+DTEND:20260707T220000Z
+DTSTAMP:20260923T205330Z
+UID:1qgouj1k9s2d6vrvcpqig7avpo@google.com
+CREATED:20260530T204521Z
+DESCRIPTION:<p>Join us for Wonders of Nature\, a special program led by exp
+ erts from the ISU Extension Service.</p><p>Designed specifically for adoles
+ cents\, this hands-on session dives into the local ecosystem\, wildlife\, a
+ nd environmental science that makes Iowa's landscape unique. Whether you're
+  interested in biology\, conservation\, or just enjoy being outside\, you'l
+ l gain a new perspective on the natural world through interactive activitie
+ s and expert-led demonstrations.</p><p><strong>ACCESSIBILITY:</strong> For 
+ accessibility requests or questions\, please contact library staff by calli
+ ng 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T204522Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Wonders Of Nature With ISU Extension Service
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260521T203000Z
+DTEND:20260521T220000Z
+DTSTAMP:20260923T205330Z
+UID:37qvea4js4imr65fjt2tmaug13@google.com
+CREATED:20260427T193729Z
+DESCRIPTION:Enjoy a fun afternoon at the library with our Family Film progr
+ am held monthly! We’ll show a popular\, family-friendly movie rated G or PG
+ \, making it the perfect outing for viewers of all ages. Grab a comfortable
+  seat\, settle in\, and enjoy a cinematic experience with your community.<b
+ r><br><strong>ACCESSIBILITY:</strong> For accessibility requests or questio
+ ns\, please contact library staff by calling 319-342-3025 or emailing info@
+ lpcpubliclibrary.org.  <br><br><b>FOR DETAILS\, VISIT: </b><a href="https:/
+ /www.lpcpubliclibrary.org/calendar">https://www.lpcpubliclibrary.org/calend
+ ar</a>
+LAST-MODIFIED:20260427T212730Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Family Film | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_FamilyFilm.jpg;FMTTYPE=image/jpeg:https://dri
+ ve.google.com/open?id=1cxYZIK8ZAhWSBA2KQmqZ1ONQfDPmPges
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260727T180000Z
+DTEND:20260727T190000Z
+DTSTAMP:20260923T205330Z
+UID:5v272dq0hak3fcg8fvlc5fvak3@google.com
+CREATED:20260530T205025Z
+DESCRIPTION:<p>This exciting\, multi-generational event is perfect for all 
+ ages\, offering a fun-filled hour of community connection and friendly comp
+ etition. Whether you're a seasoned pro or a first-time player\, come enjoy 
+ this interactive program designed to bring families together.</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T205025Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BINGO For Families
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260625
+DTEND;VALUE=DATE:20260628
+DTSTAMP:20260923T205330Z
+UID:6gjfqm1qo581k9dd3g0vb7qsff@google.com
+CREATED:20260530T203546Z
+DESCRIPTION:<p>Unleash your inner artist at our Perler Beads All Day event!
+  We’re putting out colorful fuse beads\, pegboards\, and patterns for you t
+ o design and create your very own pixel art masterpieces.</p><p>Whether you
+  want to make a keychain of your favorite character\, a colorful coaster\, 
+ or a unique 3D creation\, the possibilities are endless. Once your design i
+ s complete\, library staff will be on hand to help you iron and fuse your b
+ eads together so you can take your creation home the same day! This is a dr
+ op-in program\, so feel free to stop by anytime during library hours to get
+  crafting.</p><p><strong>ACCESSIBILITY:</strong> For accessibility requests
+  or questions\, please contact library staff by calling 319-342-3025 or ema
+ iling info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T203546Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Perler Beads All Day
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260602T220000Z
+DTEND:20260603T010000Z
+DTSTAMP:20260923T205330Z
+UID:4lht01njqki3d4hl0d2ifk2h52@google.com
+CREATED:20260530T201051Z
+DESCRIPTION:<p>Everyone is welcome to stop by the library for an afternoon 
+ of fun and games! The Dealt Hand will be bringing a massive selection of ga
+ mes for all ages and experience levels to play—and will be teaching newbies
+  and making recommendations. </p><p>Learn more at <a href="https://www.thed
+ ealthand.com/">https://www.thedealthand.com/</a></p><p><strong>ACCESSIBILIT
+ Y:</strong> For accessibility requests or questions\, please contact librar
+ y staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T201051Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Tabletop Games With The Dealt Hand
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260723T203000Z
+DTEND:20260723T213000Z
+DTSTAMP:20260923T205330Z
+UID:5gu4glr9fejqgkv1d3clhtbcvn@google.com
+CREATED:20260530T204928Z
+DESCRIPTION:<p>Take control of your financial future! The library is proud 
+ to partner with the ISU Extension Service to present an essential Financial
+  Literacy workshop.</p><p>This program is specifically designed for young a
+ dults and adults looking to build a solid financial foundation. Whether you
+ ’re navigating student loans\, planning for your first major purchase\, or 
+ simply wanting to sharpen your budgeting and saving skills\, our expert fac
+ ilitators will provide practical tools and strategies to help you manage yo
+ ur money with confidence.</p><p><strong>ACCESSIBILITY:</strong> For accessi
+ bility requests or questions\, please contact library staff by calling 319-
+ 342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T204928Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Financial Literacy With ISU Extension Service
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260508T210000Z
+DTEND:20260508T220000Z
+DTSTAMP:20260923T205330Z
+UID:16eo45qbg13ip7f34cfva3ov1f@google.com
+CREATED:20260427T191845Z
+DESCRIPTION:Brought to us by Iowa State University Extension and Outreach\,
+  learn about ways to help feed your family\, community\, country\, and the 
+ world with hands-on and research-based activities and learning opportunitie
+ s focused on gardening and growing. Lessons centered around spring and summ
+ er.<br><br><strong>ACCESSIBILITY:</strong> For accessibility requests or qu
+ estions\, please contact library staff by calling 319-342-3025 or emailing 
+ info@lpcpubliclibrary.org.  <br><br><b>FOR DETAILS\, VISIT: </b><a href="ht
+ tps://www.lpcpubliclibrary.org/calendar">https://www.lpcpubliclibrary.org/c
+ alendar</a>
+LAST-MODIFIED:20260427T193417Z
+LOCATION:308 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Gardening To Give | LPC Public Library
+TRANSP:OPAQUE
+ATTACH;FILENAME=LPCPL_MAY2026_GardeningToGive.jpg;FMTTYPE=image/jpeg:https:
+ //drive.google.com/open?id=1Cz3Hb0imtX37NAdg07HhzggUOxNxmA92
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260603T230000Z
+DTEND:20260604T000000Z
+DTSTAMP:20260923T205330Z
+UID:1usb446hv15ubcgb0u05b4hq0c@google.com
+CREATED:20260512T155517Z
+DESCRIPTION:Bring your own beverage and create your own masterpiece. A $25 
+ entrance fee must be paid before the class date. Please preregister and mak
+ e your payment to secure your spot.<p dir="ltr">Space is limited! You can e
+ asily register by calling\, visiting in person\, emailing\, or clicking the
+  RSVP button at the top of the page. Cash or check accepted.</p>For details
+ \, visit <a href="https://www.laportecitymuseum.org/event-details/paint-par
+ take-1"><u>https://www.laportecitymuseum.org/event-details/paint-partake-1<
+ /u></a>.
+LAST-MODIFIED:20260512T155653Z
+LOCATION:408 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Paint and Partake
+TRANSP:OPAQUE
+ATTACH;FILENAME="Hooray for the Red, white and blue!.png";FMTTYPE=image/png
+ :https://drive.google.com/open?id=1i6Ed5AT0J9BZYnS6otmvKONDLKWdRKHW
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260721T210000Z
+DTEND:20260721T220000Z
+DTSTAMP:20260923T205330Z
+UID:3s50vh48c8i60e56275jgfnqrl@google.com
+CREATED:20260530T204451Z
+DESCRIPTION:<p>Are you passionate about a specific series\, game\, movie\, 
+ or niche hobby? Now is your chance to take the stage at the Academy of Fand
+ oms!</p><p>This program is designed for teens and young adults to share the
+ ir expertise and enthusiasm with a like-minded community. Participants are 
+ invited to deliver a presentation on a topic of their choosing—whether it’s
+  a deep dive into lore\, a character analysis\, or a history of your favori
+ te franchise.</p><p>To kick things off\, our first session will feature a s
+ taff member demonstration to show you exactly how it’s done and provide som
+ e inspiration for your own future presentations. Best of all? Snacks will b
+ e provided to fuel your fandom-fueled discussions!</p><p><strong>ACCESSIBIL
+ ITY:</strong> For accessibility requests or questions\, please contact libr
+ ary staff by calling 319-342-3025 or emailing <a href="mailto:info@lpcpubli
+ clibrary.org" target="_blank">info@lpcpubliclibrary.org</a>.</p>
+LAST-MODIFIED:20260530T204452Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Academy Of Fandoms
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260817T230000Z
+DTEND:20260818T010000Z
+DTSTAMP:20260923T205330Z
+UID:7pkn1fn7rvp2544lhjm81blfou@google.com
+CREATED:20260530T205307Z
+DESCRIPTION:<p>Open to the public\, board meetings are held monthly in the 
+ library beginning at 6:00PM. Public comments are welcome at the beginning o
+ f the meeting but limited to three minutes per speaker. To view the agenda 
+ and accompanying material\, visit <a href="https://www.lpcpubliclibrary.org
+ /board-of-trustees.">https://www.lpcpubliclibrary.org/board-of-trustees.</a
+ ></p><p>To join the meeting via Zoom\, click the link below:<br><a href="ht
+ tps://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVbRHq1L2uaQ2SYX.1">h
+ ttps://us06web.zoom.us/j/83516941639?pwd=7cHnVJH0UzZm71sVbRHq1L2uaQ2SYX.1</
+ a><br>Meeting ID: 835 1694 1639<br>Passcode: 120867</p><p><strong>ACCESSIBI
+ LITY:</strong> For accessibility requests or questions\, please contact lib
+ rary staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.</
+ p>
+LAST-MODIFIED:20260530T205307Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Library Board Meeting
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Chicago:20260616T180000
+DTEND;TZID=America/Chicago:20260616T200000
+RRULE:FREQ=MONTHLY;UNTIL=20270901T045959Z;BYDAY=3TU
+DTSTAMP:20260923T205330Z
+UID:2qrtipr17eapour7ht4sls0ta1@google.com
+CREATED:20260530T202343Z
+DESCRIPTION:<p>Join us for a relaxing drop-in session where creativity meet
+ s community! Whether you’re working on a detailed coloring project or a per
+ sonal craft\, this is the perfect space to unwind and connect with others. 
+ No project? No problem! We provide high-quality supplies and intricate colo
+ ring pages to get you started. Enjoy a pressure-free\, supportive environme
+ nt where you can share advice\, ask questions\, and create at your own pace
+ . All skill levels are welcome!</p><p><strong>ACCESSIBILITY:</strong> For a
+ ccessibility requests or questions\, please contact library staff by callin
+ g 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T202343Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Color\, Craft\, & Connect
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260804T210000Z
+DTEND:20260804T230000Z
+DTSTAMP:20260923T205330Z
+UID:3fvvgerhdpp2i7hqkqachulusf@google.com
+CREATED:20260530T205114Z
+DESCRIPTION:<p>Switch Tournament! We’re handing over the controllers to twe
+ ens and teens for two hours of high-energy\, head-to-head competition.</p><
+ p>Whether you're a seasoned pro or just looking to test your skills\, come 
+ to face off against your friends and fellow gamers. We’ll have a variety of
+  multiplayer favorites ready to go. Just bring your "A" game and a spirit o
+ f friendly competition!</p><p><strong>ACCESSIBILITY:</strong> For accessibi
+ lity requests or questions\, please contact library staff by calling 319-34
+ 2-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T205115Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Nintendo Switch Tournament
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260622T140000Z
+DTEND:20260622T200000Z
+DTSTAMP:20260923T205330Z
+UID:2csda3jpcd0kbkpfotvtvh2mne@google.com
+CREATED:20260530T202629Z
+DESCRIPTION:<p>Enjoy a full day at the library with movies all day! You'll 
+ pick popular\, family-friendly movies rated G or PG\, making it the perfect
+  outing for viewers of all ages. Grab a comfortable seat\, settle in\, and 
+ enjoy a cinematic experience with your community.</p><p><strong>ACCESSIBILI
+ TY:</strong> For accessibility requests or questions\, please contact libra
+ ry staff by calling 319-342-3025 or emailing info@lpcpubliclibrary.org.</p>
+LAST-MODIFIED:20260530T202629Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Movies All
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260709
+DTEND;VALUE=DATE:20260712
+DTSTAMP:20260923T205330Z
+UID:2m07t0idi71q4ukvsffiacdubf@google.com
+CREATED:20260530T204642Z
+DESCRIPTION:<p>Unleash your inner artist at our Perler Beads All Day event!
+  We’re putting out colorful fuse beads\, pegboards\, and patterns for you t
+ o design and create your very own pixel art masterpieces.</p><p>Whether you
+  want to make a keychain of your favorite character\, a colorful coaster\, 
+ or a unique 3D creation\, the possibilities are endless. Once your design i
+ s complete\, library staff will be on hand to help you iron and fuse your b
+ eads together so you can take your creation home the same day!</p><p><stron
+ g>ACCESSIBILITY:</strong> For accessibility requests or questions\, please 
+ contact library staff by calling 319-342-3025 or emailing info@lpcpubliclib
+ rary.org.</p>
+LAST-MODIFIED:20260530T204642Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Perler Beads All Day
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260609T150000Z
+DTEND:20260609T160000Z
+DTSTAMP:20260923T205330Z
+UID:0p9sohbnhjh7oo6gvo4idqppo7@google.com
+CREATED:20260512T155641Z
+DESCRIPTION:We will be playing a variety of classic children's games that a
+ re sure to bring smiles and laughter to everyone.<br><table><colgroup><col 
+ /></colgroup><tbody><tr><td><p dir="ltr">For a $5 admission fee your grade 
+ school child will come spend an hour playing and learning. Please preregist
+ er and pay in advance by cash or check.</p><p dir="ltr">For details\, visit
+  <a href="https://www.laportecitymuseum.org/event-details/summer-at-the-mus
+ eum-june"><u>https://www.laportecitymuseum.org/event-details/summer-at-the-
+ museum-june</u></a>.</p></td></tr></tbody></table>
+LAST-MODIFIED:20260512T155642Z
+LOCATION:408 Main St\, La Porte City\, IA 50651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Summer at the Museum
+TRANSP:OPAQUE
+ATTACH;FILENAME=FFA Historical & Ag Museum.png;FMTTYPE=image/png:https://dr
+ ive.google.com/open?id=1vXtrrDND0YbNOb7plIYdcxbM-8hY0g3S
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260810T180000Z
+DTEND:20260810T190000Z
+DTSTAMP:20260923T205330Z
+UID:0cnu4fqqq1niehk2qb6s5g6ebi@google.com
+CREATED:20260530T205217Z
+DESCRIPTION:<p>This exciting\, multi-generational event is perfect for all 
+ ages\, offering a fun-filled hour of community connection and friendly comp
+ etition. Whether you're a seasoned pro or a first-time player\, come enjoy 
+ this interactive program designed to bring families together.</p><p><strong
+ >ACCESSIBILITY:</strong> For accessibility requests or questions\, please c
+ ontact library staff by calling 319-342-3025 or emailing info@lpcpubliclibr
+ ary.org.</p>
+LAST-MODIFIED:20260530T205217Z
+LOCATION:La Porte City Public Library\, 308 Main St\, La Porte City\, IA 50
+ 651\, USA
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BINGO For Families
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR
