@@ -47,7 +47,7 @@ async function duplicateEvent(formData: FormData) {
   const { data: event, error } = await service
     .from("nrcs_events")
     .select(
-      "district_key, title, body_html, location_name, address, city, state, zip, location, start_at, end_at, image_url, classification_term_id"
+      "district_key, title, body_html, notes, location_name, address, city, state, zip, location, start_at, end_at, image_url, classification_term_id"
     )
     .eq("id", id)
     .maybeSingle();

@@ -170,8 +170,9 @@ If a requested Story is not visible, stop and report the problem. Do not recreat
 8. Select one Classification when applicable, or leave it as **None**.
 9. Use the Cloudinary Event Image control to upload or select an image. Verify the image preview.
 10. Enter Details in the rich-text editor.
-11. Choose **Save Event**.
-12. Verify both the NRCS save confirmation and the CMS delivery result shown after save.
+11. Enter newsroom-only information in **Internal Notes**. Notes remain in NRCS and are never sent to CMS or displayed publicly.
+12. Choose **Save Event**.
+13. Verify both the NRCS save confirmation and the CMS delivery result shown after save.
 
 Drafts may be incomplete. Publishing requires title, start time, location name, address, city, state, and ZIP.
 

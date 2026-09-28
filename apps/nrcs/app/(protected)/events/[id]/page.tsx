@@ -86,7 +86,7 @@ export default async function EditEventPage({
   const { data, error } = await service
     .from("nrcs_events")
     .select(
-      "id, district_key, title, body_html, location_name, address, city, state, zip, start_at, end_at, image_url, status, classification_term_id"
+      "id, district_key, title, body_html, notes, location_name, address, city, state, zip, start_at, end_at, image_url, status, classification_term_id"
     )
     .eq("id", id)
     .maybeSingle();

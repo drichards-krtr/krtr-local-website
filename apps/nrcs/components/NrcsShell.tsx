@@ -8,18 +8,18 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Stories", href: "/stories" },
   { label: "Homepage & Alerts", href: "/homepage", minimumRole: "editor" },
-  { label: "Dailies", href: "/dailies", minimumRole: "editor" },
-  { label: "CMS Deliveries", href: "/publishing", minimumRole: "editor" },
   { label: "Programs", href: "/programs", minimumRole: "producer" },
   { label: "Events", href: "/events" },
   { label: "Graphics", href: "/graphics" },
-  { label: "Schools & Co-ops", href: "/schools", minimumRole: "editor" },
   { label: "Follow-Ups", href: "/follow-ups" },
-  { label: "Search", href: "/search" },
-  { label: "Intake", href: "/intake", minimumRole: "editor" },
+  { label: "Global Search", href: "/search" },
+  { label: "Story/Tips Intake", href: "/intake", minimumRole: "editor" },
+] as const;
+
+const ADMIN_NAV_ITEMS = [
+  { label: "CMS Deliveries", href: "/publishing", minimumRole: "editor" },
   { label: "Taxonomy", href: "/taxonomy", minimumRole: "editor" },
   { label: "Users", href: "/users", minimumRole: "admin" },
-  { label: "Migration", href: "/migrations", minimumRole: "admin" },
   { label: "Media Cleanup", href: "/media-cleanup", minimumRole: "admin" },
 ] as const;
 
@@ -35,6 +35,7 @@ export default function NrcsShell({
   const visibleItems = NAV_ITEMS.filter(
     (item) => !("minimumRole" in item) || hasNrcsRoleAtLeast(profile.role, item.minimumRole)
   );
+  const visibleAdminItems = ADMIN_NAV_ITEMS.filter((item) => hasNrcsRoleAtLeast(profile.role, item.minimumRole));
 
   return (
     <div className="min-h-screen bg-neutral-100 text-neutral-950">
@@ -56,6 +57,22 @@ export default function NrcsShell({
                 {item.label}
               </Link>
             ))}
+            {visibleAdminItems.length > 0 && (
+              <details className="group">
+                <summary className="cursor-pointer rounded px-3 py-2 font-semibold text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950">Admin</summary>
+                <div className="mt-1 grid gap-1 border-l border-neutral-200 pl-3">
+                  {visibleAdminItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="rounded px-3 py-2 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </details>
+            )}
           </nav>
         </aside>
         <div className="flex min-h-screen flex-1 flex-col">

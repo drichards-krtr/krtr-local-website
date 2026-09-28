@@ -48,9 +48,9 @@ export default async function GraphicsPage({searchParams}: {searchParams:Promise
   const defaultId = selection.data?.find(row=>row.is_default)?.school_id || null;
   return <div className="grid min-w-0 gap-5">
     <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-semibold">Graphics</h1>
-      <form className="flex gap-2"><input type="hidden" name="builder" value={builder} /><select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">{allowedDistricts.map(d=><option key={d.district_key} value={d.district_key}>{d.display_name}</option>)}</select><button className="rounded border border-neutral-300 px-3 py-2 text-sm">Apply</button></form>
+      <div className="flex flex-wrap gap-2">{hasNrcsRoleAtLeast(profile.role,"editor") && <Link href={`/schools?district=${districtKey}`} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Schools &amp; Co-ops</Link>}<form className="flex gap-2"><input type="hidden" name="builder" value={builder} /><select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">{allowedDistricts.map(d=><option key={d.district_key} value={d.district_key}>{d.display_name}</option>)}</select><button className="rounded border border-neutral-300 px-3 py-2 text-sm">Apply</button></form></div>
     </header>
-    {builder==="sports" && !selectedSchools.length && <p className="text-sm text-amber-800">No schools selected for this district.{profile.role!=="contributor" && <Link href={`/schools?district=${districtKey}`} className="ml-2 underline">Manage Schools</Link>}</p>}
+    {builder==="sports" && !selectedSchools.length && <p className="text-sm text-amber-800">No schools selected for this district.{hasNrcsRoleAtLeast(profile.role,"editor") && <Link href={`/schools?district=${districtKey}`} className="ml-2 underline">Manage Schools</Link>}</p>}
     <NrcsGraphicBuilder key={`${builder}-${districtKey}-${query.story||query.edition||""}-${query.item||""}`} builder={builder} context={context} categories={categories.data||[]} tags={tags.data||[]} documentHtml={generatorDocument(builder,selectedSchools,defaultId)} />
   </div>;
 }

@@ -45,6 +45,7 @@ export function getEventPayloadFromForm(formData: FormData, fallbackDistrictKey:
       district_key: String(formData.get("district_key") || fallbackDistrictKey).trim().toLowerCase(),
       title: title || null,
       body_html: sanitizeEventHtml(String(formData.get("body_html") || "")) || null,
+      notes: String(formData.get("notes") || "").trim().slice(0, 10000) || null,
       ...fields,
       start_at: startAt || null,
       end_at: String(formData.get("end_at") || "").trim() || null,

@@ -8,6 +8,7 @@ export type NrcsEventFormValue = {
   district_key: string;
   title: string | null;
   body_html: string | null;
+  notes: string | null;
   location_name: string | null;
   address: string | null;
   city: string | null;
@@ -135,6 +136,18 @@ export default function NrcsEventForm({
       <label className="grid gap-1 text-sm">
         <span className="font-medium">Details</span>
         <RichTextEditor name="body_html" initialHtml={event?.body_html || ""} />
+      </label>
+
+      <label className="grid gap-1 text-sm">
+        <span className="font-medium">Internal Notes</span>
+        <textarea
+          name="notes"
+          maxLength={10000}
+          defaultValue={event?.notes || ""}
+          rows={5}
+          placeholder="Internal newsroom notes. These are never sent to CMS or displayed publicly."
+          className="rounded border border-neutral-300 px-3 py-2"
+        />
       </label>
 
       <div className="flex gap-3">

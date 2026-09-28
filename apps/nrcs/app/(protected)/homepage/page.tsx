@@ -2,6 +2,7 @@ import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
 import { createNrcsServerClient } from "@/lib/server";
 import NrcsHomepageManager, { type HomepageLineup, type PriorityAlert } from "@/components/NrcsHomepageManager";
+import Link from "next/link";
 
 export default async function HomepagePage({ searchParams }: { searchParams: Promise<{ district?: string; story?: string; event?: string }> }) {
   await requireNrcsStaff("editor");
@@ -20,7 +21,7 @@ export default async function HomepagePage({ searchParams }: { searchParams: Pro
   if (lineup.error || alerts.error || currentAlert.error || alertDeliveries.error) throw new Error(lineup.error?.message || alerts.error?.message || currentAlert.error?.message || alertDeliveries.error?.message);
   const delivered = new Set((alertDeliveries.data || []).map(row => row.source_id));
   const alertRows = [...(currentAlert.data || []), ...(alerts.data || []).filter(a => !currentAlert.data?.some(c => c.id === a.id))].map(alert => ({ ...alert, has_delivery: delivered.has(alert.id) }));
-  return <div className="grid gap-5"><h1 className="text-2xl font-semibold">Homepage Editorial Controls</h1><form className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm"><span>District</span><select name="district" defaultValue={district.district_key} className="rounded border px-3 py-2">{context.allowedDistricts.map(d => <option key={d.district_key} value={d.district_key}>{d.display_name}</option>)}</select></label><button className="rounded border bg-white px-4 py-2 text-sm">Apply</button></form>
+  return <div className="grid gap-5"><header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-semibold">Homepage Editorial Controls</h1><Link href="/dailies" className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold">Manage Dailies</Link></header><form className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm"><span>District</span><select name="district" defaultValue={district.district_key} className="rounded border px-3 py-2">{context.allowedDistricts.map(d => <option key={d.district_key} value={d.district_key}>{d.display_name}</option>)}</select></label><button className="rounded border bg-white px-4 py-2 text-sm">Apply</button></form>
     <NrcsHomepageManager key={district.district_key} districtKey={district.district_key} timezone={district.timezone} initialLineup={lineup.data as HomepageLineup | null} initialAlerts={alertRows as PriorityAlert[]} initialTarget={params.story ? { type: "story", id: params.story } : params.event ? { type: "event", id: params.event } : null} />
   </div>;
 }

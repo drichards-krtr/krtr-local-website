@@ -103,6 +103,18 @@ function formatEventWindow(startAt: string, endAt: string | null) {
   return `${formatNaiveDateTime(startAt)} - ${formatNaiveDateTime(endAt)}`;
 }
 
+function eventDirections(event: EventItem) {
+  const destination = [event.address, event.city, [event.state, event.zip].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ") || event.location?.trim() || "";
+  if (!destination) return null;
+  const encoded = encodeURIComponent(destination);
+  return {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${encoded}`,
+    apple: `https://maps.apple.com/?daddr=${encoded}&dirflg=d`,
+  };
+}
+
 function startOfCurrentWeekSunday(dateText: string) {
   const [year, month, day] = dateText.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -148,6 +160,7 @@ function renderEventDetails(event: EventItem) {
   ].filter((link) => Boolean(link.url));
   const locationLines = formatEventLocation(event);
   const term = getClassification(event);
+  const directions = eventDirections(event);
 
   return (
     <div className="grid gap-3">
@@ -164,6 +177,19 @@ function renderEventDetails(event: EventItem) {
             <p key={line}>{line}</p>
           ))}
         </div>
+      )}
+      {directions && (
+        <section className="grid gap-2 border-t border-neutral-200 pt-3">
+          <h3 className="text-sm font-semibold">Get Directions</h3>
+          <div className="flex flex-wrap gap-2">
+            <a href={directions.google} target="_blank" rel="noreferrer" className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">
+              Google Maps
+            </a>
+            <a href={directions.apple} target="_blank" rel="noreferrer" className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">
+              Apple Maps
+            </a>
+          </div>
+        </section>
       )}
       {event.body_html ? (
         <div className="event-rich-text text-sm text-neutral-700" dangerouslySetInnerHTML={{ __html: event.body_html }} />
