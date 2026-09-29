@@ -84,7 +84,7 @@ if (process.argv.includes("--unit")) process.exit(0);
 
 const runtime = process.env.KRTR_TEST_NODE_MODULES;
 const { chromium } = runtime ? createRequire(path.join(runtime, "package.json"))("playwright") : require("playwright");
-const files = ["lib/localDates.ts", "lib/outputs.ts", "components/NrcsPublicationDelivery.tsx", "components/NrcsOutputEditor.tsx", "components/NrcsEditorialPicker.tsx", "components/NrcsHomepageManager.tsx", "components/NrcsCloudinaryAssetPicker.tsx"];
+const files = ["lib/localDates.ts", "lib/outputs.ts", "components/NrcsPublicationDelivery.tsx", "components/NrcsOutputEditor.tsx", "components/NrcsEditorialPicker.tsx", "components/NrcsHomepageManager.tsx", "components/NrcsCloudinaryPicker.tsx", "components/NrcsCloudinaryAssetPicker.tsx"];
 const modules = files.map(file => {
   const id = file.replace(/\.tsx?$/, "");
   const js = ts.transpileModule(readFileSync(path.join(root, file), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
@@ -109,9 +109,8 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const browser = await chromium.launch({ headless: true, channel: process.env.KRTR_TEST_BROWSER_CHANNEL || undefined });
 try {
   const page = await browser.newPage(); const errors = []; page.on("pageerror", e => errors.push(e.message));
-  await page.addInitScript(() => { window.cloudinary = { createMediaLibrary: (config, callbacks) => ({ show() { callbacks.insertHandler({ assets: [{ public_id: "fixture/image", secure_url: "https://res.cloudinary.com/fixture/image/upload/image.png" }] }); }, hide() {} }) }; });
   await page.addInitScript(() => { Object.defineProperty(navigator, "clipboard", { value: { writeText: async text => { window.phase6CopiedText = text; } } }); });
-  await page.route("**/api/cloudinary/signature", route => route.fulfill({ json: { cloudName: "fixture", apiKey: "fixture", folder: "krtr" } }));
+  await page.route("**/api/cloudinary/assets**", route => route.fulfill({ json: { assets: [{ id: "fixture-asset", public_id: "fixture/image", secure_url: "https://res.cloudinary.com/fixture/image/upload/image.png", width: 640, height: 360 }], nextCursor: null } }));
   await page.route("https://res.cloudinary.com/fixture/image/upload/image.png", route => route.fulfill({ contentType: "image/png", body: readFileSync(path.join(root, "public/graphics/legacy/union-knights.png")) }));
   let posted = [], fail = false;
   let deliveryAttempts = 0;
@@ -138,11 +137,13 @@ try {
   const url = `http://127.0.0.1:${server.address().port}`;
   await page.goto(url);
   await page.getByRole("button", { name: "Choose Image/Graphic", exact: true }).click();
+  await page.getByRole("button", { name: /fixture\/image/ }).click();
   await page.getByRole("button", { name: "Attach Selected", exact: true }).click();
   await page.getByText("Cloudinary image attached.", { exact: true }).waitFor();
   const web = page.locator("section").filter({ has: page.getByRole("heading", { name: "Web Output", exact: true }) });
   assert.equal(await web.locator('[name="copy_version_id"]').inputValue(), versionId);
   await web.getByRole("button", { name: "Choose Hero Image", exact: true }).click();
+  await page.getByRole("button", { name: /fixture\/image/ }).click();
   await web.getByRole("button", { name: "Use as Hero", exact: true }).click();
   await web.getByRole("button", { name: "Clear Hero Image", exact: true }).waitFor();
   assert.equal(await web.getByAltText("Selected Hero image").count(), 1);

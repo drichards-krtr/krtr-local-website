@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireNrcsStaff } from "@/lib/auth";
+import { getCloudinaryCredentials, signCloudinaryParameters } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,22 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const folder = String(body.folder || "krtr").trim() || "krtr";
+  if (body.upload === true) {
+    try {
+      const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const parameters = { folder, timestamp, unique_filename: "true" };
+      return NextResponse.json({
+        cloudName,
+        apiKey,
+        folder,
+        timestamp,
+        signature: signCloudinaryParameters(parameters, apiSecret),
+      }, { headers: { "Cache-Control": "private, no-store" } });
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to authorize the upload." }, { status: 500 });
+    }
+  }
   const directCloudConfig = parseCloudinaryConfigValue(process.env.CLOUDINARY_CLOUD_NAME, "CLOUDINARY_CLOUD_NAME");
   const publicCloudConfig = parseCloudinaryConfigValue(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME");
   const cloudinaryUrl = parseCloudinaryConfigValue(process.env.CLOUDINARY_URL, "CLOUDINARY_URL");
