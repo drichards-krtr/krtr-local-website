@@ -51,7 +51,8 @@ export async function POST(request: Request) {
     }
     const { data: existing } = await supabase.from("nrcs_assets").select("id, created_by").eq("id", id).maybeSingle();
     if (existing && existing.created_by !== staff.profile.id) return NextResponse.json({ error: "Request belongs to another user." }, { status: 403 });
-    const uploaded = await uploadGeneratedImage(file, `krtr/generated/${staff.profile.id}/${id}`);
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "graphic";
+    const uploaded = await uploadGeneratedImage(file, `krtr/generated/${staff.profile.id}/${slug}-${id}`, title);
     const settings = JSON.parse(String(form.get("settings") || "{}"));
     const { error } = await supabase.rpc("nrcs_register_generated_graphic", {
       p_asset: { id, title, district_key: district, category_id: categoryId, cloudinary_public_id: uploaded.publicId, cloudinary_url: uploaded.url, metadata: { generator: builder, settings, width: uploaded.width, height: uploaded.height } },

@@ -10,10 +10,12 @@ export type NrcsCloudinaryAsset = {
   height?: number | null;
   format?: string | null;
   created_at?: string | null;
+  display_name?: string | null;
+  filename?: string | null;
 };
 
 type LibraryResponse = { assets?: NrcsCloudinaryAsset[]; nextCursor?: string | null; error?: string };
-type UploadConfig = { cloudName?: string; apiKey?: string; folder?: string; timestamp?: string; signature?: string; error?: string };
+type UploadConfig = { cloudName?: string; apiKey?: string; folder?: string; timestamp?: string; signature?: string; parameters?: Record<string, string>; error?: string };
 
 export default function NrcsCloudinaryPicker({ label = "Choose from Cloudinary", onSelect }: { label?: string; onSelect: (asset: NrcsCloudinaryAsset) => void }) {
   const [open, setOpen] = useState(false);
@@ -62,16 +64,14 @@ export default function NrcsCloudinaryPicker({ label = "Choose from Cloudinary",
       const configResponse = await fetch("/api/cloudinary/signature", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folder: "krtr", upload: true }),
+        body: JSON.stringify({ folder: "krtr", upload: true, fileName: file.name }),
       });
       const config = await configResponse.json().catch(() => null) as UploadConfig | null;
       if (!configResponse.ok || !config?.cloudName || !config.apiKey || !config.timestamp || !config.signature) throw new Error(config?.error || "Unable to authorize the upload.");
       const body = new FormData();
       body.set("file", file);
       body.set("api_key", config.apiKey);
-      body.set("timestamp", config.timestamp);
-      body.set("folder", config.folder || "krtr");
-      body.set("unique_filename", "true");
+      for (const [key, value] of Object.entries(config.parameters || {})) body.set(key, value);
       body.set("signature", config.signature);
       const response = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, { method: "POST", body });
       const result = await response.json().catch(() => null) as NrcsCloudinaryAsset & { error?: { message?: string } } | null;
@@ -108,7 +108,7 @@ export default function NrcsCloudinaryPicker({ label = "Choose from Cloudinary",
         <div className="grid min-h-48 flex-1 grid-cols-2 gap-3 overflow-y-auto p-4 sm:grid-cols-3 lg:grid-cols-4">
           {assets.map((asset) => <button key={asset.id || asset.public_id} type="button" onClick={() => { onSelect(asset); setOpen(false); }} className="grid content-start gap-2 border border-neutral-200 bg-white p-2 text-left hover:border-neutral-700 focus:border-neutral-900">
             <span className="aspect-video w-full bg-neutral-100"><img src={asset.secure_url} alt="" className="h-full w-full object-contain" loading="lazy" /></span>
-            <span className="break-all text-xs font-medium">{asset.public_id.replace(/^krtr\//, "")}</span>
+            <span className="break-all text-xs font-medium">{asset.display_name || asset.filename || asset.public_id.replace(/^krtr\//, "")}</span>
             {(asset.width || asset.height) && <span className="text-xs text-neutral-500">{asset.width || "?"} × {asset.height || "?"}</span>}
           </button>)}
           {!loading && assets.length === 0 && <p className="col-span-full text-sm text-neutral-500">No matching images found.</p>}

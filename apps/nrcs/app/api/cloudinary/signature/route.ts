@@ -69,12 +69,22 @@ export async function POST(request: Request) {
     try {
       const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const parameters = { folder, timestamp, unique_filename: "true" };
+      const originalName = String(body.fileName || "image").replace(/\.[^.]+$/, "").replace(/[|=]/g, " ").replace(/\s+/g, " ").trim().slice(0, 180) || "image";
+      const parameters = {
+        context: `title=${originalName}|caption=${originalName}`,
+        display_name: originalName,
+        filename_override: String(body.fileName || `${originalName}.png`).replace(/[|=]/g, " ").slice(0, 220),
+        folder,
+        timestamp,
+        unique_filename: "true",
+        use_filename: "true",
+      };
       return NextResponse.json({
         cloudName,
         apiKey,
         folder,
         timestamp,
+        parameters,
         signature: signCloudinaryParameters(parameters, apiSecret),
       }, { headers: { "Cache-Control": "private, no-store" } });
     } catch (error) {

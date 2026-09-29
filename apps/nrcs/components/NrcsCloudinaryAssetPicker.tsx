@@ -23,7 +23,7 @@ export default function NrcsCloudinaryAssetPicker({ action, storyId, editionId, 
       <input type="hidden" name="asset_type" value="image" />
       <input type="hidden" name="cloudinary_url" value={selected?.secure_url || ""} />
       <input type="hidden" name="cloudinary_public_id" value={selected?.public_id || ""} />
-      <input type="hidden" name="title" value={selected?.public_id || "Cloudinary image"} />
+      <input type="hidden" name="title" value={selected?.display_name || selected?.filename || selected?.public_id || "Cloudinary image"} />
       <div className="flex flex-wrap items-center gap-3">
         <NrcsCloudinaryPicker label={label} onSelect={setSelected} />
         <button disabled={!selected?.secure_url} className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{submitLabel}</button>

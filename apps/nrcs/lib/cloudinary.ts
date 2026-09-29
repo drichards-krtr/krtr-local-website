@@ -24,12 +24,21 @@ export function getCloudinaryCredentials() {
 export function signCloudinaryParameters(parameters: Record<string, string>, secret: string) {
   return createHash("sha256").update(Object.keys(parameters).sort().map(key => `${key}=${parameters[key]}`).join("&") + secret).digest("hex");
 }
-export async function uploadGeneratedImage(file: Blob, publicId: string) {
+function cloudinaryText(value: string) {
+  return value.trim().replace(/[|=]/g, " ").replace(/\s+/g, " ").slice(0, 240);
+}
+export async function uploadGeneratedImage(file: Blob, publicId: string, title?: string) {
   const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
-  const parameters = { public_id: publicId, timestamp: String(Math.floor(Date.now() / 1000)), overwrite: "false" };
+  const cleanTitle = title ? cloudinaryText(title) : "";
+  const parameters: Record<string, string> = { public_id: publicId, timestamp: String(Math.floor(Date.now() / 1000)), overwrite: "false" };
+  if (cleanTitle) {
+    parameters.context = `title=${cleanTitle}|caption=${cleanTitle}`;
+    parameters.display_name = cleanTitle;
+    parameters.filename_override = `${cleanTitle}.png`;
+  }
   const body = new FormData();
   for (const [key, value] of Object.entries(parameters)) body.set(key, value);
-  body.set("file", file, "graphic.png");
+  body.set("file", file, cleanTitle ? `${cleanTitle}.png` : "graphic.png");
   body.set("api_key", apiKey);
   body.set("signature", signCloudinaryParameters(parameters, apiSecret));
   const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
