@@ -21,8 +21,18 @@ type Story = {
   title: string;
   tease: string | null;
   image_url: string | null;
+  article_media?: Array<{ url?: string | null }> | null;
   published_at: string | null;
 };
+
+const HOMEPAGE_STORY_SELECT = "id, slug, title, tease, image_url, article_media, published_at";
+
+function withResolvedStoryImage(story: Story): Story {
+  const articleImage = Array.isArray(story.article_media)
+    ? story.article_media.find((asset) => typeof asset?.url === "string" && asset.url.trim())?.url?.trim() || null
+    : null;
+  return { ...story, image_url: story.image_url || articleImage };
+}
 
 type HomePageContentProps = {
   siteScopeKey: SiteScopeKey;
@@ -88,7 +98,7 @@ async function getSlotStories(siteScopeKey: string) {
 
   const { data: stories, error: storiesError } = await supabase
     .from("stories")
-    .select("id, slug, title, tease, image_url, published_at")
+    .select(HOMEPAGE_STORY_SELECT)
     .eq("district_key", siteScopeKey)
     .eq("status", "published")
     .or(publishVisibilityFilter)
@@ -100,7 +110,10 @@ async function getSlotStories(siteScopeKey: string) {
   }
 
   const storiesById = new Map<string, Story>();
-  (stories || []).forEach((story) => storiesById.set(story.id, story as Story));
+  (stories || []).forEach((story) => {
+    const resolved = withResolvedStoryImage(story as unknown as Story);
+    storiesById.set(resolved.id, resolved);
+  });
   return { storiesById, slots: slots || [] };
 }
 
@@ -109,7 +122,7 @@ async function getRecentStories(siteScopeKey: string, skipIds: string[]) {
   const publishVisibilityFilter = `published_at.is.null,published_at.lte.${new Date().toISOString()}`;
   const { data, error } = await supabase
     .from("stories")
-    .select("id, slug, title, tease, image_url, published_at")
+    .select(HOMEPAGE_STORY_SELECT)
     .eq("district_key", siteScopeKey)
     .eq("status", "published")
     .or(publishVisibilityFilter)
@@ -121,12 +134,12 @@ async function getRecentStories(siteScopeKey: string, skipIds: string[]) {
     throw new Error(`[HomePageContent:getRecentStories] ${error.message}`);
   }
 
-  let stories = (data || []) as Story[];
+  let stories = (data || []).map((story) => withResolvedStoryImage(story as unknown as Story));
 
   if (!stories.length) {
     const { data: fallbackData, error: fallbackError } = await supabase
       .from("stories")
-      .select("id, slug, title, tease, image_url, published_at")
+      .select(HOMEPAGE_STORY_SELECT)
       .eq("district_key", siteScopeKey)
       .eq("status", "published")
       .or(publishVisibilityFilter)
@@ -143,7 +156,7 @@ async function getRecentStories(siteScopeKey: string, skipIds: string[]) {
       );
     }
 
-    stories = (fallbackData || []) as Story[];
+    stories = (fallbackData || []).map((story) => withResolvedStoryImage(story as unknown as Story));
   }
 
   return stories.filter((story) => !skipIds.includes(story.id));
