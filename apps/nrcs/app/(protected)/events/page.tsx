@@ -118,7 +118,7 @@ export default async function NrcsEventsPage({
     resolvedSearchParams?.district && allowedDistricts.some((district) => district.district_key === resolvedSearchParams.district)
       ? resolvedSearchParams.district
       : activeDistrict?.district_key || "dlpc";
-  const status = resolvedSearchParams?.status || "all";
+  const status = resolvedSearchParams?.status || "draft";
 
   const service = createNrcsServiceClient();
   let query = service
