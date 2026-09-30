@@ -19,8 +19,13 @@ export const dynamic = "force-dynamic";
 function getStoryPreviewImage(story: {
   image_url: string | null;
   mux_playback_id: string | null;
+  article_media?: Array<{ url?: string | null }> | null;
 }) {
   if (story.image_url) return story.image_url;
+  const articleImage = story.article_media?.find(
+    (asset) => typeof asset?.url === "string" && asset.url.trim()
+  )?.url?.trim();
+  if (articleImage) return articleImage;
   if (story.mux_playback_id) {
     return `https://image.mux.com/${story.mux_playback_id}/thumbnail.jpg?time=0`;
   }
