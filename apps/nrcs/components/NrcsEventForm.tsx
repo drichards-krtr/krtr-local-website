@@ -1,6 +1,7 @@
 import Link from "next/link";
 import RichTextEditor from "./RichTextEditor";
 import NrcsCloudinaryImageField from "./NrcsCloudinaryImageField";
+import NrcsEventLocationFields from "./NrcsEventLocationFields";
 import { sortClassificationTerms, type EventClassificationTerm } from "@/lib/eventClassifications";
 
 export type NrcsEventFormValue = {
@@ -19,6 +20,7 @@ export type NrcsEventFormValue = {
   image_url: string | null;
   status: string;
   classification_term_id: string | null;
+  location_id?: string | null;
 };
 
 type DistrictOption = {
@@ -93,26 +95,13 @@ export default function NrcsEventForm({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">Location Name</span>
-          <input name="location_name" defaultValue={event?.location_name || ""} className="rounded border border-neutral-300 px-3 py-2" />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">Address</span>
-          <input name="address" defaultValue={event?.address || ""} className="rounded border border-neutral-300 px-3 py-2" />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">City</span>
-          <input name="city" defaultValue={event?.city || ""} className="rounded border border-neutral-300 px-3 py-2" />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">State</span>
-          <input name="state" defaultValue={event?.state || ""} className="rounded border border-neutral-300 px-3 py-2" />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">Zip</span>
-          <input name="zip" defaultValue={event?.zip || ""} className="rounded border border-neutral-300 px-3 py-2" />
-        </label>
+        <NrcsEventLocationFields initial={{
+          location_name: event?.location_name || "",
+          address: event?.address || "",
+          city: event?.city || "",
+          state: event?.state || "",
+          zip: event?.zip || "",
+        }} />
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Classification</span>
           <select

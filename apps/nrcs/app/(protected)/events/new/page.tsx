@@ -8,6 +8,7 @@ import type { EventClassificationTerm } from "@/lib/eventClassifications";
 import { syncNrcsEventById } from "@/lib/eventSyncServer";
 import { createNrcsServiceClient, createNrcsServerClient } from "@/lib/server";
 import { hasNrcsRoleAtLeast } from "@/lib/roles";
+import { resolveEventLocation } from "@/lib/eventLocations";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
   if (syncResult.ok) {
@@ -39,8 +40,10 @@ async function createEvent(formData: FormData) {
     redirect(`/events/new?district=${fallbackDistrictKey}&error=${encodeURIComponent(payloadError || "Invalid event")}`);
   }
 
+  const resolvedLocation = await resolveEventLocation(payload);
+  if (resolvedLocation.error) redirect(`/events/new?district=${payload.district_key}&error=${encodeURIComponent(resolvedLocation.error)}`);
   const service = await createNrcsServerClient();
-  const { data, error } = await service.from("nrcs_events").insert({ ...payload, created_by: profile.id }).select("id, district_key").single();
+  const { data, error } = await service.from("nrcs_events").insert({ ...payload, location_id: resolvedLocation.locationId, created_by: profile.id }).select("id, district_key").single();
 
   if (error) {
     redirect(`/events/new?district=${payload.district_key}&error=${encodeURIComponent(error.message)}`);
