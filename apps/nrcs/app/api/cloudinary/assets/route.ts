@@ -27,7 +27,11 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const terms = searchTerms(params.get("q") || "");
     const cursor = (params.get("cursor") || "").trim();
-    const expression = ["resource_type:image", "public_id:krtr/*", ...terms.map((term) => `(public_id:*${term}* OR filename:*${term}* OR display_name:*${term}*)`)].join(" AND ");
+    const expression = [
+      "resource_type:image",
+      "public_id:krtr/*",
+      ...terms.map((term) => `(public_id:${term} OR filename:${term} OR display_name:${term} OR context.title:${term} OR context.caption:${term})`),
+    ].join(" AND ");
     const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/resources/search`, {
       method: "POST",
       headers: {
