@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
-import { createNrcsServerClient } from "@/lib/server";
+import { createNrcsServerClient, createNrcsServiceClient } from "@/lib/server";
 import { STORY_LIFECYCLE_STATES } from "@/lib/stories";
 
 type StoryRow = {
@@ -47,6 +47,14 @@ export default async function NrcsStoriesPage({
   }
 
   const stories = (data || []) as unknown as StoryRow[];
+  const ownerIds = [...new Set(stories.map((story) => story.created_by).filter((id): id is string => Boolean(id)))];
+  const service = createNrcsServiceClient();
+  const { data: owners } = ownerIds.length
+    ? await service.from("nrcs_staff_profiles").select("id, display_name, email").in("id", ownerIds)
+    : { data: [] };
+  const ownerNames = new Map(
+    (owners || []).map((owner) => [owner.id, owner.display_name?.trim() || owner.email || "Unknown user"])
+  );
 
   return (
     <div className="grid gap-6">
@@ -96,7 +104,7 @@ export default async function NrcsStoriesPage({
               {story.title}
             </Link>
             <div className="capitalize">{story.lifecycle_state}</div>
-            <div className="truncate text-neutral-600">{story.created_by ? story.created_by.slice(0, 8) : "-"}</div>
+            <div className="truncate text-neutral-600">{story.created_by ? ownerNames.get(story.created_by) || "Unknown user" : "-"}</div>
             <div className="text-neutral-600">{new Date(story.updated_at || story.created_at).toLocaleDateString()}</div>
           </div>
         ))}

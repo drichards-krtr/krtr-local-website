@@ -197,7 +197,12 @@ async function convertIntake(formData: FormData) {
 
   await supabase
     .from("nrcs_intake_items")
-    .update({ status: "converted", reviewed_by: profile.id, reviewed_at: new Date().toISOString() })
+    .update({
+      status: "converted",
+      reviewed_by: profile.id,
+      reviewed_at: new Date().toISOString(),
+      payload: { ...payload, converted_kind: "events", converted_id: event.id },
+    })
     .eq("id", id);
   await syncNrcsEventById(event.id);
   revalidatePath("/events");

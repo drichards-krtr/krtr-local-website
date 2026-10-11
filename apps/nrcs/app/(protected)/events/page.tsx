@@ -16,6 +16,7 @@ type EventRow = {
   end_at: string | null;
   status: string;
   city: string;
+  created_by: string | null;
   nrcs_event_classification_terms: { name: string; kind: string } | Array<{ name: string; kind: string }> | null;
 };
 
@@ -123,7 +124,7 @@ export default async function NrcsEventsPage({
   const service = createNrcsServiceClient();
   let query = service
     .from("nrcs_events")
-    .select("id, district_key, title, start_at, end_at, status, city, nrcs_event_classification_terms(name, kind)")
+    .select("id, district_key, title, start_at, end_at, status, city, created_by, nrcs_event_classification_terms(name, kind)")
     .eq("district_key", districtKey)
     .order("start_at", { ascending: true });
 
@@ -137,6 +138,26 @@ export default async function NrcsEventsPage({
   }
 
   const events = (data || []) as unknown as EventRow[];
+  const ownerIds = [...new Set(events.map((event) => event.created_by).filter((id): id is string => Boolean(id)))];
+  const [{ data: owners }, { data: submissionIntakes }] = await Promise.all([
+    ownerIds.length
+      ? service.from("nrcs_staff_profiles").select("id, display_name, email").in("id", ownerIds)
+      : Promise.resolve({ data: [] }),
+    service
+      .from("nrcs_intake_items")
+      .select("payload")
+      .eq("district_key", districtKey)
+      .eq("intake_type", "calendar_submission")
+      .eq("status", "converted"),
+  ]);
+  const ownerNames = new Map(
+    (owners || []).map((owner) => [owner.id, owner.display_name?.trim() || owner.email || "Unknown user"])
+  );
+  const submissionEventIds = new Set(
+    (submissionIntakes || [])
+      .map((intake) => String((intake.payload as Record<string, unknown> | null)?.converted_id || ""))
+      .filter(Boolean)
+  );
 
   return (
     <div className="grid gap-6">
@@ -239,15 +260,16 @@ export default async function NrcsEventsPage({
       </form>
 
       <section className="rounded border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-3 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Title</div>
           <div>When</div>
           <div>City</div>
           <div>Classification</div>
+          <div>Owner</div>
           <div>Actions</div>
         </div>
         {events.map((event) => (
-          <div key={event.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
+          <div key={event.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
             <div>
               <Link href={`/events/${event.id}?district=${districtKey}`} className="font-medium underline">
                 {event.title || "Untitled draft"}
@@ -260,6 +282,13 @@ export default async function NrcsEventsPage({
               {Array.isArray(event.nrcs_event_classification_terms)
                 ? event.nrcs_event_classification_terms[0]?.name || "-"
                 : event.nrcs_event_classification_terms?.name || "-"}
+            </div>
+            <div className="truncate text-neutral-600">
+              {submissionEventIds.has(event.id)
+                ? "Submission"
+                : event.created_by
+                  ? ownerNames.get(event.created_by) || "Unknown user"
+                  : "-"}
             </div>
             <div className="flex flex-wrap gap-3">
               <form action={duplicateEvent}>
