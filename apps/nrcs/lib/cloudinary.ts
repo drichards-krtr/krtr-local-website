@@ -27,18 +27,18 @@ export function signCloudinaryParameters(parameters: Record<string, string>, sec
 function cloudinaryText(value: string) {
   return value.trim().replace(/[|=]/g, " ").replace(/\s+/g, " ").slice(0, 240);
 }
-export async function uploadGeneratedImage(file: Blob, publicId: string, title?: string) {
+export async function uploadGeneratedImage(file: Blob, publicId: string, title?: string, originalFilename?: string) {
   const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
   const cleanTitle = title ? cloudinaryText(title) : "";
   const parameters: Record<string, string> = { public_id: publicId, timestamp: String(Math.floor(Date.now() / 1000)), overwrite: "false" };
   if (cleanTitle) {
     parameters.context = `title=${cleanTitle}|caption=${cleanTitle}`;
     parameters.display_name = cleanTitle;
-    parameters.filename_override = `${cleanTitle}.png`;
+    parameters.filename_override = cloudinaryText(originalFilename || `${cleanTitle}.png`);
   }
   const body = new FormData();
   for (const [key, value] of Object.entries(parameters)) body.set(key, value);
-  body.set("file", file, cleanTitle ? `${cleanTitle}.png` : "graphic.png");
+  body.set("file", file, originalFilename || (cleanTitle ? `${cleanTitle}.png` : "graphic.png"));
   body.set("api_key", apiKey);
   body.set("signature", signCloudinaryParameters(parameters, apiSecret));
   const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
@@ -48,5 +48,5 @@ export async function uploadGeneratedImage(file: Blob, publicId: string, title?:
   if (!response.ok || !payload.public_id || !payload.secure_url) {
     throw new Error(payload.error?.message || "Cloudinary upload failed.");
   }
-  return { publicId: payload.public_id as string, url: payload.secure_url as string, width: payload.width as number, height: payload.height as number };
+  return { publicId: payload.public_id as string, url: payload.secure_url as string, width: payload.width as number, height: payload.height as number, format: payload.format as string | undefined };
 }

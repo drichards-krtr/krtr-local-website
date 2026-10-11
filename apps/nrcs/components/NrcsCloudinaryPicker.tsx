@@ -15,7 +15,6 @@ export type NrcsCloudinaryAsset = {
 };
 
 type LibraryResponse = { assets?: NrcsCloudinaryAsset[]; nextCursor?: string | null; error?: string };
-type UploadConfig = { cloudName?: string; apiKey?: string; folder?: string; timestamp?: string; signature?: string; parameters?: Record<string, string>; error?: string };
 
 export default function NrcsCloudinaryPicker({ label = "Choose from Cloudinary", onSelect }: { label?: string; onSelect: (asset: NrcsCloudinaryAsset) => void }) {
   const [open, setOpen] = useState(false);
@@ -61,21 +60,14 @@ export default function NrcsCloudinaryPicker({ label = "Choose from Cloudinary",
     setUploading(true);
     setError(null);
     try {
-      const configResponse = await fetch("/api/cloudinary/signature", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folder: "krtr", upload: true, fileName: file.name }),
-      });
-      const config = await configResponse.json().catch(() => null) as UploadConfig | null;
-      if (!configResponse.ok || !config?.cloudName || !config.apiKey || !config.timestamp || !config.signature) throw new Error(config?.error || "Unable to authorize the upload.");
       const body = new FormData();
       body.set("file", file);
-      body.set("api_key", config.apiKey);
-      for (const [key, value] of Object.entries(config.parameters || {})) body.set(key, value);
-      body.set("signature", config.signature);
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, { method: "POST", body });
-      const result = await response.json().catch(() => null) as NrcsCloudinaryAsset & { error?: { message?: string } } | null;
-      if (!response.ok || !result?.public_id || !result.secure_url) throw new Error(result?.error?.message || "Cloudinary upload failed.");
+      const response = await fetch("/api/cloudinary/upload", { method: "POST", body });
+      const result = await response.json().catch(() => null) as (NrcsCloudinaryAsset & { error?: string | { message?: string } }) | null;
+      if (!response.ok || !result?.public_id || !result.secure_url) {
+        const message = typeof result?.error === "string" ? result.error : result?.error?.message;
+        throw new Error(message || "Cloudinary upload failed.");
+      }
       onSelect(result);
       setOpen(false);
     } catch (uploadError) {
