@@ -8,10 +8,12 @@ the repository root as the main site's Root Directory and `apps/nrcs` as the
 NRCS project's Root Directory. The commands run relative to those directories.
 
 - Main site: builds for changes outside `apps/`; skips changes confined to NRCS,
-  calendar ingestion, or future apps such as sales.
+  calendar ingestion, or Sales.
 - NRCS: builds for changes inside `apps/nrcs` or shared `supabase` files; skips
   main-site-only changes.
-- Shared `supabase` changes build both projects.
+- Sales: Root Directory `apps/sales`; builds only for changes inside that app.
+- Shared root `supabase` changes build main and NRCS; Sales uses a separate database
+  and keeps its own migrations under `apps/sales/supabase`.
 
 The commands compare HEAD with `VERCEL_GIT_PREVIOUS_SHA` when available, otherwise
 with HEAD's parent. Expose Vercel system environment variables to use the previous
@@ -25,10 +27,10 @@ controls Git tracking, not whether a tracked change triggers a Vercel build.
 
 Reference: https://vercel.com/kb/guide/how-do-i-use-the-ignored-build-step-field-on-vercel
 
-## Planned sales application
+## Sales application
 
-Future specs will move ad management out of CMS into a sales application at
-`sales.krtrlocal.tv`. No migration is implemented yet. If the sales application
-is added under `apps/sales`, give its Vercel project its own Root Directory and
-deployment scope, and include any shared code dependencies in the affected
-projects' build checks.
+The Sales foundation exists under `apps/sales`, targeting `sales.krtrlocal.tv`.
+Its own `vercel.json` isolates deployments from CMS/main and NRCS changes.
+Ad management remains in CMS until the website migration chunk; moving controls
+is not part of the foundation. See `docs/sales/build-plan.md` and
+`docs/sales/chunk-1-setup.md` for scope and project setup.
