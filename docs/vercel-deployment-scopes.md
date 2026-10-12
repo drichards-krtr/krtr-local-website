@@ -7,8 +7,8 @@ Each application has a `vercel.json` with an Ignored Build Step. Vercel must use
 the repository root as the main site's Root Directory and `apps/nrcs` as the
 NRCS project's Root Directory. The commands run relative to those directories.
 
-- Main site: builds for changes outside `apps/`; skips changes confined to NRCS,
-  calendar ingestion, or Sales.
+- Main site: builds for changes outside `apps/` and `docs/`; skips changes confined to NRCS,
+  calendar ingestion, Sales, or documentation.
 - NRCS: builds for changes inside `apps/nrcs` or shared `supabase` files; skips
   main-site-only changes.
 - Sales: Root Directory `apps/sales`; builds only for changes inside that app.

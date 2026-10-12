@@ -17,3 +17,6 @@ header button { padding: 6px 12px; } button.secondary { background: white; color
 :focus-visible { outline: 3px solid #bd830a; outline-offset: 3px; }
 .auth { max-width: 480px; padding-top: 64px; } .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 ul { padding-left: 22px; } .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; background: #e8f3ef; font-size: 13px; }
+
+textarea { font: inherit; min-height: 100px; resize: vertical; border: 1px solid #a9bcc4; border-radius: 6px; padding: 12px; width: 100%; }
+.check { display: flex; gap: 8px; align-items: center; } .check input { width: 18px; height: 18px; } .history { border-top: 1px solid #d4dfe2; margin-top: 20px; padding-top: 12px; }

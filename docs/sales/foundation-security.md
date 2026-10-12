@@ -16,12 +16,13 @@ are no cross-database foreign keys or shared service credentials.
 | Inactive/unassigned | No district or organization authority; no automatic signup privileges |
 | Anonymous | No private Sales table reads or mutations |
 
-Later chunks add each domain's manager/seller/agent/customer mutation paths;
+Chunk 2 adds checked customer, membership, transfer, district expansion and pipeline
+RPCs; later chunks add financial/production mutation paths.
 foundation read access does not itself authorize future financial or production
 operations. Organization approval/sign permissions are separate stored flags,
 not a single customer-role ladder. Organization account ownership and salesperson
 ownership are distinct. Invitations, accepted transfers, scoped recovery and
-customer-specific expansion are implemented in Chunk 2, not simulated here.
+customer-specific expansion are implemented in Chunk 2; see `chunk-2-setup.md`.
 
 Sales Manager or higher tax authority maps to district manager, regional manager
 and owner with the appropriate district scope. This mapping will be enforced
@@ -41,8 +42,9 @@ Administrative mutations record actor/time and old/new records. Authenticated
 users cannot edit/delete the audit ledger. Initial audit reads are owner-only;
 future domain-specific scoped audit views must avoid unrelated/private data.
 
-Chunk 1 has no privileged database client, external integrations, payment
-processor or public ad API. The future public interface must return only eligible
+Chunk 1 had no privileged client. Chunk 2 adds a server-only client limited in
+application usage to token-gated Auth creation and trusted invitation send outcomes,
+and reuses the existing Resend service. No payment processor or public ad API exists. The future public interface must return only eligible
 public display fields. A server-only service key does not replace per-request
 authorization. Approval/payment/ledger/booking histories require dedicated
 immutable/versioned domain records in later chunks, not just this setup audit.

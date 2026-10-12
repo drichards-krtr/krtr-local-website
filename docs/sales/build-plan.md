@@ -25,8 +25,9 @@ subsequent clarifications in this chat. The original PDF remains at
    authentication, owner/role permissions, district/region/studio/show structure,
    setup-aware UI and tests. Local implementation complete only after checks pass;
    connected setup verification remains pending until Dan creates the project.
-2. **Customers/pipeline:** organization invitations and permissions, ownership,
-   district expansion/transfers and action-driven follow-ups.
+2. **Customers/pipeline:** locally implemented organization invitations and permissions,
+   ownership, district expansion/transfers and action-driven follow-ups. Connected
+   verification remains pending until the Sales Supabase project/email are configured.
 3. **Catalogue/quotes/inventory:** immutable versions, prices, two-week coverage
    blocks, tax configuration, discounts, date/deadline rules, scoped overrides,
    transaction-safe exclusive/four-advertiser reservations.

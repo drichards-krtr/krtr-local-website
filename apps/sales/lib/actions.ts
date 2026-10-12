@@ -51,3 +51,10 @@ export async function removeStaffScope(form: FormData) {
   if (error) redirect("/settings/access?notice=failed");
   revalidatePath("/settings/access"); redirect("/settings/access?notice=saved");
 }
+
+export async function setPrimaryScope(form: FormData) {
+ const { supabase } = await requireSalesOwner();
+ const { error } = await supabase.rpc("sales_set_primary_scope", { p_scope: String(form.get("id") || "") });
+ if (error) redirect("/settings/access?notice=failed");
+ revalidatePath("/settings/access"); redirect("/settings/access?notice=saved");
+}

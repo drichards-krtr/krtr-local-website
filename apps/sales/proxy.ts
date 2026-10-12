@@ -4,7 +4,7 @@ import { getSalesSupabaseEnv } from "./lib/env";
 
 export async function proxy(request: NextRequest) {
   const env = getSalesSupabaseEnv();
-  if (!env) return NextResponse.next();
+  if (!env) { const response = NextResponse.next(); response.headers.set("Referrer-Policy", "no-referrer"); return response; }
   let response = NextResponse.next({ request });
   const supabase = createServerClient(env.url, env.anon, {
     cookieOptions: { name: "krtr-sales-auth", path: "/", sameSite: "lax" },
@@ -19,6 +19,7 @@ export async function proxy(request: NextRequest) {
   });
   await supabase.auth.getUser();
   response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("Referrer-Policy", "no-referrer");
   return response;
 }
 export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };

@@ -1,11 +1,11 @@
 import { requireSalesOwner } from "@/lib/auth";
-import { setProfileActive, assignStaffScope, removeStaffScope } from "@/lib/actions";
+import { setProfileActive, assignStaffScope, removeStaffScope, setPrimaryScope } from "@/lib/actions";
 export default async function Access({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
   const { supabase, user } = await requireSalesOwner();
   const { notice } = await searchParams;
   const results = await Promise.all([
     supabase.from("sales_profiles").select("id, display_name, active").order("created_at"),
-    supabase.from("sales_staff_scopes").select("id, user_id, role, district_key, region_id"),
+    supabase.from("sales_staff_scopes").select("id, user_id, role, district_key, region_id, is_primary"),
     supabase.from("sales_districts").select("district_key, name"),
     supabase.from("sales_regions").select("id, name"),
   ]);

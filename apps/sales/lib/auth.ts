@@ -13,7 +13,9 @@ export async function getSalesIdentity() {
   if (!profile?.active) return null;
   const { data: owner, error: ownerError } = await supabase.from("sales_owner").select("user_id").eq("user_id", user.id).maybeSingle();
   if (ownerError) throw new Error("Sales permissions are unavailable.");
-  return { user, profile, isOwner: !!owner, supabase };
+  const { data: workspace, error: workspaceError } = await supabase.rpc("sales_workspace_context");
+  if (workspaceError) throw new Error("Sales customer/pipeline migration is required.");
+  return { user, profile, isOwner: !!owner, isSalesStaff: workspace?.is_sales_staff === true, isProductionAgent: workspace?.is_production_agent === true, supabase };
 }
 export async function requireSalesIdentity() {
   if (!getSalesSupabaseEnv()) redirect("/setup");

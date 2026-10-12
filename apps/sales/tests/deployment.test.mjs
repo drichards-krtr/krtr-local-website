@@ -9,9 +9,9 @@ const root = resolve(import.meta.dirname, "../../..");
 const configs = ["vercel.json", "apps/nrcs/vercel.json", "apps/sales/vercel.json"].map(file => JSON.parse(readFileSync(join(root, file), "utf8")));
 // These are the literal pathspecs used by the checked-in commands; assert them
 // before exercising them against commits (including a multi-commit change).
-const scopes = [[".", ":(exclude)apps/**"], [".", "../../supabase"], ["."]];
+const scopes = [[".", ":(exclude)apps/**", ":(exclude)docs/**"], [".", "../../supabase"], ["."]];
 test("app deployment pathspecs isolate committed changes and retain shared dependencies", () => {
-  assert.equal(configs[0].ignoreCommand, 'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- . \':(exclude)apps/**\'');
+  assert.equal(configs[0].ignoreCommand, 'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- . \':(exclude)apps/**\' \':(exclude)docs/**\'');
   assert.equal(configs[1].ignoreCommand, 'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- . ../../supabase');
   assert.equal(configs[2].ignoreCommand, 'git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- .');
   const fixture = mkdtempSync(join(tmpdir(), "krtr-sales-scope-"));
@@ -23,13 +23,13 @@ test("app deployment pathspecs isolate committed changes and retain shared depen
   }
   function checked(args) { const result = git(args); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); }
   checked(["init"]);
-  const paths = ["app/page.tsx", "apps/nrcs/app/page.tsx", "apps/sales/app/page.tsx", "apps/calendar/_ingest/app/page.tsx", "supabase/schema.sql", "apps/sales/supabase/migrations/test.sql"];
+  const paths = ["app/page.tsx", "apps/nrcs/app/page.tsx", "apps/sales/app/page.tsx", "apps/calendar/_ingest/app/page.tsx", "supabase/schema.sql", "apps/sales/supabase/migrations/test.sql", "docs/sales/setup.md"];
   for (const file of paths) { const target = join(tree, file); mkdirSync(dirname(target), { recursive: true }); writeFileSync(target, "initial"); }
   checked(["add", "."]);
   function commit() { checked(["-c", "user.name=Scope test", "-c", "user.email=scope@example.invalid", "commit", "-m", "Fixture"]); }
   commit();
   const directories = [tree, join(tree, "apps/nrcs"), join(tree, "apps/sales")];
-  const expected = [[1,0,0], [0,1,0], [0,0,1], [0,0,0], [1,1,0], [0,0,1]];
+  const expected = [[1,0,0], [0,1,0], [0,0,1], [0,0,0], [1,1,0], [0,0,1], [0,0,0]];
   for (const [index,file] of paths.entries()) {
     const base = checked(["rev-parse", "HEAD"]);
     writeFileSync(join(tree, file), "change"); checked(["add", "."]); commit();

@@ -8,7 +8,7 @@ export default function Setup() {
     <p>The Sales app is ready for its dedicated Supabase project. Selling and customer access stay unavailable until the database and accounts are configured.</p>
     <p className="notice">No campaigns, payments, or customer records are connected on this screen.</p>
     {configured && <Link href="/login">Continue to sign in</Link>}</section>
-    <div className="grid"><section className="card"><h2>Next setup steps</h2><ol><li>Create the dedicated Sales Supabase project.</li><li>Apply the Sales foundation migration and create Dan&apos;s owner account.</li><li>Configure authentication and connect the Sales Vercel project.</li></ol></section>
-    <section className="card"><h2>Coming in later chunks</h2><p>Customer pipeline, quotes, agreements, payments, artwork approvals, and fulfillment will be added in the planned build order.</p></section></div>
+    <div className="grid"><section className="card"><h2>Next setup steps</h2><ol><li>Create the dedicated Sales Supabase project.</li><li>Apply the Sales migrations and create Dan&apos;s owner account.</li><li>Configure Sales authentication and environment variables.</li></ol></section>
+    <section className="card"><h2>Build progress</h2><p>Customer organizations, invitations, permissions, and follow-ups are built. Connect the Sales database to use them. Quotes, agreements, payments, and fulfillment follow in later chunks.</p></section></div>
   </main></>;
 }
