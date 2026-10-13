@@ -9,6 +9,6 @@ export default function Setup() {
     <p className="notice">No campaigns, payments, or customer records are connected on this screen.</p>
     {configured && <Link href="/login">Continue to sign in</Link>}</section>
     <div className="grid"><section className="card"><h2>Next setup steps</h2><ol><li>Create the dedicated Sales Supabase project.</li><li>Apply the Sales migrations and create Dan&apos;s owner account.</li><li>Configure Sales authentication and environment variables.</li></ol></section>
-    <section className="card"><h2>Build progress</h2><p>Customer organizations, invitations, permissions, and follow-ups are built. Connect the Sales database to use them. Quotes, agreements, payments, and fulfillment follow in later chunks.</p></section></div>
+    <section className="card"><h2>Build progress</h2><p>Customer organizations, invitations, permissions, and follow-ups are built. Connect the Sales database to use them. The product catalogue, versioned quotes, tax controls, and inventory foundation are also built. Agreements, payments, and fulfillment follow in later chunks.</p></section></div>
   </main></>;
 }

@@ -35,7 +35,7 @@ export default async function Customer({ params, searchParams }: { params: Promi
  const ownership = results[9].data || [];
  const salesContact = results[10].data?.[0];
  const memberName=(userId:string)=>userId===user.id ? "You" : memberNames.find((m:{id:string;display_name:string|null})=>m.id===userId)?.display_name || userId;
- return <><Link href="/customers">All organizations</Link><h1>{org.company_name}</h1><Notice {...query} />
+ return <><Link href="/customers">All organizations</Link><h1>{org.company_name}</h1>{isSalesStaff&&<Link href={`/quotes/new?organization=${id}`}>Create quote</Link>}<Notice {...query} />
  <div className="row">{districts.map(d=><span className="badge" key={d.district_key}>{d.district_key.toUpperCase()}</span>)}</div>
  {salesContact && <p>Your salesperson: {salesContact.display_name || "KRTR sales"}{salesContact.email && <> · <a href={`mailto:${salesContact.email}`}>{salesContact.email}</a></>}</p>}
  {!isSalesStaff && <p className="notice">Campaigns, artwork, agreements, and invoices will become available in later build chunks. Your account permissions are active now.</p>}

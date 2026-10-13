@@ -28,7 +28,8 @@ subsequent clarifications in this chat. The original PDF remains at
 2. **Customers/pipeline:** locally implemented organization invitations and permissions,
    ownership, district expansion/transfers and action-driven follow-ups. Connected
    verification remains pending until the Sales Supabase project/email are configured.
-3. **Catalogue/quotes/inventory:** immutable versions, prices, two-week coverage
+3. **Catalogue/quotes/inventory:** locally implemented; connected Auth/UI and
+   independent-connection booking verification awaits the Sales database. Immutable versions, prices, two-week coverage
    blocks, tax configuration, discounts, date/deadline rules, scoped overrides,
    transaction-safe exclusive/four-advertiser reservations.
 4. **Agreements/financial foundation:** signing, holds, invoices, checks,
