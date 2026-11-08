@@ -7,7 +7,7 @@ import { getEventPayloadFromForm } from "@/lib/eventForms";
 import type { EventClassificationTerm } from "@/lib/eventClassifications";
 import { syncNrcsEventById } from "@/lib/eventSyncServer";
 import { createNrcsServiceClient, createNrcsServerClient } from "@/lib/server";
-import { hasNrcsRoleAtLeast } from "@/lib/roles";
+import { canPublishNrcsContent, hasNrcsRoleAtLeast } from "@/lib/roles";
 import { resolveEventLocation } from "@/lib/eventLocations";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
@@ -38,6 +38,9 @@ async function createEvent(formData: FormData) {
 
   if (payloadError || !payload) {
     redirect(`/events/new?district=${fallbackDistrictKey}&error=${encodeURIComponent(payloadError || "Invalid event")}`);
+  }
+  if (payload.status === "published" && !canPublishNrcsContent(profile.role)) {
+    redirect(`/events/new?district=${fallbackDistrictKey}&error=${encodeURIComponent("Only producers, editors, or admins can publish an Event.")}`);
   }
 
   const resolvedLocation = await resolveEventLocation(payload);
@@ -90,6 +93,7 @@ export default async function NewEventPage({
         selectedDistrictKey={districtKey}
         terms={(terms || []) as EventClassificationTerm[]}
         submitLabel="Save Event"
+        canPublish={canPublishNrcsContent(profile.role)}
         canArchive={hasNrcsRoleAtLeast(profile.role, "editor")}
       />
     </div>

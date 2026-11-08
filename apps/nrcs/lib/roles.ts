@@ -27,3 +27,7 @@ export function roleRank(role: NrcsRole) {
 export function hasNrcsRoleAtLeast(role: NrcsRole, minimum: NrcsRole) {
   return roleRank(role) >= roleRank(minimum);
 }
+
+export function canPublishNrcsContent(role: NrcsRole) {
+  return hasNrcsRoleAtLeast(role, "producer");
+}

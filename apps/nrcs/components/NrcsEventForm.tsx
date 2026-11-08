@@ -35,6 +35,7 @@ type Props = {
   selectedDistrictKey: string;
   terms: EventClassificationTerm[];
   submitLabel: string;
+  canPublish?: boolean;
   canArchive?: boolean;
 };
 
@@ -49,6 +50,7 @@ export default function NrcsEventForm({
   selectedDistrictKey,
   terms,
   submitLabel,
+  canPublish = false,
   canArchive = false,
 }: Props) {
   const districtKey = event?.district_key || selectedDistrictKey;
@@ -69,10 +71,10 @@ export default function NrcsEventForm({
           </select>
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">Status (select Published only after review)</span>
+          <span className="font-medium">Status</span>
           <select name="status" defaultValue={event?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">
             <option value="draft">Draft</option>
-            <option value="published">Published</option>
+            {(canPublish || event?.status === "published") && <option value="published">Published</option>}
             {(canArchive || event?.status === "archived") && <option value="archived">Archived</option>}
           </select>
         </label>

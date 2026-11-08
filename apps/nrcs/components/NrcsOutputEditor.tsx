@@ -66,7 +66,7 @@ function VersionSelect({ versions, value }: { versions: OutputVersion[]; value: 
 function DateFields({ output, timezone }: { output: { scheduled_at: string | null; published_at: string | null } | null; timezone: string }) {
   return <><label className="grid gap-1 text-sm"><span>Scheduled At · {timezone}</span><input type="datetime-local" className={input} name="scheduled_at" defaultValue={formatDateTimeForInput(output?.scheduled_at, timezone)} /></label><label className="grid gap-1 text-sm"><span>Published At · {timezone}</span><input type="datetime-local" className={input} name="published_at" defaultValue={formatDateTimeForInput(output?.published_at, timezone)} /></label></>;
 }
-function WebEditor({ storyId, districtKey, timezone, editor, initialWeb, versions, assets, initialMedia, onAssetAttached }: { storyId: string; districtKey: string; timezone: string; editor: boolean; initialWeb: WebOutput | null; versions: OutputVersion[]; assets: OutputAsset[]; initialMedia: string[]; onAssetAttached: (asset: OutputAsset) => void }) {
+function WebEditor({ storyId, districtKey, timezone, canPublish, canUnpublish, initialWeb, versions, assets, initialMedia, onAssetAttached }: { storyId: string; districtKey: string; timezone: string; canPublish: boolean; canUnpublish: boolean; initialWeb: WebOutput | null; versions: OutputVersion[]; assets: OutputAsset[]; initialMedia: string[]; onAssetAttached: (asset: OutputAsset) => void }) {
   const [output, setOutput] = useState(initialWeb);
   const [hero, setHero] = useState(initialWeb?.hero_asset_id || "");
   const [media, setMedia] = useState(initialMedia);
@@ -76,7 +76,7 @@ function WebEditor({ storyId, districtKey, timezone, editor, initialWeb, version
   const heroState = useEditorialSave();
   const formRef = useRef<HTMLFormElement>(null);
   const images = assets.filter(a => ["image", "graphic"].includes(a.asset_type));
-  const readonly = !editor && output !== null && output.status !== "draft";
+  const readonly = !canPublish && output !== null && output.status !== "draft";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget);
     const data = await state.save("web", { ...Object.fromEntries(form), story_id: storyId, district_key: districtKey, revision: output?.revision || 0, hero_asset_id: hero, media_ids: media });
@@ -107,7 +107,7 @@ function WebEditor({ storyId, districtKey, timezone, editor, initialWeb, version
     }} /></fieldset><SaveFeedback state={heroState} />{hero && <div className="flex flex-wrap items-center gap-3">{assets.find(a => a.id === hero)?.cloudinary_url && <img src={assets.find(a => a.id === hero)!.cloudinary_url!} alt="Selected Hero image" className="h-24 w-40 object-contain" />}<button type="button" disabled={state.busy || heroState.busy || readonly} className="text-sm underline disabled:opacity-50" onClick={() => { setHero(""); state.setDirty(true); }}>Clear Hero Image</button></div>}</div>
     <form ref={formRef} onSubmit={submit} onChange={() => state.setDirty(true)} className="grid gap-4"><fieldset disabled={state.busy || heroState.busy || readonly} className="grid gap-4 md:grid-cols-2">
       <VersionSelect versions={versions} value={output ? output.copy_version_id || "" : versions[0]?.id || ""} />
-      <label className="grid gap-1 text-sm"><span>Publication Instruction</span><select name="status" className={input} defaultValue={output?.status || "draft"}><option value="draft">Draft</option>{editor && <><option value="scheduled">Scheduled</option><option value="published">Published</option><option value="unpublished">Unpublished</option></>}{readonly && <option value={output?.status}>{output?.status}</option>}</select></label>
+      <label className="grid gap-1 text-sm"><span>Publication Instruction</span><select name="status" className={input} defaultValue={output?.status || "draft"}><option value="draft">Draft</option>{canPublish && <><option value="scheduled">Scheduled</option><option value="published">Published</option></>}{canUnpublish && <option value="unpublished">Unpublished</option>}{readonly && <option value={output?.status}>{output?.status}</option>}</select></label>
       <label className="grid gap-1 text-sm"><span>Slug</span><input name="slug" className={input} maxLength={240} defaultValue={output?.slug || ""} /></label>
       <DateFields output={output} timezone={timezone} />
       <label className="grid gap-1 text-sm"><span>Primary Video · Optional</span><select name="video_asset_id" className={input} defaultValue={output?.video_asset_id || ""}><option value="">No video</option>{assets.filter(a => a.asset_type === "video").map(a => <option key={a.id} value={a.id} disabled={!isReadyPublicAsset(a)}>{a.title}{!isReadyPublicAsset(a) ? " · Not ready" : ""}</option>)}</select></label>
@@ -116,17 +116,17 @@ function WebEditor({ storyId, districtKey, timezone, editor, initialWeb, version
       <div className="md:col-span-2"><h3 className="mb-2 text-sm font-semibold">Article Media</h3><MediaOrder assets={images} selected={media} heroId={hero} onChange={ids => { setMedia(ids); state.setDirty(true); }} /></div>
       <button className={button}>Save Web Output</button>
     </fieldset><button type="button" className="w-fit text-sm underline" onClick={() => { const selected = String(new FormData(formRef.current!).get("copy_version_id")); setSlide(0); setPreview(versions.find(v => v.id === selected) || null); }}>Preview Selected Copy</button></form>
-    {output && editor && <NrcsPublicationDelivery kind="web" sourceId={output.id} districtKey={districtKey} revision={output.revision} disabled={state.dirty || state.busy || heroState.busy} />}
+    {output && canPublish && <NrcsPublicationDelivery kind="web" sourceId={output.id} districtKey={districtKey} revision={output.revision} disabled={state.dirty || state.busy || heroState.busy} />}
     {preview && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if (e.target === e.currentTarget) setPreview(null); }}><div role="dialog" aria-modal="true" aria-label="Web Output preview" className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded bg-white p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-semibold">Web Copy v{preview.version_number}</h3><button autoFocus type="button" className={button} onClick={() => setPreview(null)}>Close</button></div>{media.length > 0 && <div className="mb-5"><img className="aspect-video w-full object-contain" alt={assets.find(a => a.id === media[slide])?.title || "Article image"} src={assets.find(a => a.id === media[slide])?.cloudinary_url || ""} />{media.length > 1 && <div className="mt-2 flex items-center justify-center gap-4"><button title="Previous image" aria-label="Previous image" className="h-9 w-9 border" onClick={() => setSlide((slide + media.length - 1) % media.length)}>←</button><span>{slide + 1} / {media.length}</span><button title="Next image" aria-label="Next image" className="h-9 w-9 border" onClick={() => setSlide((slide + 1) % media.length)}>→</button></div>}</div>}<h1 className="mb-4 text-2xl font-semibold">{preview.headline}</h1><div className="rich-text break-words" dangerouslySetInnerHTML={{ __html: preview.body_html }} /></div></div>}
   </section>;
 }
-function SocialEditor({ storyId, districtKey, timezone, editor, versions, assets, output, onSaved }: { storyId: string; districtKey: string; timezone: string; editor: boolean; versions: OutputVersion[]; assets: OutputAsset[]; output: SocialOutput | null; onSaved: (output: SocialOutput) => void }) {
+function SocialEditor({ storyId, districtKey, timezone, canPublish, versions, assets, output, onSaved }: { storyId: string; districtKey: string; timezone: string; canPublish: boolean; versions: OutputVersion[]; assets: OutputAsset[]; output: SocialOutput | null; onSaved: (output: SocialOutput) => void }) {
   const state = useEditorialSave();
   const [media, setMedia] = useState(output?.asset_ids || []);
   const [id] = useState(() => output?.id || crypto.randomUUID());
   const [copied, setCopied] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const readonly = !editor && output !== null && output.status !== "draft";
+  const readonly = !canPublish && output !== null && output.status !== "draft";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget);
     const data = await state.save("social", { ...Object.fromEntries(form), id, story_id: storyId, district_key: districtKey, revision: output?.revision || 0, asset_ids: media });
@@ -134,11 +134,11 @@ function SocialEditor({ storyId, districtKey, timezone, editor, versions, assets
   }
   return <div className="grid gap-4"><SaveFeedback state={state} /><form ref={formRef} onSubmit={submit} onChange={() => state.setDirty(true)}><fieldset disabled={state.busy || readonly} className="grid gap-4 md:grid-cols-2">
     <label className="grid gap-1 text-sm"><span>Destination</span><select name="destination" className={input} defaultValue={output?.destination || "Facebook"}>{SOCIAL_DESTINATIONS.map(d => <option key={d}>{d}</option>)}</select></label><VersionSelect versions={versions} value={output ? output.copy_version_id || "" : versions[0]?.id || ""} />
-    <label className="grid gap-1 text-sm"><span>Status</span><select name="status" className={input} defaultValue={output?.status || "draft"}><option value="draft">Draft</option>{editor && <><option value="scheduled">Scheduled</option><option value="published">Published · Manual confirmation</option></>}{readonly && <option value={output?.status}>{output?.status}</option>}</select></label><label className="grid gap-1 text-sm"><span>Published URL · Optional</span><input type="url" name="published_url" maxLength={2000} className={input} defaultValue={output?.published_url || ""} /></label>
+    <label className="grid gap-1 text-sm"><span>Status</span><select name="status" className={input} defaultValue={output?.status || "draft"}><option value="draft">Draft</option>{canPublish && <><option value="scheduled">Scheduled</option><option value="published">Published · Manual confirmation</option></>}{readonly && <option value={output?.status}>{output?.status}</option>}</select></label><label className="grid gap-1 text-sm"><span>Published URL · Optional</span><input type="url" name="published_url" maxLength={2000} className={input} defaultValue={output?.published_url || ""} /></label>
     <DateFields output={output} timezone={timezone} /><div className="md:col-span-2"><h3 className="mb-2 text-sm font-semibold">Media</h3><MediaOrder assets={assets} selected={media} onChange={ids => { setMedia(ids); state.setDirty(true); }} /></div><button className={button}>Save Social Output</button>
   </fieldset></form><button type="button" className="w-fit text-sm underline" onClick={async () => { const version = versions.find(v => v.id === new FormData(formRef.current!).get("copy_version_id")); if (!version) return; try { await navigator.clipboard.writeText(socialPlainText(version.body_html)); setCopied(true); } catch { setCopied(false); } }}>{copied ? "Copied" : "Copy Selected Social Text"}</button></div>;
 }
-export default function NrcsOutputEditor(props: { storyId: string; districtKey: string; timezone: string; editor: boolean; initialWeb: WebOutput | null; initialSocial: SocialOutput[]; webVersions: OutputVersion[]; socialVersions: OutputVersion[]; assets: OutputAsset[]; initialMedia: string[] }) {
+export default function NrcsOutputEditor(props: { storyId: string; districtKey: string; timezone: string; canPublish: boolean; canUnpublish: boolean; initialWeb: WebOutput | null; initialSocial: SocialOutput[]; webVersions: OutputVersion[]; socialVersions: OutputVersion[]; assets: OutputAsset[]; initialMedia: string[] }) {
   const [assets, setAssets] = useState(props.assets);
   const imageState = useEditorialSave();
   const [social, setSocial] = useState(props.initialSocial);

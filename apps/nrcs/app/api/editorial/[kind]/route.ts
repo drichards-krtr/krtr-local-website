@@ -8,13 +8,13 @@ import { SOCIAL_DESTINATIONS } from "@/lib/outputs";
 import { normalizeSlug } from "@/lib/stories";
 import { getCloudinaryCredentials } from "@/lib/cloudinary";
 import { processPublicationDelivery, queuePublication } from "@/lib/publicationDelivery";
-import { hasNrcsRoleAtLeast } from "@/lib/roles";
+import { canPublishNrcsContent, hasNrcsRoleAtLeast } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export async function GET(request: Request, context: { params: Promise<{ kind: string }> }) {
   const staff = await getCurrentNrcsStaff();
   if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!hasNrcsRoleAtLeast(staff.profile.role, "editor")) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+  if (!canPublishNrcsContent(staff.profile.role)) return NextResponse.json({ error: "Producers, editors, or admins only." }, { status: 403 });
   if ((await context.params).kind !== "homepage") return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {
     const params = new URL(request.url).searchParams;
@@ -107,8 +107,8 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
     const district = districts.allowedDistricts.find(d => d.district_key === body.district_key);
     if (!district) return NextResponse.json({ error: "District is not accessible." }, { status: 403 });
     const editor = hasNrcsRoleAtLeast(staff.profile.role, "editor");
-    const producer = hasNrcsRoleAtLeast(staff.profile.role, "producer");
-    if (["homepage", "alert", "daily"].includes(kind) && !editor) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+    const producer = canPublishNrcsContent(staff.profile.role);
+    if (["homepage", "alert", "daily"].includes(kind) && !producer) return NextResponse.json({ error: "Producers, editors, or admins only." }, { status: 403 });
     if (kind === "edition-media" && !producer) return NextResponse.json({ error: "Producers, editors, or admins only." }, { status: 403 });
     function date(value: unknown) {
       if (!value) return null;
@@ -133,7 +133,7 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       }
     }
     if (kind === "image") {
-      if (body.edition_id && !editor) return NextResponse.json({ error: "Editors/admins only." }, { status: 403 });
+      if (body.edition_id && !producer) return NextResponse.json({ error: "Producers, editors, or admins only." }, { status: 403 });
       const cloudinaryUrl = url(body.cloudinary_url);
       const { cloudName } = getCloudinaryCredentials();
       const parsed = cloudinaryUrl ? new URL(cloudinaryUrl) : null;
@@ -160,10 +160,11 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       const storyId = uuid(body.story_id) as string;
       const { data: story, error: storyError } = await supabase.from("nrcs_stories").select("id,district_key,created_by").eq("id", storyId).maybeSingle();
       if (storyError) throw new Error(storyError.message);
-      if (!story || story.district_key !== district.district_key || !editor && story.created_by !== staff.profile.id) return NextResponse.json({ error: "Story is not editable." }, { status: 403 });
+      if (!story || story.district_key !== district.district_key || !producer && story.created_by !== staff.profile.id) return NextResponse.json({ error: "Story is not editable." }, { status: 403 });
       const allowed = kind === "web" ? ["draft", "scheduled", "published", "unpublished"] : ["draft", "scheduled", "published"];
       if (!allowed.includes(body.status)) throw new Error("Invalid output status.");
-      if (!editor && body.status !== "draft") return NextResponse.json({ error: "Contributors can save drafts only." }, { status: 403 });
+      if (!producer && body.status !== "draft") return NextResponse.json({ error: "Contributors can save drafts only." }, { status: 403 });
+      if (!editor && body.status === "unpublished") return NextResponse.json({ error: "Only editors or admins can unpublish Web output." }, { status: 403 });
       const common = { story_id: storyId, district_key: district.district_key, copy_version_id: uuid(body.copy_version_id, true), status: body.status, scheduled_at: date(body.scheduled_at), published_at: date(body.published_at) || (body.status === "published" ? new Date().toISOString() : null) };
       if (kind === "web") {
         const slug = text(body.slug ?? "", 240);
@@ -201,6 +202,7 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
       const heroAssetId = uuid(body.hero_asset_id) as string;
       const videoAssetId = uuid(body.video_asset_id) as string;
       if (!["draft", "scheduled", "published", "archived"].includes(body.status)) throw new Error("Invalid Daily status.");
+      if (body.status === "archived" && !editor) return NextResponse.json({ error: "Only editors or admins can archive a Daily." }, { status: 403 });
       const payload = { id, district_key: district.district_key, edition_id: editionId, hero_asset_id: heroAssetId, video_asset_id: videoAssetId, asset_id: heroAssetId, status: body.status, scheduled_at: date(body.scheduled_at) };
       if (!payload.scheduled_at) throw new Error("Daily publication date/time is required.");
       const query = body.revision === 0 ? supabase.from("nrcs_dailies").insert(payload) : supabase.from("nrcs_dailies").update(payload).eq("id", id).eq("district_key", district.district_key).eq("revision", body.revision);
@@ -212,12 +214,14 @@ export async function POST(request: Request, context: { params: Promise<{ kind: 
     }
     const id = uuid(body.id) as string;
     if (body.operation === "delete") {
+      if (!editor) return NextResponse.json({ error: "Only editors or admins can delete an Alert draft." }, { status: 403 });
       const { data: deleted, error } = await supabase.rpc("nrcs_delete_undelivered_alert", { p_id: id, p_revision: body.revision });
       if (error) throw new Error(error.message);
       if (!deleted) throw new Error("Alert changed or no longer exists. Reload before deleting.");
       return NextResponse.json({ ok: true, deleted: id, message: "Undelivered Alert deleted." });
     }
     if (body.operation === "archive") {
+      if (!editor) return NextResponse.json({ error: "Only editors or admins can archive an Alert." }, { status: 403 });
       const { data: alert, error } = await supabase.from("nrcs_priority_alerts").update({ active: false, archived_at: new Date().toISOString() }).eq("id", id).eq("district_key", district.district_key).eq("revision", body.revision).is("archived_at", null).select("*").maybeSingle();
       if (error) throw new Error(error.message);
       if (!alert) throw new Error("Alert changed or is already archived. Reload before archiving.");

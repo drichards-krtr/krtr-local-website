@@ -5,7 +5,7 @@ import NrcsHomepageManager, { type HomepageLineup, type PriorityAlert } from "@/
 import Link from "next/link";
 
 export default async function HomepagePage({ searchParams }: { searchParams: Promise<{ district?: string; story?: string; event?: string }> }) {
-  await requireNrcsStaff("editor");
+  const { profile } = await requireNrcsStaff("producer");
   const params = await searchParams;
   const context = await getNrcsDistrictContext();
   const district = params.district ? context.allowedDistricts.find(d => d.district_key === params.district) : context.activeDistrict;
@@ -22,6 +22,6 @@ export default async function HomepagePage({ searchParams }: { searchParams: Pro
   const delivered = new Set((alertDeliveries.data || []).map(row => row.source_id));
   const alertRows = [...(currentAlert.data || []), ...(alerts.data || []).filter(a => !currentAlert.data?.some(c => c.id === a.id))].map(alert => ({ ...alert, has_delivery: delivered.has(alert.id) }));
   return <div className="grid gap-5"><header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-semibold">Homepage Editorial Controls</h1><Link href="/dailies" className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold">Manage Dailies</Link></header><form className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm"><span>District</span><select name="district" defaultValue={district.district_key} className="rounded border px-3 py-2">{context.allowedDistricts.map(d => <option key={d.district_key} value={d.district_key}>{d.display_name}</option>)}</select></label><button className="rounded border bg-white px-4 py-2 text-sm">Apply</button></form>
-    <NrcsHomepageManager key={district.district_key} districtKey={district.district_key} timezone={district.timezone} initialLineup={lineup.data as HomepageLineup | null} initialAlerts={alertRows as PriorityAlert[]} initialTarget={params.story ? { type: "story", id: params.story } : params.event ? { type: "event", id: params.event } : null} />
+    <NrcsHomepageManager key={district.district_key} districtKey={district.district_key} timezone={district.timezone} canArchive={profile.role === "admin" || profile.role === "editor"} initialLineup={lineup.data as HomepageLineup | null} initialAlerts={alertRows as PriorityAlert[]} initialTarget={params.story ? { type: "story", id: params.story } : params.event ? { type: "event", id: params.event } : null} />
   </div>;
 }

@@ -10,7 +10,7 @@ import { syncNrcsEventById } from "@/lib/eventSyncServer";
 import { createNrcsServerClient, createNrcsServiceClient } from "@/lib/server";
 import { FollowUpCreateForm, FollowUpList, type FollowUpRow } from "@/components/NrcsWorkflowPanels";
 import { recordRecentItem } from "@/lib/workflow";
-import { hasNrcsRoleAtLeast } from "@/lib/roles";
+import { canPublishNrcsContent, hasNrcsRoleAtLeast } from "@/lib/roles";
 import { resolveEventLocation } from "@/lib/eventLocations";
 
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
@@ -42,6 +42,9 @@ async function updateEvent(formData: FormData) {
 
   if (payloadError || !payload) {
     redirect(`/events/${id}?district=${fallbackDistrictKey}&error=${encodeURIComponent(payloadError || "Invalid event")}`);
+  }
+  if (payload.status === "published" && !canPublishNrcsContent(profile.role)) {
+    redirect(`/events/${id}?district=${fallbackDistrictKey}&error=${encodeURIComponent("Only producers, editors, or admins can publish an Event.")}`);
   }
   if (payload.status === "archived" && !hasNrcsRoleAtLeast(profile.role, "editor")) {
     redirect(`/events/${id}?district=${fallbackDistrictKey}&error=${encodeURIComponent("Only editors or admins can archive an Event.")}`);
@@ -209,6 +212,7 @@ export default async function EditEventPage({
         selectedDistrictKey={event.district_key}
         terms={(terms || []) as EventClassificationTerm[]}
         submitLabel="Save Changes"
+        canPublish={canPublishNrcsContent(profile.role)}
         canArchive={hasNrcsRoleAtLeast(profile.role, "editor")}
       />
       <section className="grid gap-4">
