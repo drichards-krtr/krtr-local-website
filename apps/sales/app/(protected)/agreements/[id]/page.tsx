@@ -1,0 +1,19 @@
+import {notFound} from "next/navigation";
+import Link from "next/link";
+import {requireSalesIdentity} from "@/lib/auth";
+import {allRows} from "@/lib/collections";
+import {money,centralTime} from "@/lib/quote-format.mjs";
+import AgreementTerms from "@/components/AgreementTerms";
+import PrintButton from "@/components/PrintButton";
+import Notice from "@/components/Notice";
+export default async function Agreement({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{notice?:string;error?:string}>}){
+ const {id}=await params;const {supabase,isSalesStaff}=await requireSalesIdentity();const {data:a}=await supabase.from("sales_agreements").select("*").eq("id",id).single();if(!a)notFound();
+ const {data:invoice,error}=await supabase.from("sales_invoices").select("*").eq("agreement_id",id).single();if(error)throw new Error("Invoice unavailable.");
+ const [receipts,checks]=await Promise.all([allRows((f,t)=>supabase.from("sales_receipts").select("*").eq("invoice_id",invoice.id).order("occurred_at").order("id").range(f,t)),allRows((f,t)=>supabase.from("sales_checks").select("id,reference,state,received_on,deposited_on,cleared_on").eq("invoice_id",invoice.id).order("created_at").order("id").range(f,t))]);
+ const {data:settings}=await supabase.from("sales_finance_settings").select("check_payee,mailing_instructions,dropoff_instructions").single();
+ let paperUrl:string|undefined;if(a.snapshot.paper_signature_ref){const {data}=await supabase.storage.from("sales-agreements").createSignedUrl(a.snapshot.paper_signature_ref,120);paperUrl=data?.signedUrl;}
+ return <><h1>{a.snapshot.organization_name} · signed agreement</h1><Notice {...await searchParams}/><PrintButton/><p>Version {a.snapshot.version} · signed by {a.signed_name} on {a.signature_on}</p><p>{a.consent_text}</p>{paperUrl&&<p><a href={paperUrl}>View private signed paper copy</a></p>}
+ <section className="card"><h2>Invoice KRTR-{invoice.invoice_number}</h2><p>Total {money(invoice.total_cents)} · collected {money(invoice.collected_cents)} · refunded {money(invoice.refunded_cents)}</p>{invoice.payment_review_required&&<p className="error">Unexpected or additional payment recorded. Manager reconciliation is required.</p>}<p>Full payment due {centralTime(invoice.due_at)}</p><p>Inventory: {invoice.inventory_status.replaceAll("_"," ")}</p>{invoice.inventory_status==="held"&&<p>Hold eligibility depends on the recorded expiry; an unpaid expired hold does not reserve inventory.</p>}{invoice.inventory_status==="payment_conflict"&&<p className="error">Payment was received, but inventory was not restored. Contact your salesperson to resolve available dates.</p>}<p>Checks payable to {settings?.check_payee||"KRTR Local, LLC"}.</p><p>{settings?.mailing_instructions||"Mailing instructions pending. Contact your salesperson before sending a check."}</p>{settings?.dropoff_instructions&&<p>{settings.dropoff_instructions}</p>}<button disabled className="no-print">Pay by Card · setup pending</button><p className="muted no-print">Card checkout will be enabled with the payment-provider integration. A return page or pending check does not prove payment.</p>{isSalesStaff&&<Link className="no-print" href="/finance">Record check receipt / verify clearance</Link>}</section>
+ <section className="card"><h2>Payment history &amp; receipts</h2>{receipts.map(r=><p key={r.id}>{r.kind==="refund"?"Refund":"Payment"} {money(r.amount_cents)} · {r.method} · {centralTime(r.occurred_at)} · receipt {r.id}</p>)}{!receipts.length&&<p>No confirmed payment yet.</p>}{checks.map(c=><p key={c.id}>Check {c.reference}: {c.state} · received {c.received_on}{c.deposited_on&&` · deposited ${c.deposited_on}`}{c.cleared_on&&` · cleared ${c.cleared_on}`}</p>)}</section>
+ <AgreementTerms content={a.snapshot}/><p className="notice">Production remains blocked until current material approvals and fulfillment readiness are verified in the following chunks.</p></>;
+}

@@ -32,8 +32,10 @@ subsequent clarifications in this chat. The original PDF remains at
    independent-connection booking verification awaits the Sales database. Immutable versions, prices, two-week coverage
    blocks, tax configuration, discounts, date/deadline rules, scoped overrides,
    transaction-safe exclusive/four-advertiser reservations.
-4. **Agreements/financial foundation:** signing, holds, invoices, checks,
-   provider-neutral events, commission/owner ledger and fake-provider tests.
+4. **Agreements/financial foundation:** locally implemented signing, holds, invoices,
+   checks, provider-neutral events, commission/owner ledger and fake-provider tests.
+   Connected Auth/Storage, scheduled expiry and independent-connection verification
+   await the dedicated Sales Supabase project. Stripe remains Chunk 9.
 5. **Assets/readiness:** intake, versioned previews/approval, per-asset fees and
    revision accounting, standing authorization, block reasons/exceptions, notices.
 6. **Website migration:** eligible Sales-backed public interfaces, shared

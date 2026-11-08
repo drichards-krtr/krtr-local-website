@@ -22,3 +22,5 @@ textarea { font: inherit; min-height: 100px; resize: vertical; border: 1px solid
 .check { display: flex; gap: 8px; align-items: center; } .check input { width: 18px; height: 18px; } .history { border-top: 1px solid #d4dfe2; margin-top: 20px; padding-top: 12px; }
 
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; } main nav { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0; } details > summary { cursor: pointer; margin-bottom: 16px; } fieldset { min-width: 0; }
+
+@media print { header, .no-print { display: none !important; } body { background: white; color: black; } main { padding: 0; max-width: none; } .card { border: 1px solid #aaa; box-shadow: none; } h1,h2,h3 { break-after: avoid; } p,li { orphans: 3; widows: 3; } }

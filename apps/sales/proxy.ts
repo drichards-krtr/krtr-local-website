@@ -22,4 +22,4 @@ export async function proxy(request: NextRequest) {
   response.headers.set("Referrer-Policy", "no-referrer");
   return response;
 }
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|api/jobs/).*)"] };

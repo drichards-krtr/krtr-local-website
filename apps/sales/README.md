@@ -1,13 +1,15 @@
 # KRTR Local Sales
 
 Independent Next.js app at `sales.krtrlocal.tv`, with its own Supabase project.
-Chunks 1–3 include setup-aware app shell, email/password sign-in and recovery,
+Chunks 1–4 include setup-aware app shell, email/password sign-in and recovery,
 owner administration, district/region/studio/show foundations, customer organizations,
 secure invitations/member permissions, sales ownership/transfers, customer-specific
 district expansion, district access approvals, pipeline and contact follow-ups.
 Chunk 3 adds the approved catalogue, immutable quotes, scoped tax/exception controls,
-and signed-inventory reservation foundation. Signing, payments and fulfillment remain
-later chunks.
+and signed-inventory reservation foundation. Chunk 4 adds exact-version signing,
+private paper evidence, invoices, received/deposited/cleared checks, normalized
+payment facts, receipts and commission/owner ledgers. Live card checkout and
+fulfillment remain later chunks.
 
 ## Local development without a Supabase project
 
@@ -36,7 +38,8 @@ using a disposable in-memory PGlite database with minimal Supabase Auth stubs.
 They do not contact or alter any live project. Live Supabase Auth, email delivery,
 Vercel and deployed database behavior must still be checked after setup.
 
-See [Chunk 3 setup and operations](../../docs/sales/chunk-3-setup.md),
+See [Chunk 4 setup and operations](../../docs/sales/chunk-4-setup.md),
+[Chunk 3 setup and operations](../../docs/sales/chunk-3-setup.md),
 [Chunk 2 setup and operations](../../docs/sales/chunk-2-setup.md),
 [foundation setup and operating instructions](../../docs/sales/chunk-1-setup.md),
 [implementation plan](../../docs/sales/build-plan.md), and
