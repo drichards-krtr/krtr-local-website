@@ -129,7 +129,7 @@ begin
     raise exception 'Only editors or admins can archive or restore an Alert';
   end if;
   return new;
-end $$;
+end; $$;
 drop trigger if exists protect_alert_archive on public.nrcs_priority_alerts;
 create trigger protect_alert_archive before update on public.nrcs_priority_alerts
 for each row execute function public.nrcs_protect_alert_archive();
@@ -163,7 +163,7 @@ begin
   end if;
   new.revision := case when TG_OP='UPDATE' then old.revision+1 else 1 end;
   new.updated_at:=now(); return new;
-end $$;
+end; $$;
 
 create or replace function public.nrcs_validate_daily() returns trigger
 language plpgsql security invoker set search_path=public as $$
@@ -177,7 +177,7 @@ begin
   new.asset_id:=new.hero_asset_id;
   new.revision:=case when TG_OP='UPDATE' then old.revision+1 else 1 end;
   new.updated_at:=now(); return new;
-end $$;
+end; $$;
 
 create or replace function public.nrcs_attach_output_image(p_asset jsonb,p_district text,p_story uuid default null,p_edition uuid default null) returns uuid
 language plpgsql security invoker set search_path=public as $$
@@ -196,7 +196,7 @@ begin
   if p_story is not null then insert into public.nrcs_story_assets(story_id,asset_id) values(p_story,result) on conflict do nothing; end if;
   if p_edition is not null then insert into public.nrcs_edition_assets(edition_id,asset_id) values(p_edition,result) on conflict do nothing; end if;
   return result;
-end $$;
+end; $$;
 
 comment on type public.nrcs_staff_role is
   'Contributor owns limited work; producer performs district editorial production and publication without destructive administration; editor manages archival/configuration; admin manages the system.';
