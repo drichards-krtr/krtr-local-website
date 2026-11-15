@@ -84,10 +84,11 @@ function formatSaleTime(timeText: string) {
 }
 
 export default async function GarageSalesCmsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string; status?: string; saved?: string; geocode?: string; session?: string };
+  searchParams?: Promise<{ district?: string; status?: string; saved?: string; geocode?: string; session?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const status = searchParams?.status || "published";

@@ -5,6 +5,7 @@ node_modules/
 .phase5-checks/
 .phase6-checks/
 .tmp/phase9/
+.tmp/article-cache/
 dist/
 .vercel/
 .env

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DISTRICT_OPTIONS } from "@/lib/districts";
 
-export default async function EditAlertPage({ params }: { params: { id: string } }) {
+export default async function EditAlertPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("alerts")

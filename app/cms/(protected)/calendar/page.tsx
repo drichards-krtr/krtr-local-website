@@ -61,10 +61,11 @@ function formatDateOnly(date: Date) {
 }
 
 export default async function CalendarPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { search?: string; status?: string; range?: string; savedAt?: string; district?: string; error?: string };
+  searchParams: Promise<{ search?: string; status?: string; range?: string; savedAt?: string; district?: string; error?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";

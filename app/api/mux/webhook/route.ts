@@ -1,3 +1,5 @@
+import { invalidateArticleDistrict } from "@/lib/articleCache";
+import { parseDistrictKey } from "@/lib/districts";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -114,7 +116,7 @@ export async function POST(request: Request) {
     let matched = false;
 
     for (const table of tables) {
-      let query = supabase.from(table).update(update).select("id");
+      let query = supabase.from(table).update(update).select("id,district_key");
       query = table === "stories" ? query.eq("editorial_origin", "cms") : query.is("nrcs_edition_id", null);
 
       if (mediaRef) {
@@ -139,6 +141,10 @@ export async function POST(request: Request) {
         });
       } else if (updatedRows && updatedRows.length > 0) {
         matched = true;
+        if (table === "stories") for (const row of updatedRows) {
+          const district = parseDistrictKey(row.district_key);
+          if (district) invalidateArticleDistrict(district);
+        }
       }
     }
 

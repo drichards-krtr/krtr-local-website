@@ -16,7 +16,8 @@ function normalizeLogoDates(formData: FormData) {
   };
 }
 
-export default async function EditLogoPage({ params }: { params: { id: string } }) {
+export default async function EditLogoPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("logos")

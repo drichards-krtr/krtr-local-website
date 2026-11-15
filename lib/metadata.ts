@@ -6,6 +6,7 @@ import { getPreferredLogo } from "@/lib/logos";
 
 type PageMetadataInput = {
   districtKey?: DistrictKey;
+  origin?: string;
   title?: string | null;
   description?: string | null;
   path?: string;
@@ -81,6 +82,7 @@ export function markdownToDescription(markdown: string | null | undefined, maxLe
 
 export async function buildPageMetadata({
   districtKey,
+  origin,
   title,
   description,
   path = "/",
@@ -93,10 +95,11 @@ export async function buildPageMetadata({
   const resolvedDescription =
     description?.trim() || district.metadata.defaultDescription;
   const resolvedImage = image || (await getActiveLogoImage(resolvedDistrictKey));
-  const url = await absoluteUrl(path, resolvedDistrictKey);
+  const base = origin ? new URL(origin) : await getMetadataBase(resolvedDistrictKey);
+  const url = new URL(path, base).toString();
 
   return {
-    metadataBase: await getMetadataBase(resolvedDistrictKey),
+    metadataBase: base,
     title: resolvedTitle,
     description: resolvedDescription,
     alternates: {

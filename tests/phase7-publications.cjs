@@ -93,6 +93,8 @@ const originalFetch = global.fetch;
     assert.equal(checks, 1); assert.equal(calls, 1, "Status check must not send instructions");
     let liveMode = false, receivingKind;
     const receive = load("app/api/nrcs/publications/route.ts", {
+      "@/lib/articleCache": { invalidateArticleDistrict: () => {} },
+      "@/lib/districts": load("lib/districts.ts"),
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
       "@/lib/nrcsPublication": helper,
       "@/lib/editorialFeatureFlag": { nrcsPublishingEnabled: () => liveMode },
@@ -116,6 +118,8 @@ const originalFetch = global.fetch;
     assert.equal(receivingKind, "receive_nrcs_alert_publication");
     liveMode = false;
     const statusApi = load("app/api/nrcs/publications/route.ts", {
+      "@/lib/articleCache": { invalidateArticleDistrict: () => {} },
+      "@/lib/districts": load("lib/districts.ts"),
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
       "@/lib/nrcsPublication": helper, "@/apps/nrcs/lib/editorialContract": contract,
       "@/lib/editorialFeatureFlag": { nrcsPublishingEnabled: () => { throw new Error("Read-only status must not depend on write activation"); } },

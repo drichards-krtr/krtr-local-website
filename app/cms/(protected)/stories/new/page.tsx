@@ -4,10 +4,11 @@ import { parseDistrictKey } from "@/lib/districts";
 import { getTagTree } from "@/lib/tags";
 
 export default async function NewStoryPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string };
+  searchParams?: Promise<{ district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || (await getCurrentDistrictKey());
   return (
     <div>

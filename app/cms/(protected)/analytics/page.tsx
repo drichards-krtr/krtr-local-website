@@ -37,10 +37,11 @@ function isDateInput(value: string) {
 }
 
 export default async function AnalyticsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { day?: string };
+  searchParams: Promise<{ day?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const requestedDay = searchParams.day?.trim() || "";
   let selectedDay = isDateInput(requestedDay) ? requestedDay : "";

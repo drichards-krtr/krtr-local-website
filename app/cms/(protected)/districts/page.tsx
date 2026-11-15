@@ -107,10 +107,11 @@ async function updateDistrict(formData: FormData) {
 }
 
 export default async function DistrictConfigurationPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { error?: string; success?: string };
+  searchParams?: Promise<{ error?: string; success?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const service = createServiceClient();
   const { data, error } = await service
     .from("districts")

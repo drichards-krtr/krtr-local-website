@@ -20,10 +20,11 @@ const PAGE_META: Record<SeasonalPage["slug"], { href: string; title: string }> =
 };
 
 export default async function SeasonalPagesDashboard({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string };
+  searchParams?: Promise<{ district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const supabase = await createServerSupabase();
   const { data } = await supabase

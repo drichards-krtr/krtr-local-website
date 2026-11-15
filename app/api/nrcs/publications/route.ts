@@ -3,6 +3,8 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { authorizeNrcsService, publicationHash, sanitizePublicationHtml } from "@/lib/nrcsPublication";
 import { validatePublication, verifyPublicationReceipt } from "@/apps/nrcs/lib/editorialContract";
 import { nrcsPublishingEnabled } from "@/lib/editorialFeatureFlag";
+import { invalidateArticleDistrict } from "@/lib/articleCache";
+import { parseDistrictKey } from "@/lib/districts";
 
 export const runtime = "nodejs";
 export async function GET(request: Request) {
@@ -13,6 +15,10 @@ export async function GET(request: Request) {
     const service = createServiceClient();
     const { data, error } = await service.rpc("nrcs_web_publication_status", { p_request_id: requestId });
     if (error) return NextResponse.json({ error: error.message }, { status: 422 });
+    if (data?.receipt?.kind === "web") {
+      const district = parseDistrictKey(data.receipt.district_key);
+      if (district) invalidateArticleDistrict(district);
+    }
     if (data?.receipt?.public_url?.startsWith("/stories/")) {
       const { data: district, error: hostError } = await service.from("districts").select("subdomain").eq("district_key", data.receipt.district_key).single();
       if (hostError || !district?.subdomain) throw new Error("CMS district public host is unavailable.");
@@ -49,6 +55,13 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: /conflict|stale|cannot change/i.test(error.message) ? 409 : 422 });
     const enriched = data?.public_url === "/" || data?.public_url?.startsWith("/stories/") ? { ...data, public_url: new URL(data.public_url, publicOrigin).toString() } : data;
     const receipt = verifyPublicationReceipt(enriched, envelope, hash, live);
+    // Replays also invalidate: if delivery committed but a response was lost,
+    // retrying the same NRCS request repairs cache freshness before returning success.
+    if (live && envelope.kind === "web") {
+      const district = parseDistrictKey(envelope.district_key);
+      if (!district) throw new Error("Unknown article cache district.");
+      invalidateArticleDistrict(district);
+    }
     return NextResponse.json({ ok: true, receipt }, { headers: { "Cache-Control": "no-store" } });
   } catch (failure) {
     return NextResponse.json({ error: failure instanceof Error ? failure.message : "Invalid publication package." }, { status: 400 });

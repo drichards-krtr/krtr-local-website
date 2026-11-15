@@ -31,10 +31,11 @@ type NominationSubmission = {
 };
 
 export default async function VotingNominationEntriesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string; nomination?: string };
+  searchParams?: Promise<{ district?: string; nomination?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const selectedNominationId = String(searchParams?.nomination || "");

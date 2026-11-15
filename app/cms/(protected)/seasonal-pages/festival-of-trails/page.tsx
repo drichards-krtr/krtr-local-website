@@ -41,10 +41,11 @@ function revalidateFestivalPaths(districtKey: DistrictKey) {
 }
 
 export default async function SeasonalFestivalCms({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string; error?: string; success?: string };
+  searchParams?: Promise<{ district?: string; error?: string; success?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const supabase = await createServerSupabase();

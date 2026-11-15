@@ -99,10 +99,11 @@ async function sendGarageSaleSubmissionEmail(
 }
 
 export default async function SubmitGarageSalePage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { session?: string };
+  searchParams?: Promise<{ session?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const district = await getCurrentDistrict();
   const sessions = await getOpenGarageSaleSessions(district.key);
   const selectedSession =

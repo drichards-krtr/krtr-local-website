@@ -88,10 +88,11 @@ async function sendSubmissionNotificationEmail(args: {
 }
 
 export default async function NominationsPublicPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { success?: string };
+  searchParams: Promise<{ success?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const district = await getCurrentDistrict();
   const nomination = await getCurrentOpenNomination(district.key);
 

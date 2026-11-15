@@ -1,3 +1,4 @@
+import { invalidateArticleDistrict } from "@/lib/articleCache";
 import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import Link from "next/link";
 import { formatDateInTimeZone } from "@/lib/dates";
@@ -10,10 +11,11 @@ type SlotRow = { slot: string; story_id: string | null };
 type StoryOption = { id: string; title: string; published_at: string | null };
 
 export default async function StoriesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { search?: string; status?: string; district?: string };
+  searchParams: Promise<{ search?: string; status?: string; district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";
@@ -156,6 +158,7 @@ async function UnpublishButton({ storyId, districtKey }: { storyId: string; dist
     await assertLegacyEditorialWrites();
     const supabase = await createServerSupabase();
     await supabase.from("stories").update({ status: "archived" }).eq("id", storyId).eq("district_key", districtKey);
+    invalidateArticleDistrict(districtKey);
     revalidatePath("/");
     revalidatePath("/cms/stories");
     redirect(`/cms/stories?district=${districtKey}`);
@@ -205,6 +208,7 @@ function renderSlotSelector(slot: string, districtKey: DistrictKey, slots: SlotR
       }
     }
 
+    invalidateArticleDistrict(districtKey);
     revalidatePath("/");
     revalidatePath("/cms/stories");
     redirect(`/cms/stories?district=${districtKey}`);

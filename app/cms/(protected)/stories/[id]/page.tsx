@@ -4,10 +4,11 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getTagTree } from "@/lib/tags";
 
 export default async function EditStoryPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const supabase = await createServerSupabase();
   const [{ data: story }, { data: slotRow }] = await Promise.all([
     supabase

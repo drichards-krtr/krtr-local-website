@@ -2,9 +2,23 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { CMS_SESSION_COOKIE, isCmsSessionExpired } from "@/lib/cmsSession";
 import { isLegacyEditorialPath, legacyEditorialEnabled } from "@/lib/editorialFeatureFlag";
+import { isExplicitDistrictHost, resolveDistrictFromHost } from "@/lib/districts";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Scope is encoded into the internal path, so ISR never shares a district's
+  // output with another host. Only trusted host routing selects this scope.
+  if (pathname.startsWith("/article-cache/")) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+  if (/^\/stories\/[^/]+\/?$/.test(pathname)) {
+    const host = request.headers.get("host");
+    const scope = isExplicitDistrictHost(host) ? resolveDistrictFromHost(host) : "global";
+    const destination = request.nextUrl.clone();
+    destination.pathname = `/article-cache/${scope}/${pathname.split("/")[2]}`;
+    return NextResponse.rewrite(destination);
+  }
 
   if (!pathname.startsWith("/cms") || pathname === "/cms/login") {
     return NextResponse.next();
@@ -25,5 +39,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/cms", "/cms/:path*"],
+  matcher: ["/cms", "/cms/:path*", "/stories/:path*", "/article-cache/:path*"],
 };

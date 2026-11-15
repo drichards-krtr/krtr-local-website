@@ -15,10 +15,11 @@ type GarageSaleGeocodeFailureRow = {
 };
 
 export default async function CmsDashboard({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string };
+  searchParams?: Promise<{ district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const supabase = await createServerSupabase();

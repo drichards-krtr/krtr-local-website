@@ -34,12 +34,14 @@ function revalidateNominationPaths(districtKey: DistrictKey) {
 }
 
 export default async function EditNominationPage({
-  params,
-  searchParams,
+  params: paramsPromise,
+  searchParams: searchParamsPromise,
 }: {
-  params: { id: string };
-  searchParams?: { district?: string; error?: string; success?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ district?: string; error?: string; success?: string }>;
 }) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const supabase = await createServerSupabase();

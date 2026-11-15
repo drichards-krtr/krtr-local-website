@@ -7,10 +7,11 @@ import { DISTRICT_OPTIONS, parseDistrictKey, type DistrictKey } from "@/lib/dist
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export default async function DailysPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { search?: string; status?: string; district?: string };
+  searchParams: Promise<{ search?: string; status?: string; district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const search = searchParams.search?.trim() || "";
   const status = searchParams.status || "all";

@@ -57,12 +57,14 @@ function formatSaleTime(timeText: string) {
 }
 
 export default async function EditGarageSaleSubmissionPage({
-  params,
-  searchParams,
+  params: paramsPromise,
+  searchParams: searchParamsPromise,
 }: {
-  params: { id: string };
-  searchParams?: { district?: string; status?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ district?: string; status?: string }>;
 }) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const statusFilter = searchParams?.status || "draft";

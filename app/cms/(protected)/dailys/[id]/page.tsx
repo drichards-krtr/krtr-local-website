@@ -3,10 +3,11 @@ import { syncDailyVideoState } from "@/lib/mux";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export default async function EditDailyPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const supabase = await createServerSupabase();
   const { data: daily } = await supabase
     .from("dailys")

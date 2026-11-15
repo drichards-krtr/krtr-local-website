@@ -24,10 +24,11 @@ function revalidateSocialLinkPaths(siteScopeKey: SiteScopeKey) {
 }
 
 export default async function SocialLinksPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string };
+  searchParams?: Promise<{ district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const siteScopeKey = parseSiteScopeKey(searchParams?.district) || "dlpc";
   const fallbackDistrictKey = getFallbackDistrictKey(siteScopeKey);
   const district = getDistrictConfig(fallbackDistrictKey);

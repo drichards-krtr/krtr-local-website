@@ -1,3 +1,4 @@
+import { invalidateArticleDistrict } from "@/lib/articleCache";
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { syncStoryVideoState } from "@/lib/mux";
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
+    invalidateArticleDistrict(district);
     return NextResponse.json({
       mux_asset_id: story.mux_asset_id,
       mux_upload_id: story.mux_upload_id,

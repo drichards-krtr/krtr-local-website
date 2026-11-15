@@ -144,6 +144,16 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
         return;
       }
 
+      const cacheResponse = await fetch("/api/cms/article-cache", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ district: form.district_key }),
+      }).catch(() => null);
+      if (!cacheResponse?.ok) {
+        setError("Story saved, but public cache refresh failed. Save again to retry.");
+        setSaving(false);
+        return;
+      }
+
       const { error: clearSlotError } = await supabase
         .from("story_slots")
         .update({ story_id: null })

@@ -4,10 +4,11 @@ import { getCurrentDistrictKey } from "@/lib/districtServer";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { debug?: string };
+  searchParams?: Promise<{ debug?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const siteScopeKey = await getCurrentDistrictKey();
   return (
     <HomePageContent

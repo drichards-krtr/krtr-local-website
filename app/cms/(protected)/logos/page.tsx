@@ -23,10 +23,11 @@ function revalidateLogoPaths(districtKey: DistrictKey) {
 }
 
 export default async function LogosPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string };
+  searchParams?: Promise<{ district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const supabase = await createServerSupabase();

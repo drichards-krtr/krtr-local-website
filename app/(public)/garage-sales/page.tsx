@@ -45,10 +45,11 @@ function formatSaleTime(timeText: string) {
 }
 
 export default async function GarageSalesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { date?: string };
+  searchParams?: Promise<{ date?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = await getCurrentDistrictKey();
   const selectedDate = String(searchParams?.date || "").trim();
   const sessions = await getOpenGarageSaleSessions(districtKey);

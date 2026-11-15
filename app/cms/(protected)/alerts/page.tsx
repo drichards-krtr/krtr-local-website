@@ -10,10 +10,11 @@ import {
 import { DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
 
 export default async function AlertsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { active?: string; search?: string; district?: string };
+  searchParams: Promise<{ active?: string; search?: string; district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const districtKey = parseDistrictKey(searchParams.district) || "dlpc";
   // Cleanup: remove alerts that expired more than 7 days ago

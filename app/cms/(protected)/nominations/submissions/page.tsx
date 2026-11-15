@@ -35,10 +35,11 @@ function revalidateSubmissionPaths(districtKey: DistrictKey) {
 }
 
 export default async function NominationSubmissionsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string; category?: string; from?: string; to?: string; error?: string; success?: string };
+  searchParams?: Promise<{ district?: string; category?: string; from?: string; to?: string; error?: string; success?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const supabase = await createServerSupabase();

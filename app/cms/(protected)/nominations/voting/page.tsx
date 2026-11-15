@@ -77,10 +77,11 @@ function countBy<T>(items: T[], key: (item: T) => string) {
 }
 
 export default async function NominationVotingPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string; category?: string; error?: string; success?: string };
+  searchParams?: Promise<{ district?: string; category?: string; error?: string; success?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
   const district = getDistrictConfig(districtKey);
   const selectedCategory = NOMINATION_CATEGORIES.includes(searchParams?.category as NominationCategory)

@@ -1,20 +1,19 @@
+import { getCachedArticle, getArticleScope } from "@/lib/articleCache";
+import ArticleChrome from "@/components/public/ArticleChrome";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { createServiceClient } from "@/lib/supabase/admin";
+import { redirect, notFound } from "next/navigation";
 import MuxPlayer from "@/components/public/MuxPlayer";
 import Markdown from "@/components/public/Markdown";
-import AdSlot from "@/components/public/AdSlot";
-import { pickAndTrackAdsForPlacement, type Ad } from "@/lib/ads";
 import { formatDateInTimeZone } from "@/lib/dates";
 import { buildPageMetadata, markdownToDescription } from "@/lib/metadata";
-import { syncStoryVideoState } from "@/lib/mux";
-import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
-import { getCurrentDistrictKey } from "@/lib/districtServer";
 import NrcsArticleMedia from "@/components/cms/NrcsArticleMedia";
 import { sanitizePublicationHtml } from "@/lib/nrcsPublication";
 import { htmlToDescription } from "@/lib/storyDescription";
 
-export const dynamic = "force-dynamic";
+// Empty params opts into on-demand ISR; no production data is read at build time.
+export const dynamic = "force-static";
+export const revalidate = false;
+export function generateStaticParams() { return []; }
 
 function getStoryPreviewImage(story: {
   image_url: string | null;
@@ -35,15 +34,15 @@ function getStoryPreviewImage(story: {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ scope: string; id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
-  const districtKey = await getCurrentDistrictKey();
-  const story = await getPublishedStoryByIdOrSlug(districtKey, id);
+  const { id, scope } = await params;
+  const { districtKey, origin } = getArticleScope(scope);
+  const story = await getCachedArticle(districtKey, id);
 
   if (!story) {
     return buildPageMetadata({
-      districtKey,
+      districtKey, origin,
       title: "Story not found",
       path: `/stories/${id}`,
     });
@@ -52,7 +51,7 @@ export async function generateMetadata({
   const storyPath = `/stories/${story.slug || story.id}`;
 
   return buildPageMetadata({
-    districtKey,
+    districtKey, origin,
     title: story.seo_title || story.title,
     description: story.seo_description || story.tease || (story.editorial_origin === "nrcs" ? htmlToDescription(story.body_html) : markdownToDescription(story.body_markdown)),
     path: storyPath,
@@ -61,44 +60,23 @@ export async function generateMetadata({
   });
 }
 
-export default async function StoryPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const districtKey = await getCurrentDistrictKey();
-  const story = await getPublishedStoryByIdOrSlug(districtKey, id);
+export default async function StoryPage({ params }: { params: Promise<{ scope: string; id: string }> }) {
+  const { id, scope } = await params;
+  const { districtKey, origin } = getArticleScope(scope);
+  const story = await getCachedArticle(districtKey, id);
 
-  if (!story) {
-    return (
-      <main className="mx-auto max-w-site px-4 py-10">
-        <p>Story not found.</p>
-      </main>
-    );
-  }
+  if (!story) notFound();
 
   if (story.slug && id !== story.slug) {
     redirect(`/stories/${story.slug}`);
   }
 
-  const syncedVideo =
-    story.editorial_origin === "nrcs" || story.mux_playback_id ? null : await syncStoryVideoState(story.id).catch(() => null);
-  const playbackId = syncedVideo?.mux_playback_id || story.mux_playback_id;
+  const playbackId = story.mux_playback_id;
   const nrcsArticle = story.editorial_origin === "nrcs" && typeof story.body_html === "string";
   const fallbackImage = !playbackId && !nrcsArticle ? story.image_url : null;
 
-  let storyAd: Ad | null = null;
-  try {
-    const service = createServiceClient();
-    const picked = await pickAndTrackAdsForPlacement({
-      supabase: service,
-      districtKey,
-      placement: "story",
-      count: 1,
-    });
-    storyAd = picked[0] || null;
-  } catch (error) {
-    console.error("[StoryPage] Failed to load tracked ad", error);
-  }
-
   return (
+    <ArticleChrome key={`${scope}:${id}`} scope={scope}>
     <main className="mx-auto max-w-site px-4 py-6">
       <article className="rounded-lg bg-white p-6">
         <header className="mb-4">
@@ -132,9 +110,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
         {nrcsArticle ? <><NrcsArticleMedia images={story.article_media || []} /><div className="rich-text break-words" dangerouslySetInnerHTML={{ __html: sanitizePublicationHtml(story.body_html || "") }} /></> : <Markdown content={story.body_markdown || ""} />}
       </article>
 
-      <div className="mt-6">
-        <AdSlot ad={storyAd} className="mx-auto max-w-[900px]" />
-      </div>
     </main>
+    </ArticleChrome>
   );
 }

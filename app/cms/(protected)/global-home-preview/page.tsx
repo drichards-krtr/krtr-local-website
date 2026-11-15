@@ -4,10 +4,11 @@ import HomePageContent from "@/components/public/HomePageContent";
 export const dynamic = "force-dynamic";
 
 export default async function GlobalHomePreviewPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { debug?: string };
+  searchParams?: Promise<{ debug?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   return (
     <div className="-mx-8 -my-6 bg-neutral-100">
       <div className="border-b border-neutral-200 bg-white px-8 py-4">

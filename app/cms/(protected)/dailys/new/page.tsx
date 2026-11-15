@@ -1,11 +1,12 @@
 import DailyEditor from "@/components/cms/DailyEditor";
 import { parseDistrictKey } from "@/lib/districts";
 
-export default function NewDailyPage({
-  searchParams,
+export default async function NewDailyPage({
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { district?: string };
+  searchParams?: Promise<{ district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const districtKey = parseDistrictKey(searchParams?.district) || "dlpc";
 
   return (

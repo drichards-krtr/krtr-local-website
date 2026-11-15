@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { DISTRICT_OPTIONS, parseDistrictKey } from "@/lib/districts";
 
 export default async function AdsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { placement?: string; active?: string; search?: string; district?: string };
+  searchParams: Promise<{ placement?: string; active?: string; search?: string; district?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const supabase = await createServerSupabase();
   const placement = searchParams.placement || "all";
   const active = searchParams.active || "all";
