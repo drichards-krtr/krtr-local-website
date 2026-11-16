@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/publicCache";
 import { redirect } from "next/navigation";
 import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { createServerSupabase } from "@/lib/supabase/server";

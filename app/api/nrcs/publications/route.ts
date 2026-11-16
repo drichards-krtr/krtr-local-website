@@ -5,6 +5,8 @@ import { validatePublication, verifyPublicationReceipt } from "@/apps/nrcs/lib/e
 import { nrcsPublishingEnabled } from "@/lib/editorialFeatureFlag";
 import { invalidateArticleDistrict } from "@/lib/articleCache";
 import { parseDistrictKey } from "@/lib/districts";
+import { isSiteScopeKey } from "@/lib/districts";
+import { invalidatePublicScope } from "@/lib/publicCache";
 
 export const runtime = "nodejs";
 export async function GET(request: Request) {
@@ -15,6 +17,7 @@ export async function GET(request: Request) {
     const service = createServiceClient();
     const { data, error } = await service.rpc("nrcs_web_publication_status", { p_request_id: requestId });
     if (error) return NextResponse.json({ error: error.message }, { status: 422 });
+    if (isSiteScopeKey(data?.receipt?.district_key)) invalidatePublicScope(data.receipt.district_key);
     if (data?.receipt?.kind === "web") {
       const district = parseDistrictKey(data.receipt.district_key);
       if (district) invalidateArticleDistrict(district);
@@ -55,6 +58,7 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: /conflict|stale|cannot change/i.test(error.message) ? 409 : 422 });
     const enriched = data?.public_url === "/" || data?.public_url?.startsWith("/stories/") ? { ...data, public_url: new URL(data.public_url, publicOrigin).toString() } : data;
     const receipt = verifyPublicationReceipt(enriched, envelope, hash, live);
+    if (live && isSiteScopeKey(envelope.district_key)) invalidatePublicScope(envelope.district_key);
     // Replays also invalidate: if delivery committed but a response was lost,
     // retrying the same NRCS request repairs cache freshness before returning success.
     if (live && envelope.kind === "web") {

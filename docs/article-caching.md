@@ -68,4 +68,7 @@ ads and live chrome. Publish an approved correction through NRCS and verify the
 next public request reflects it. Do not fabricate or withdraw a live news story
 solely for a test. Preserve the previous production deployment for rollback.
 
-Homepage, calendar, tag and other public route output caching remains part two.
+On November 16, production article HITs and an NRCS correction were verified on
+both district and main-site URLs: the updated article returned REVALIDATED,
+followed by HIT with identical updated content. Phase-two implementation and
+release status are documented in `public-page-caching.md`.

@@ -92,7 +92,9 @@ const originalFetch = global.fetch;
     assert.equal((await post({ kind: "web", source_id: source, district_key: "dlpc", revision: 1, action: "refresh" })).status, 200);
     assert.equal(checks, 1); assert.equal(calls, 1, "Status check must not send instructions");
     let liveMode = false, receivingKind;
+    const publicInvalidations = [];
     const receive = load("app/api/nrcs/publications/route.ts", {
+      "@/lib/publicCache": { invalidatePublicScope: scope => publicInvalidations.push(scope) },
       "@/lib/articleCache": { invalidateArticleDistrict: () => {} },
       "@/lib/districts": load("lib/districts.ts"),
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
@@ -106,6 +108,7 @@ const originalFetch = global.fetch;
     assert.equal((await receivePost({ ...envelope, private_notes: "secret" })).status, 400);
     assert.equal((await receivePost(envelope)).status, 200);
     assert.equal(receivingKind, "receive_nrcs_publication", "Disabled flag must retain private receiving");
+    assert.deepEqual(publicInvalidations, [], "Private receipt must not expire public pages");
     liveMode = true;
     assert.equal((await receivePost(envelope)).status, 200);
     assert.equal(receivingKind, "receive_nrcs_web_publication");
@@ -116,8 +119,10 @@ const originalFetch = global.fetch;
     const alertEnvelope = { ...envelope, kind: "alert", payload: { headline: "Test", message: "Message", active: false, start_at: null, end_at: null, target_type: "none", target_id: null, external_url: null } };
     assert.equal((await receivePost(alertEnvelope)).status, 200);
     assert.equal(receivingKind, "receive_nrcs_alert_publication");
+    assert.deepEqual(publicInvalidations, ["dlpc", "dlpc", "dlpc"], "Web, homepage and alert deliveries must refresh public output");
     liveMode = false;
     const statusApi = load("app/api/nrcs/publications/route.ts", {
+      "@/lib/publicCache": { invalidatePublicScope: () => {} },
       "@/lib/articleCache": { invalidateArticleDistrict: () => {} },
       "@/lib/districts": load("lib/districts.ts"),
       "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },

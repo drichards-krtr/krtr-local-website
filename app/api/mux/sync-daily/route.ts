@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { invalidatePublicScope } from "@/lib/publicCache";
 import { syncDailyVideoState } from "@/lib/mux";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Daily not found" }, { status: 404 });
     }
 
+    invalidatePublicScope(district);
     return NextResponse.json({
       mux_asset_id: daily.mux_asset_id,
       mux_upload_id: daily.mux_upload_id,

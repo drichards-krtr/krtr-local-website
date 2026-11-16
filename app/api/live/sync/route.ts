@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabaseServer";
 import { isLiveBySchedule, type StreamScheduleRow } from "@/lib/streamSchedule";
 import { resolveDistrictFromHost } from "@/lib/districts";
+import { invalidatePublicScope } from "@/lib/publicCache";
 
 export async function GET(request: Request) {
   const districtKey = resolveDistrictFromHost(
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
       mode: "auto",
       timezone,
     });
+    invalidatePublicScope(districtKey);
   }
 
   return NextResponse.json({

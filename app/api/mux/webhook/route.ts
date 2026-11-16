@@ -1,5 +1,6 @@
 import { invalidateArticleDistrict } from "@/lib/articleCache";
 import { parseDistrictKey } from "@/lib/districts";
+import { invalidatePublicScope } from "@/lib/publicCache";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -144,6 +145,10 @@ export async function POST(request: Request) {
         if (table === "stories") for (const row of updatedRows) {
           const district = parseDistrictKey(row.district_key);
           if (district) invalidateArticleDistrict(district);
+        }
+        if (table === "dailys") for (const row of updatedRows) {
+          const district = parseDistrictKey(row.district_key);
+          if (district) invalidatePublicScope(district);
         }
       }
     }

@@ -3,6 +3,7 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { notFound } from "next/navigation";
 import { getPublishedStoryByIdOrSlug } from "@/lib/public-stories";
 import { getDistrictConfig, getFallbackDistrictKey, isSiteScopeKey, type DistrictKey } from "@/lib/districts";
+import { invalidatePublicScope } from "@/lib/publicCache";
 
 export function getArticleScope(scope: string) {
   if (!isSiteScopeKey(scope)) notFound();
@@ -33,6 +34,7 @@ export const getCachedArticle = cache(async (district: DistrictKey, id: string) 
 });
 
 export function invalidateArticleDistrict(district: DistrictKey) {
+  invalidatePublicScope(district);
   // A district tag deliberately covers ID URLs, historical aliases, fuzzy dated
   // slugs and cached 404s, so a rename/withdrawal cannot leave a stale variant.
   revalidateTag(articleTag(district), { expire: 0 });

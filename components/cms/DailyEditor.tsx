@@ -121,6 +121,15 @@ export default function DailyEditor({ initialDaily, initialDistrictKey }: Props)
       return;
     }
 
+    const refreshed = await fetch("/api/cms/article-cache", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ district: form.district_key, previousDistrict: initialDaily?.district_key }),
+    }).catch(() => null);
+    if (!refreshed?.ok) {
+      setError("Daily saved, but public cache refresh failed. Save again to retry.");
+      setSaving(false);
+      return;
+    }
     setSuccess("Saved.");
     window.location.href = `/cms/dailys?district=${form.district_key}`;
     setSaving(false);

@@ -48,6 +48,7 @@ const fixture = http.createServer(async (request, response) => {
   if (table === "ads") rows = [ { id: id(80), district_key: "dlpc", placement: "story", image_url: "https://example.invalid/ad.jpg", html: null, link_url: null, weight: 1 },
     { id: id(81), district_key: "dlpc", placement: "allsite", image_url: "https://example.invalid/ad.jpg", html: null, link_url: null, weight: 1 } ];
   if (table === "alerts") rows = [{ id: id(82), district_key: "dlpc", message: "Fixture alert", link_url: "/weather", start_at: null, end_at: null }];
+  if (table === "site_pages") rows = [{ district_key: "dlpc", slug: "about", title: "Fixture About", body_markdown: "Fixture informational copy" }];
   for (const [key, value] of url.searchParams) {
     if (value.startsWith("eq.") && rows.some(row => key in row)) rows = rows.filter(row => String(row[key]) === value.slice(3));
     if (value.startsWith("like.")) rows = rows.filter(row => String(row[key]).startsWith(value.slice(5).replace(/%$/, "")));
@@ -101,10 +102,25 @@ async function publish(changes, revision) {
     assert.equal((await request("/article-cache/dlpc/cache-test")).status, 404);
     assert.equal((await request("/api/cms/article-cache", { method: "POST", body: "{}" })).status, 401);
     console.log("PASS: cached HTML/RSC route, server-rendered content/metadata/video, host isolation, spoof resistance, no SSR impressions, cache endpoint auth");
+    const home = await request("/", {headers:{host:"dlpc.krtrlocal.tv"}});
+    assert.equal(home.status,200);assert.match(home.text,/Original dlpc/);
+    const homeReads=reads;
+    const homeHit=await request("/",{headers:{host:"dlpc.krtrlocal.tv"}});
+    assert.equal(homeHit.headers.get("x-nextjs-cache"),"HIT");assert.equal(reads,homeReads);
+    const about=await request("/about",{headers:{host:"dlpc.krtrlocal.tv"}});
+    assert.equal(about.status,200);assert.match(about.text,/Fixture informational copy/);
+    const calendar=await request("/calendar?view=calendar",{headers:{host:"dlpc.krtrlocal.tv"}});
+    assert.equal(calendar.status,200);assert.match(calendar.text,/Previous/);
+    const list=await request("/calendar?view=list",{headers:{host:"dlpc.krtrlocal.tv"}});
+    assert.equal(list.status,200);assert.doesNotMatch(list.text,/>Previous</);
+    assert.equal(impressions,0,"Homepage output and prefetched HTML must not record ads");
+    console.log("PASS: homepage output hit without database reads, informational output, calendar query isolation, no cached homepage ad impressions");
     await publish({}, 1);
     const corrected = await article(); assert.match(corrected.text, /<h1[^>]*>Published correction<\/h1>/); assert.match(corrected.text, /Corrected copy/);
     const vsBefore = reads; await article("vs.krtrlocal.tv"); assert.equal(reads, vsBefore, "Publishing DLPC must preserve VS cache");
     const rootCorrected = await article("krtrlocal.tv"); assert.match(rootCorrected.text, /Published correction/);
+    const refreshedHome=await request("/",{headers:{host:"dlpc.krtrlocal.tv"}});
+    assert.match(refreshedHome.text,/Published correction/);assert.doesNotMatch(refreshedHome.text,/Original dlpc/);
     await publish({ slug: "renamed-test" }, 2);
     const old = await article(); assert.equal(old.status, 307); assert.equal(old.headers.get("location"), "/stories/renamed-test");
     const byId = await article("dlpc.krtrlocal.tv", stories[0].id); assert.equal(byId.status, 307);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/publicCache";
 import { redirect } from "next/navigation";
 import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";
 import { createServerSupabase } from "@/lib/supabase/server";

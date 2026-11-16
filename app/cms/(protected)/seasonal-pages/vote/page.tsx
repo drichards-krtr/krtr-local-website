@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/publicCache";
 import { redirect } from "next/navigation";
 import Markdown from "@/components/public/Markdown";
 import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";

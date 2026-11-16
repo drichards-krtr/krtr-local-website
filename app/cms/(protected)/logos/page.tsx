@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/publicCache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import CloudinaryMediaLibraryField from "@/components/cms/CloudinaryMediaLibraryField";
 import { DISTRICT_OPTIONS, getDistrictConfig, parseDistrictKey, type DistrictKey } from "@/lib/districts";

@@ -1,6 +1,6 @@
 import { assertLegacyEditorialWrites } from "@/lib/legacyEditorialWrite";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/publicCache";
 import { redirect } from "next/navigation";
 import { formatDateInTimeZone } from "@/lib/dates";
 import { DISTRICT_OPTIONS, parseDistrictKey, type DistrictKey } from "@/lib/districts";

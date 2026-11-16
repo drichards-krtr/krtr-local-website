@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import MuxPlayer from "@/components/public/MuxPlayer";
-import { dailyHref, getPublishedDailyBySlug } from "@/lib/dailys";
-import { formatDateInTimeZone } from "@/lib/dates";
-import { getCurrentDistrictKey } from "@/lib/districtServer";
+import { getPublishedDailyBySlug, dailyHref } from "@/lib/dailys";
 import { buildPageMetadata } from "@/lib/metadata";
-import { syncDailyVideoState } from "@/lib/mux";
-
+import Content from "@/components/public/pages/DailyPage";
+import { getCurrentDistrictKey } from "@/lib/districtServer";
 export const dynamic = "force-dynamic";
+export default async function Page(props: {params: Promise<{slug:string}>}) {
+ return <Content districtKey={await getCurrentDistrictKey()} params={props.params} />;
+}
 
 function getDailyPreviewImage(daily: {
   image_url: string | null;
@@ -44,46 +43,4 @@ export async function generateMetadata({
     image: getDailyPreviewImage(daily),
     type: "article",
   });
-}
-
-export default async function DailyPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const districtKey = await getCurrentDistrictKey();
-  const daily = await getPublishedDailyBySlug(districtKey, slug);
-
-  if (!daily) {
-    notFound();
-  }
-
-  const syncedVideo =
-    daily.mux_playback_id ? null : await syncDailyVideoState(daily.id).catch(() => null);
-  const playbackId = syncedVideo?.mux_playback_id || daily.mux_playback_id;
-
-  return (
-    <main className="mx-auto max-w-site px-4 py-6">
-      <article className="rounded-lg bg-white p-6">
-        <header className="mb-4">
-          <h1 className="text-2xl font-semibold">{daily.title}</h1>
-          {daily.published_at && (
-            <time className="text-sm text-muted" dateTime={daily.published_at}>
-              {formatDateInTimeZone(daily.published_at)}
-            </time>
-          )}
-        </header>
-        {playbackId ? (
-          <MuxPlayer
-            playbackId={playbackId}
-            poster={daily.image_url || undefined}
-            orientation={daily.video_orientation}
-          />
-        ) : daily.image_url ? (
-          <img
-            src={daily.image_url}
-            alt=""
-            className="mx-auto mb-4 block h-auto max-h-[300px] w-auto max-w-[calc(100%-2px)] rounded-lg"
-          />
-        ) : null}
-      </article>
-    </main>
-  );
 }

@@ -146,7 +146,7 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
 
       const cacheResponse = await fetch("/api/cms/article-cache", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ district: form.district_key }),
+        body: JSON.stringify({ district: form.district_key, previousDistrict: initialStory?.district_key }),
       }).catch(() => null);
       if (!cacheResponse?.ok) {
         setError("Story saved, but public cache refresh failed. Save again to retry.");
@@ -194,6 +194,17 @@ export default function StoryEditor({ initialStory, initialDistrictKey, tagTree 
         }
       }
 
+      // A reader could regenerate the homepage while the slot writes above are
+      // in progress. Expire it again only after the final lineup is committed.
+      const lineupRefresh = await fetch("/api/cms/article-cache", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ district: form.district_key, previousDistrict: initialStory?.district_key }),
+      }).catch(() => null);
+      if (!lineupRefresh?.ok) {
+        setError("Story and lineup saved, but public cache refresh failed. Save again to retry.");
+        setSaving(false);
+        return;
+      }
       setSuccess("Saved.");
       window.location.href = `/cms/stories?district=${form.district_key}`;
     }

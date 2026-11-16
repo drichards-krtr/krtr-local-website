@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { authorizeNrcsService, sanitizePublicationHtml } from "@/lib/nrcsPublication";
 import sanitizeHtml from "sanitize-html";
+import { invalidatePublicScope } from "@/lib/publicCache";
+import { isSiteScopeKey } from "@/lib/districts";
 
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -16,6 +18,7 @@ export async function POST(request: Request) {
       const { data: hidden, error } = await createServiceClient().rpc("hide_nrcs_event", { p_id: payload.id, p_district: payload.district_key, p_status: payload.status, p_cms_event_id: payload.cms_event_id || null });
       if (error) throw new Error(error.message);
       if (hidden?.nrcs_source_id !== payload.id || hidden?.status !== payload.status || hidden?.district_key !== payload.district_key) throw new Error("CMS visibility receipt could not be verified.");
+      if (isSiteScopeKey(payload.district_key)) invalidatePublicScope(payload.district_key);
       return NextResponse.json({ ok: true, table: "events", cms_event_id: hidden.id, nrcs_source_id: hidden.nrcs_source_id, status: hidden.status, no_public_projection: !hidden.id }, { headers: { "Cache-Control": "no-store" } });
     }
     if (typeof payload.title !== "string" || !payload.title.trim() || typeof payload.start_at !== "string" || !Number.isFinite(Date.parse(payload.start_at))) throw new Error("Published Events require title and start time.");
@@ -27,6 +30,7 @@ export async function POST(request: Request) {
     const { data: event, error } = await service.rpc("receive_nrcs_event", { p_event: { ...payload, body_html: bodyHtml, description: plain || null } });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!event?.id || event.nrcs_source_id !== payload.id || event.district_key !== payload.district_key || event.status !== payload.status) throw new Error("CMS event receipt could not be verified.");
+    if (isSiteScopeKey(payload.district_key)) invalidatePublicScope(payload.district_key);
     return NextResponse.json({ ok: true, table: "events", cms_event_id: event.id, event_id: event.id, nrcs_source_id: event.nrcs_source_id, district_key: event.district_key, status: event.status, cms_supabase_host: process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host : null }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Event receiving failed." }, { status: 400 });

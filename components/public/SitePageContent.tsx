@@ -1,9 +1,10 @@
 import Markdown from "@/components/public/Markdown";
 import { getSitePage, type SitePageSlug } from "@/lib/site-pages";
 import { getCurrentDistrictKey } from "@/lib/districtServer";
+import type { DistrictKey } from "@/lib/districts";
 
-export default async function SitePageContent({ slug }: { slug: SitePageSlug }) {
-  const data = await getSitePage(await getCurrentDistrictKey(), slug);
+export default async function SitePageContent({ slug, districtKey }: { slug: SitePageSlug; districtKey?: DistrictKey }) {
+  const data = await getSitePage(districtKey || await getCurrentDistrictKey(), slug);
 
   return (
     <main className="mx-auto max-w-site px-4 py-6">

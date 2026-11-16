@@ -39,6 +39,7 @@ type HomePageContentProps = {
   debug?: boolean;
   showDistrictBanners?: boolean;
   trackAds?: boolean;
+  deferAds?: boolean;
   previewBanner?: ReactNode;
 };
 
@@ -203,12 +204,13 @@ export default async function HomePageContent({
   debug = false,
   showDistrictBanners = true,
   trackAds = true,
+  deferAds = false,
   previewBanner,
 }: HomePageContentProps) {
   const [{ storiesById, slots }, homepageAds, activeNomination, activeVotingSession, latestDaily, priorityAlert] =
     await Promise.all([
       getSlotStories(siteScopeKey),
-      getHomepageAds(siteScopeKey, trackAds),
+      deferAds ? Promise.resolve([] as Ad[]) : getHomepageAds(siteScopeKey, trackAds),
       showDistrictBanners
         ? getCurrentOpenNomination(siteScopeKey as DistrictKey)
         : Promise.resolve(null),

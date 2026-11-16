@@ -18,5 +18,7 @@ export async function POST(request: Request) {
   const district = parseDistrictKey(body?.district);
   if (!district) return NextResponse.json({ error: "Invalid district" }, { status: 400 });
   invalidateArticleDistrict(district);
+  const previousDistrict = parseDistrictKey(body?.previousDistrict);
+  if (previousDistrict && previousDistrict !== district) invalidateArticleDistrict(previousDistrict);
   return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
 }
