@@ -20,6 +20,20 @@ type EventRow = {
   nrcs_event_classification_terms: { name: string; kind: string } | Array<{ name: string; kind: string }> | null;
 };
 
+const EVENTS_PAGE_SIZE = 100;
+
+function validDate(value: string | undefined) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : "";
+}
+
+function nextDate(value: string) {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 function syncSearchParams(syncResult: Awaited<ReturnType<typeof syncNrcsEventById>>) {
   if (syncResult.ok) {
     const params = new URLSearchParams({ sync: "success" });
@@ -100,6 +114,9 @@ export default async function NrcsEventsPage({
   searchParams?: Promise<{
     district?: string;
     status?: string;
+    start?: string;
+    end?: string;
+    page?: string;
     error?: string;
     success?: string;
     sync?: "success" | "failed" | "skipped";
@@ -120,24 +137,43 @@ export default async function NrcsEventsPage({
       ? resolvedSearchParams.district
       : activeDistrict?.district_key || "dlpc";
   const status = resolvedSearchParams?.status || "draft";
+  const startDate = validDate(resolvedSearchParams?.start);
+  const endDate = validDate(resolvedSearchParams?.end);
+  const dateError = startDate && endDate && startDate > endDate ? "Start Date must be on or before End Date." : "";
+  const requestedPage = Number(resolvedSearchParams?.page || "0");
+  const page = Number.isSafeInteger(requestedPage) && requestedPage >= 0 ? requestedPage : 0;
+  const rangeStart = page * EVENTS_PAGE_SIZE;
 
   const service = createNrcsServiceClient();
   let query = service
     .from("nrcs_events")
-    .select("id, district_key, title, start_at, end_at, status, city, created_by, nrcs_event_classification_terms(name, kind)")
+    .select("id, district_key, title, start_at, end_at, status, city, created_by, nrcs_event_classification_terms(name, kind)", { count: "exact" })
     .eq("district_key", districtKey)
-    .order("start_at", { ascending: true });
+    .order("start_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (status !== "all") {
     query = query.eq("status", status === "upcoming" ? "published" : status);
   }
+  if (startDate) query = query.gte("start_at", `${startDate}T00:00:00`);
+  if (endDate) query = query.lt("start_at", `${nextDate(endDate)}T00:00:00`);
 
-  const { data, error } = await query.limit(200);
+  const { data, error, count } = dateError
+    ? { data: [], error: null, count: 0 }
+    : await query.range(rangeStart, rangeStart + EVENTS_PAGE_SIZE - 1);
   if (error) {
     throw new Error(`Unable to load events: ${error.message}`);
   }
 
   const events = (data || []) as unknown as EventRow[];
+  const totalEvents = count || 0;
+  const pageParams = (targetPage: number) => new URLSearchParams({
+    district: districtKey,
+    status,
+    ...(startDate ? { start: startDate } : {}),
+    ...(endDate ? { end: endDate } : {}),
+    page: String(targetPage),
+  }).toString();
   const ownerIds = [...new Set(events.map((event) => event.created_by).filter((id): id is string => Boolean(id)))];
   const [{ data: owners }, { data: submissionIntakes }] = await Promise.all([
     ownerIds.length
@@ -242,24 +278,48 @@ export default async function NrcsEventsPage({
         </div>
       )}
 
-      <form className="flex flex-wrap gap-3 rounded border border-neutral-200 bg-white p-4">
-        <select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">
+      <form className="flex flex-wrap items-end gap-3 rounded border border-neutral-200 bg-white p-4">
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">District</span>
+          <select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">
           {allowedDistricts.map((district) => (
             <option key={district.district_key} value={district.district_key}>
               {district.display_name}
             </option>
           ))}
-        </select>
-        <select name="status" defaultValue={status} className="rounded border border-neutral-300 px-3 py-2 text-sm">
-          <option value="all">All</option>
-          <option value="upcoming">Published</option>
-          <option value="draft">Draft</option>
-          <option value="archived">Archived</option>
-        </select>
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Status</span>
+          <select name="status" defaultValue={status} className="rounded border border-neutral-300 px-3 py-2 text-sm">
+            <option value="all">All</option>
+            <option value="upcoming">Published</option>
+            <option value="draft">Draft</option>
+            <option value="archived">Archived</option>
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Start Date</span>
+          <input type="date" name="start" defaultValue={startDate} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">End Date</span>
+          <input type="date" name="end" defaultValue={endDate} className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+        </label>
         <button className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">Apply</button>
+        {(startDate || endDate) && <Link href={`/events?${new URLSearchParams({ district: districtKey, status }).toString()}`} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Clear Dates</Link>}
       </form>
 
+      {dateError && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{dateError}</p>}
+
       <section className="rounded border border-neutral-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 text-sm text-neutral-600">
+          <span>{totalEvents === 0 ? "No matching events" : `Showing ${rangeStart + 1}-${rangeStart + events.length} of ${totalEvents}`}</span>
+          <div className="flex gap-2">
+            {page > 0 && <Link href={`/events?${pageParams(page - 1)}`} className="rounded border border-neutral-300 px-3 py-1.5 font-semibold text-neutral-900">Previous</Link>}
+            {rangeStart + events.length < totalEvents && <Link href={`/events?${pageParams(page + 1)}`} className="rounded border border-neutral-300 px-3 py-1.5 font-semibold text-neutral-900">Next</Link>}
+          </div>
+        </div>
         <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-3 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Title</div>
           <div>When</div>
@@ -303,6 +363,7 @@ export default async function NrcsEventsPage({
             </div>
           </div>
         ))}
+        {events.length === 0 && !dateError && <p className="px-4 py-6 text-sm text-neutral-500">No events match this view.</p>}
       </section>
     </div>
   );
