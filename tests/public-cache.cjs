@@ -47,18 +47,44 @@ assert.match(proxy(request('https://dlpc.krtrlocal.tv/stories/example')).rewrite
 (async()=>{
  await cache.dependOnPublicScope('bc',true); await cache.dependOnPublicScope('bc',false);
  assert.equal(options[0].revalidate,60);assert.equal(options[1].revalidate,false);
- let hidden=false,fail=false,invalidated=[];
+ let hidden=false,fail=false,invalidated=[],previousDistrict;
  const event={id:'f9100000-0000-4000-8000-000000000001',nrcs_source_id:'f9100000-0000-4000-8000-000000000002',district_key:'bc',status:'published'};
  const api=load('app/api/nrcs/events/route.ts',{
   'next/server':{NextResponse:{json:Response.json}},'@/lib/nrcsPublication':{authorizeNrcsService:()=>true,sanitizePublicationHtml:x=>x},
   '@/lib/districts':districts,'@/lib/publicCache':{invalidatePublicScope:s=>invalidated.push(s)},
-  '@/lib/supabase/admin':{createServiceClient:()=>({rpc:async(name)=>({data:{...event,status:hidden?'archived':'published'},error:fail?{message:'Database failed'}:null})})},
+  '@/lib/supabase/admin':{createServiceClient:()=>({rpc:async(name)=>({data:{...event,previous_district_key:previousDistrict,status:hidden?'archived':'published'},error:fail?{message:'Database failed'}:null})})},
  });
  const payload={id:event.nrcs_source_id,district_key:'bc',status:'published',title:'Test',start_at:'2026-11-16T12:00:00Z',body_html:null};
  const post=()=>api.POST(new Request('https://example.invalid/api/nrcs/events',{method:'POST',body:JSON.stringify(payload)}));
  assert.equal((await post()).status,200);assert.deepEqual(invalidated,['bc']);
  fail=true;invalidated=[];assert.equal((await post()).status,500);assert.deepEqual(invalidated,[]);
  fail=false;hidden=true;payload.status='archived';assert.equal((await post()).status,200);assert.deepEqual(invalidated,['bc']);
+ previousDistrict='vs'; invalidated=[];
+ assert.equal((await post()).status,200); assert.deepEqual(invalidated,['vs','bc']);
+ const chambers=load('app/api/nrcs/chambers/route.ts',{
+  'next/server':{NextResponse:{json:Response.json}},
+  '@/lib/nrcsPublication':{authorizeNrcsService:req=>req.headers.get('authorization')==='Bearer test-nrcs'},
+  '@/lib/districts':districts,'@/lib/publicCache':{invalidatePublicScope:s=>invalidated.push(s)},
+  '@/lib/supabase/admin':{createServiceClient:()=>({rpc:async(name,args)=>{
+   assert.equal(name,'save_chamber_account');
+   assert.deepEqual(args.p_coverage,{dlpc:true});
+   return {data:{id:args.p_account.id,affected_districts:['dlpc']},error:null};
+  }})},
+ });
+ invalidated=[];
+ process.env.NRCS_CHAMBER_ADMIN_ENABLED='false';
+ process.env.CMS_SALES_CHAMBER_API_SECRET='test-sales';
+ const saveChamber=token=>chambers.POST(new Request('https://example.invalid/api/nrcs/chambers',{
+  method:'POST',headers:{authorization:`Bearer ${token}`},
+  body:JSON.stringify({account:{id:event.id,name:'Chamber',city:'La Porte City',active:true},coverage:{dlpc:true}}),
+ }));
+ assert.equal((await saveChamber('bad-token')).status,401);
+ assert.equal((await saveChamber('test-nrcs')).status,401);
+ assert.deepEqual(invalidated,[]);
+ assert.equal((await saveChamber('test-sales')).status,200);
+ assert.deepEqual(invalidated,['dlpc']);
+ delete process.env.NRCS_CHAMBER_ADMIN_ENABLED;
+ delete process.env.CMS_SALES_CHAMBER_API_SECRET;
  const placements=[];
  const ads=load('app/api/public/article-ads/[scope]/route.ts',{
   'next/server':{NextResponse:{json:Response.json}},'@/lib/articleCache':{getArticleScope:scope=>({districtKey:scope})},

@@ -1,10 +1,12 @@
+import NrcsEventChamberFields from "./NrcsEventChamberFields";
+import type { ChamberAssignment, ChamberCatalog } from "@/lib/chamberHighlights";
 import Link from "next/link";
 import RichTextEditor from "./RichTextEditor";
 import NrcsCloudinaryImageField from "./NrcsCloudinaryImageField";
 import NrcsEventLocationFields from "./NrcsEventLocationFields";
 import { sortClassificationTerms, type EventClassificationTerm } from "@/lib/eventClassifications";
 
-export type NrcsEventFormValue = {
+export type NrcsEventFormValue = ChamberAssignment & {
   id?: string;
   district_key: string;
   title: string | null;
@@ -32,6 +34,7 @@ type Props = {
   action: (formData: FormData) => Promise<void>;
   event?: NrcsEventFormValue | null;
   districtOptions: DistrictOption[];
+  chamberCatalog: ChamberCatalog | null;
   selectedDistrictKey: string;
   terms: EventClassificationTerm[];
   submitLabel: string;
@@ -47,6 +50,7 @@ export default function NrcsEventForm({
   action,
   event,
   districtOptions,
+  chamberCatalog,
   selectedDistrictKey,
   terms,
   submitLabel,
@@ -60,16 +64,8 @@ export default function NrcsEventForm({
     <form action={action} className="grid gap-4 rounded border border-neutral-200 bg-white p-6">
       <p className="text-sm text-neutral-600">Drafts may be incomplete. Publishing requires title, start time, location name, address, city, state, and ZIP.</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">District</span>
-          <select name="district_key" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2">
-            {districtOptions.map((district) => (
-              <option key={district.district_key} value={district.district_key}>
-                {district.display_name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <NrcsEventChamberFields catalog={chamberCatalog} initialDistrict={districtKey}
+          districts={districtOptions} assignment={event} />
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Status</span>
           <select name="status" defaultValue={event?.status || "draft"} className="rounded border border-neutral-300 px-3 py-2">

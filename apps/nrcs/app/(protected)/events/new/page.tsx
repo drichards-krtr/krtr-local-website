@@ -1,3 +1,4 @@
+import { loadChamberCatalog, validateChamberAssignment } from "@/lib/chambersServer";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import NrcsEventForm from "@/components/NrcsEventForm";
@@ -43,10 +44,13 @@ async function createEvent(formData: FormData) {
     redirect(`/events/new?district=${fallbackDistrictKey}&error=${encodeURIComponent("Only producers, editors, or admins can publish an Event.")}`);
   }
 
+  const chamber = await validateChamberAssignment(formData, payload.district_key);
+  if (chamber.error) redirect(`/events/new?district=${payload.district_key}&error=${encodeURIComponent(chamber.error)}`);
+
   const resolvedLocation = await resolveEventLocation(payload);
   if (resolvedLocation.error) redirect(`/events/new?district=${payload.district_key}&error=${encodeURIComponent(resolvedLocation.error)}`);
   const service = await createNrcsServerClient();
-  const { data, error } = await service.from("nrcs_events").insert({ ...payload, location_id: resolvedLocation.locationId, created_by: profile.id }).select("id, district_key").single();
+  const { data, error } = await service.from("nrcs_events").insert({ ...payload, ...chamber.assignment, location_id: resolvedLocation.locationId, created_by: profile.id }).select("id, district_key").single();
 
   if (error) {
     redirect(`/events/new?district=${payload.district_key}&error=${encodeURIComponent(error.message)}`);
@@ -77,6 +81,8 @@ export default async function NewEventPage({
     .eq("district_key", districtKey)
     .eq("enabled", true);
 
+  const chamberCatalog = await loadChamberCatalog();
+
   return (
     <div className="grid gap-6">
       <header>
@@ -92,6 +98,7 @@ export default async function NewEventPage({
         }))}
         selectedDistrictKey={districtKey}
         terms={(terms || []) as EventClassificationTerm[]}
+        chamberCatalog={chamberCatalog}
         submitLabel="Save Event"
         canPublish={canPublishNrcsContent(profile.role)}
         canArchive={hasNrcsRoleAtLeast(profile.role, "editor")}

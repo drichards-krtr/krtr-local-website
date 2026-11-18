@@ -1,3 +1,4 @@
+import { loadChamberCatalog, validateChamberAssignment } from "@/lib/chambersServer";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -50,10 +51,17 @@ async function updateEvent(formData: FormData) {
     redirect(`/events/${id}?district=${fallbackDistrictKey}&error=${encodeURIComponent("Only editors or admins can archive an Event.")}`);
   }
 
+  const client = await createNrcsServerClient();
+  const { data: existing } = await client.from("nrcs_events")
+    .select("district_key, chamber_id, chamber_highlight_type").eq("id", id).maybeSingle();
+  if (!existing) redirect("/events?error=Event%20not%20found");
+  const chamber = await validateChamberAssignment(formData, payload.district_key, existing);
+  if (chamber.error) redirect(`/events/${id}?district=${payload.district_key}&error=${encodeURIComponent(chamber.error)}`);
+
   const resolvedLocation = await resolveEventLocation(payload);
   if (resolvedLocation.error) redirect(`/events/${id}?district=${payload.district_key}&error=${encodeURIComponent(resolvedLocation.error)}`);
   const service = await createNrcsServerClient();
-  const { error } = await service.from("nrcs_events").update({ ...payload, location_id: resolvedLocation.locationId }).eq("id", id).select("id").single();
+  const { error } = await service.from("nrcs_events").update({ ...payload, ...chamber.assignment, location_id: resolvedLocation.locationId }).eq("id", id).select("id").single();
 
   if (error) {
     redirect(`/events/${id}?district=${payload.district_key}&error=${encodeURIComponent(error.message)}`);
@@ -92,7 +100,7 @@ export default async function EditEventPage({
   const { data, error } = await service
     .from("nrcs_events")
     .select(
-      "id, district_key, title, body_html, notes, location_id, location_name, address, city, state, zip, start_at, end_at, image_url, status, classification_term_id"
+      "id, district_key, title, body_html, notes, location_id, location_name, address, city, state, zip, start_at, end_at, image_url, status, classification_term_id, chamber_id, chamber_highlight_type"
     )
     .eq("id", id)
     .maybeSingle();
@@ -101,7 +109,7 @@ export default async function EditEventPage({
     throw new Error(`Unable to load event: ${error.message}`);
   }
 
-  if (!data) {
+  if (!data || !allowedDistricts.some((district) => district.district_key === data.district_key)) {
     return <p>Event not found.</p>;
   }
 
@@ -126,6 +134,8 @@ export default async function EditEventPage({
     objectType: "event",
     title: event.title || "Untitled draft",
   });
+
+  const chamberCatalog = await loadChamberCatalog();
 
   return (
     <div className="grid gap-6">
@@ -211,6 +221,7 @@ export default async function EditEventPage({
         }))}
         selectedDistrictKey={event.district_key}
         terms={(terms || []) as EventClassificationTerm[]}
+        chamberCatalog={chamberCatalog}
         submitLabel="Save Changes"
         canPublish={canPublishNrcsContent(profile.role)}
         canArchive={hasNrcsRoleAtLeast(profile.role, "editor")}

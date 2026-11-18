@@ -19,6 +19,7 @@ const NAV_ITEMS = [
 const ADMIN_NAV_ITEMS = [
   { label: "CMS Deliveries", href: "/publishing", minimumRole: "editor" },
   { label: "Taxonomy", href: "/taxonomy", minimumRole: "editor" },
+  { label: "Chamber Sponsorships", href: "/chambers", minimumRole: "admin" },
   { label: "Users", href: "/users", minimumRole: "admin" },
   { label: "Media Cleanup", href: "/media-cleanup", minimumRole: "admin" },
 ] as const;
@@ -35,7 +36,10 @@ export default function NrcsShell({
   const visibleItems = NAV_ITEMS.filter(
     (item) => !("minimumRole" in item) || hasNrcsRoleAtLeast(profile.role, item.minimumRole)
   );
-  const visibleAdminItems = ADMIN_NAV_ITEMS.filter((item) => hasNrcsRoleAtLeast(profile.role, item.minimumRole));
+  const visibleAdminItems = ADMIN_NAV_ITEMS.filter((item) =>
+    hasNrcsRoleAtLeast(profile.role, item.minimumRole) &&
+    (item.href !== "/chambers" || process.env.NRCS_CHAMBER_ADMIN_ENABLED !== "false")
+  );
 
   return (
     <div className="min-h-screen bg-neutral-100 text-neutral-950">

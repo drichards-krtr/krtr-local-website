@@ -41,6 +41,7 @@ type EventItem = {
   state: string | null;
   zip: string | null;
   is_school_sports: boolean;
+  chamber_event_label?: string | null;
   event_classification_assignments?: Array<{
     event_classification_terms: ClassificationTerm | ClassificationTerm[] | null;
   }>;
@@ -152,6 +153,12 @@ function eventMatchesFilters(
   return true;
 }
 
+function ChamberLabel({ event }: { event: EventItem }) {
+  return event.chamber_event_label
+    ? <p className="mb-1 text-sm font-semibold text-amber-900">{event.chamber_event_label}</p>
+    : null;
+}
+
 function renderEventDetails(event: EventItem) {
   const links = [
     { url: event.link_1_url?.trim(), text: event.link_1_text?.trim() },
@@ -242,7 +249,7 @@ export default async function CommunityCalendarPage({
   const weekStart = resolvedSearchParams.week_start || startOfCurrentWeekSunday(todayDate);
   const selectedEventId = String(resolvedSearchParams.selected_event || "");
   const selectColumns =
-      "id, title, description, body_html, location, location_name, address, city, state, zip, start_at, end_at, image_url, link_1_url, link_1_text, link_2_url, link_2_text, is_school_sports, event_classification_assignments(event_classification_terms(id, kind, name, enabled))";
+      "id, title, description, body_html, location, location_name, address, city, state, zip, start_at, end_at, image_url, link_1_url, link_1_text, link_2_url, link_2_text, is_school_sports, chamber_event_label, event_classification_assignments(event_classification_terms(id, kind, name, enabled))";
 
   const { data, error } = await supabase
     .from("events")
@@ -408,7 +415,8 @@ export default async function CommunityCalendarPage({
           pageEvents.length > 0 ? (
             <div className="grid gap-4">
               {pageEvents.map((event, index) => (
-                <article key={event.id} id={`event-${index}`} className="scroll-mt-6 rounded border border-neutral-200 p-4">
+                <article key={event.id} id={`event-${index}`} className={`scroll-mt-6 rounded border p-4 ${event.chamber_event_label ? "border-2 border-amber-500" : "border-neutral-200"}`}>
+                  <ChamberLabel event={event} />
                   <h2 className="text-lg font-semibold">{event.title}</h2>
                   {renderEventDetails(event)}
                 </article>
@@ -437,8 +445,9 @@ export default async function CommunityCalendarPage({
                             week_start: calendarStart,
                             selected_event: event.id,
                           })}
-                          className="rounded bg-neutral-50 p-2 text-sm font-medium hover:bg-neutral-100"
+                          className={`rounded bg-neutral-50 p-2 text-sm font-medium hover:bg-neutral-100 ${event.chamber_event_label ? "border-2 border-amber-500" : ""}`}
                         >
+                          <ChamberLabel event={event} />
                           {formatTime(event.start_at)} {event.title}
                         </a>
                       ))}
@@ -454,7 +463,8 @@ export default async function CommunityCalendarPage({
                   className="absolute inset-0"
                   aria-label="Close event details"
                 />
-                <article className="relative z-10 max-h-[85vh] w-full max-w-2xl overflow-auto rounded bg-white p-5 shadow-xl">
+                <article className={`relative z-10 max-h-[85vh] w-full max-w-2xl overflow-auto rounded bg-white p-5 shadow-xl ${selectedCalendarEvent.chamber_event_label ? "border-2 border-amber-500" : ""}`}>
+                  <ChamberLabel event={selectedCalendarEvent} />
                   <header className="mb-4 flex items-start justify-between gap-4">
                     <div>
                       <h2 className="text-xl font-semibold">{selectedCalendarEvent.title}</h2>

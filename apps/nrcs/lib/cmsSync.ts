@@ -1,7 +1,9 @@
 import { getNrcsCmsApiEnv } from "./env";
 import type { EventClassificationKind } from "./eventClassifications";
 
-type SyncEventPayload = {
+import type { ChamberAssignment } from "./chamberHighlights";
+
+type SyncEventPayload = Partial<ChamberAssignment> & {
   id: string;
   cms_event_id?: string | null;
   district_key: string;

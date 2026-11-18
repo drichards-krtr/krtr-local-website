@@ -2,7 +2,9 @@ import { createNrcsServiceClient } from "./server";
 import { syncEventToCms, type CmsSyncResult } from "./cmsSync";
 import type { EventClassificationKind } from "./eventClassifications";
 
-type EventWithTerm = {
+import type { ChamberAssignment } from "./chamberHighlights";
+
+type EventWithTerm = ChamberAssignment & {
   id: string;
   cms_event_id: string | null;
   district_key: string;
@@ -37,7 +39,7 @@ export async function syncNrcsEventById(id: string): Promise<CmsSyncResult> {
   const { data, error } = await service
     .from("nrcs_events")
     .select(
-      "id, cms_event_id, district_key, title, body_html, location_name, address, city, state, zip, location, start_at, end_at, image_url, status, nrcs_event_classification_terms(kind, name, enabled)"
+      "id, cms_event_id, district_key, title, body_html, location_name, address, city, state, zip, location, start_at, end_at, image_url, status, chamber_id, chamber_highlight_type, nrcs_event_classification_terms(kind, name, enabled)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -66,6 +68,8 @@ export async function syncNrcsEventById(id: string): Promise<CmsSyncResult> {
     end_at: event.end_at,
     image_url: event.image_url,
     status: event.status,
+    chamber_id: event.chamber_id,
+    chamber_highlight_type: event.chamber_highlight_type,
     classification: term
       ? {
           kind: term.kind,
