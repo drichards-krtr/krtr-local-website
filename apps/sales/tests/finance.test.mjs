@@ -81,6 +81,10 @@ test('signed agreements, provider-neutral collection, checks and allocation ledg
  await asUser(db,manager,()=>rpc(db,'sales_update_check',check,'clear',today));await asUser(db,manager,()=>rpc(db,'sales_update_check',check,'clear',today));
  assert.equal((await db.query('select count(*) n from sales_receipts where invoice_id=$1',[sale.invoice.id])).rows[0].n,1);
  });
+ await t.test('manual clearance retains its actual date and records current verification time',async()=>{
+ const sale=await sign(await draft());const check=uid(seq++);await asUser(db,seller,()=>rpc(db,'sales_receive_check',sale.invoice.id,check,'Clearance timestamp regression',today));await asUser(db,seller,()=>rpc(db,'sales_update_check',check,'deposit',today));await asUser(db,manager,()=>rpc(db,'sales_update_check',check,'clear',today));
+ const row=(await db.query("select e.occurred_at,c.cleared_on::text,i.created_at from sales_payment_events e join sales_invoices i on i.id=e.invoice_id join sales_checks c on c.invoice_id=i.id where i.id=$1 and e.kind='check_cleared'",[sale.invoice.id])).rows[0];assert.equal(row.cleared_on,today);assert.ok(new Date(row.occurred_at).getTime()>=new Date(row.created_at).getTime());
+ });
  await t.test('expired inventory stays released on late payment, with receipt, allocation and conflict notice',async()=>{
  const sale=await sign(await draft());await db.query("update sales_inventory_units set hold_until=now()-interval '1 second' where agreement_id=$1",[sale.id]);
  const check=uid(seq++);await asUser(db,seller,()=>rpc(db,'sales_receive_check',sale.invoice.id,check,'Late check',today));
