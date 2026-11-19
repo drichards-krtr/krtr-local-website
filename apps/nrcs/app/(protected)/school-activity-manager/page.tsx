@@ -15,6 +15,10 @@ function cleanName(value: FormDataEntryValue | null) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
 
+function cleanEmoji(value: FormDataEntryValue | null) {
+  return String(value || "").trim().replace(/[\r\n]/g, "").slice(0, 32) || null;
+}
+
 function getKind(value: FormDataEntryValue | null): EventClassificationKind {
   const kind = String(value || "");
   return EVENT_CLASSIFICATION_KINDS.includes(kind as EventClassificationKind)
@@ -29,6 +33,7 @@ async function createTerm(formData: FormData) {
   const districtKey = String(formData.get("district_key") || "").trim().toLowerCase();
   const kind = getKind(formData.get("kind"));
   const name = cleanName(formData.get("name"));
+  const emoji = cleanEmoji(formData.get("emoji"));
 
   if (!districtKey || !name) {
     redirect("/school-activity-manager?error=District and name are required");
@@ -39,6 +44,7 @@ async function createTerm(formData: FormData) {
     district_key: districtKey,
     kind,
     name,
+    emoji,
     enabled: formData.get("enabled") === "on",
   });
 
@@ -56,7 +62,9 @@ async function updateTerm(formData: FormData) {
 
   const id = String(formData.get("id") || "");
   const districtKey = String(formData.get("district_key") || "").trim().toLowerCase();
+  const kind = getKind(formData.get("kind"));
   const name = cleanName(formData.get("name"));
+  const emoji = cleanEmoji(formData.get("emoji"));
 
   if (!id || !name) {
     redirect(`/school-activity-manager?district=${districtKey}&error=Name is required`);
@@ -66,7 +74,9 @@ async function updateTerm(formData: FormData) {
   const { error } = await service
     .from("nrcs_event_classification_terms")
     .update({
+      kind,
       name,
+      emoji,
       enabled: formData.get("enabled") === "on",
     })
     .eq("id", id);
@@ -95,7 +105,7 @@ export default async function SchoolActivityManagerPage({
   const service = createNrcsServiceClient();
   const { data, error } = await service
     .from("nrcs_event_classification_terms")
-    .select("id, district_key, kind, name, enabled")
+    .select("id, district_key, kind, name, emoji, enabled")
     .eq("district_key", districtKey);
 
   if (error) {
@@ -109,7 +119,7 @@ export default async function SchoolActivityManagerPage({
       <header>
         <Link href={`/events?district=${encodeURIComponent(districtKey)}`} className="mb-2 inline-block text-sm underline">Back to Events</Link>
         <h1 className="text-2xl font-semibold">Event Class Manager</h1>
-        <p className="text-sm text-neutral-500">Manage district sports, extra-curriculars, and other event types.</p>
+        <p className="text-sm text-neutral-500">Manage district sports, extra-curriculars, other event types, and their graphics symbols.</p>
       </header>
 
       {resolvedSearchParams?.error && <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{resolvedSearchParams.error}</p>}
@@ -128,7 +138,7 @@ export default async function SchoolActivityManagerPage({
 
       <section className="rounded border border-neutral-200 bg-white p-5">
         <h2 className="text-lg font-semibold">Create Term</h2>
-        <form action={createTerm} className="mt-4 grid gap-3 md:grid-cols-[180px_1fr_auto_auto]">
+        <form action={createTerm} className="mt-4 grid gap-3 md:grid-cols-[180px_1fr_100px_auto_auto]">
           <input type="hidden" name="district_key" value={districtKey} />
           <select name="kind" className="rounded border border-neutral-300 px-3 py-2 text-sm">
             {EVENT_CLASSIFICATION_KINDS.map((kind) => (
@@ -138,6 +148,7 @@ export default async function SchoolActivityManagerPage({
             ))}
           </select>
           <input name="name" placeholder="Name" required className="rounded border border-neutral-300 px-3 py-2 text-sm" />
+          <input name="emoji" aria-label="Emoji or symbol" placeholder="Emoji" maxLength={32} className="rounded border border-neutral-300 px-3 py-2 text-center text-lg" />
           <label className="inline-flex items-center gap-2 rounded border border-neutral-200 px-3 py-2 text-sm">
             <input name="enabled" type="checkbox" defaultChecked />
             Enabled
@@ -147,18 +158,22 @@ export default async function SchoolActivityManagerPage({
       </section>
 
       <section className="rounded border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[1fr_180px_120px_100px] gap-3 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
+        <div className="grid grid-cols-[1fr_180px_100px_120px_100px] gap-3 border-b border-neutral-200 px-4 py-3 text-xs font-semibold uppercase text-neutral-500">
           <div>Name</div>
           <div>Type</div>
+          <div>Emoji</div>
           <div>Status</div>
           <div>Actions</div>
         </div>
         {terms.map((term) => (
-          <form key={term.id} action={updateTerm} className="grid grid-cols-[1fr_180px_120px_100px] gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
+          <form key={term.id} action={updateTerm} className="grid grid-cols-[1fr_180px_100px_120px_100px] gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
             <input type="hidden" name="id" value={term.id} />
             <input type="hidden" name="district_key" value={districtKey} />
             <input name="name" defaultValue={term.name} required className="rounded border border-neutral-300 px-3 py-2 text-sm" />
-            <div className="py-2">{getClassificationKindLabel(term.kind)}</div>
+            <select name="kind" defaultValue={term.kind} className="rounded border border-neutral-300 px-3 py-2 text-sm">
+              {EVENT_CLASSIFICATION_KINDS.map((kind) => <option key={kind} value={kind}>{getClassificationKindLabel(kind)}</option>)}
+            </select>
+            <input name="emoji" aria-label={`Emoji for ${term.name}`} defaultValue={term.emoji || ""} maxLength={32} className="rounded border border-neutral-300 px-3 py-2 text-center text-lg" />
             <label className="inline-flex items-center gap-2">
               <input name="enabled" type="checkbox" defaultChecked={term.enabled} />
               Enabled

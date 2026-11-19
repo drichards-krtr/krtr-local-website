@@ -7,6 +7,7 @@ import { generatorDocument } from "@/lib/generators/document";
 import { GRAPHIC_BUILDERS, type GraphicBuilder, type GraphicContext, type SchoolIdentity } from "@/lib/graphics";
 import NrcsGraphicBuilder from "@/components/NrcsGraphicBuilder";
 import { hasNrcsRoleAtLeast } from "@/lib/roles";
+import { sortClassificationTerms, type EventClassificationTerm } from "@/lib/eventClassifications";
 
 export default async function GraphicsPage({searchParams}: {searchParams:Promise<{district?:string;builder?:string;story?:string;edition?:string;item?:string}>}) {
   const {profile} = await requireNrcsStaff();
@@ -36,21 +37,23 @@ export default async function GraphicsPage({searchParams}: {searchParams:Promise
       context.label+=" - "+item.title;
     }
   }
-  const [selection, schools, categories, tags] = await Promise.all([
+  const [selection, schools, categories, tags, sports] = await Promise.all([
     supabase.from("nrcs_district_schools").select("school_id,is_default").eq("district_key",districtKey),
     supabase.from("nrcs_school_identities").select("*").order("display_name"),
     supabase.from("nrcs_categories").select("id,name").eq("district_key",districtKey).eq("enabled",true).order("name"),
     supabase.from("nrcs_tags").select("id,name").order("name"),
+    supabase.from("nrcs_event_classification_terms").select("id,district_key,kind,name,emoji,enabled").eq("district_key",districtKey).eq("kind","sport").eq("enabled",true).order("name"),
   ]);
-  for(const result of [selection,schools,categories,tags]) if(result.error) throw new Error(result.error.message);
+  for(const result of [selection,schools,categories,tags,sports]) if(result.error) throw new Error(result.error.message);
   const selectedIds = new Set((selection.data||[]).map(row=>row.school_id));
   const selectedSchools = (schools.data||[]).filter(s=>selectedIds.has(s.id)) as SchoolIdentity[];
   const defaultId = selection.data?.find(row=>row.is_default)?.school_id || null;
   return <div className="grid min-w-0 gap-5">
     <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-semibold">Graphics</h1>
-      <div className="flex flex-wrap gap-2">{hasNrcsRoleAtLeast(profile.role,"editor") && <Link href={`/schools?district=${districtKey}`} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Schools &amp; Co-ops</Link>}<form className="flex gap-2"><input type="hidden" name="builder" value={builder} /><select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">{allowedDistricts.map(d=><option key={d.district_key} value={d.district_key}>{d.display_name}</option>)}</select><button className="rounded border border-neutral-300 px-3 py-2 text-sm">Apply</button></form></div>
+      <div className="flex flex-wrap gap-2">{hasNrcsRoleAtLeast(profile.role,"editor") && <><Link href={`/schools?district=${districtKey}`} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Schools &amp; Co-ops</Link><Link href={`/school-activity-manager?district=${districtKey}`} className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">Event Classes</Link></>}<form className="flex gap-2"><input type="hidden" name="builder" value={builder} /><select name="district" defaultValue={districtKey} className="rounded border border-neutral-300 px-3 py-2 text-sm">{allowedDistricts.map(d=><option key={d.district_key} value={d.district_key}>{d.display_name}</option>)}</select><button className="rounded border border-neutral-300 px-3 py-2 text-sm">Apply</button></form></div>
     </header>
     {builder==="sports" && !selectedSchools.length && <p className="text-sm text-amber-800">No schools selected for this district.{hasNrcsRoleAtLeast(profile.role,"editor") && <Link href={`/schools?district=${districtKey}`} className="ml-2 underline">Manage Schools</Link>}</p>}
-    <NrcsGraphicBuilder key={`${builder}-${districtKey}-${query.story||query.edition||""}-${query.item||""}`} builder={builder} context={context} categories={categories.data||[]} tags={tags.data||[]} documentHtml={generatorDocument(builder,selectedSchools,defaultId)} />
+    {builder==="sports" && !sports.data?.length && <p className="text-sm text-amber-800">No enabled Sports are configured for this district.{hasNrcsRoleAtLeast(profile.role,"editor") && <Link href={`/school-activity-manager?district=${districtKey}`} className="ml-2 underline">Manage Event Classes</Link>}</p>}
+    <NrcsGraphicBuilder key={`${builder}-${districtKey}-${query.story||query.edition||""}-${query.item||""}`} builder={builder} context={context} categories={categories.data||[]} tags={tags.data||[]} documentHtml={generatorDocument(builder,selectedSchools,defaultId,sortClassificationTerms((sports.data||[]) as EventClassificationTerm[]))} />
   </div>;
 }

@@ -7,6 +7,7 @@ export type EventClassificationTerm = {
   district_key: string;
   kind: EventClassificationKind;
   name: string;
+  emoji: string | null;
   enabled: boolean;
 };
 

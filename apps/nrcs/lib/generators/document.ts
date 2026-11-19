@@ -2,17 +2,21 @@ import generic from "./generic";
 import sports from "./sports";
 import weather from "./weather";
 import type { GraphicBuilder, SchoolIdentity } from "../graphics";
+import type { EventClassificationTerm } from "../eventClassifications";
 
 function scriptJson(value: unknown) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 // Retain the original drawing functions. Only host integration, loading, and export handling change.
-export function generatorDocument(builder: GraphicBuilder, schools: SchoolIdentity[], defaultId: string | null) {
+export function generatorDocument(builder: GraphicBuilder, schools: SchoolIdentity[], defaultId: string | null, classificationSports: EventClassificationTerm[] = []) {
   let source = { generic, sports, weather }[builder];
   if (builder === "sports") {
     const map = Object.fromEntries(schools.map(school => [school.display_name, school.logo_url || school.legacy_logo_path || ""]));
     const defaultName = schools.find(school => school.id === defaultId)?.display_name || schools[0]?.display_name || "";
     source = source.replace('<script src="config.js"></script>', `<script>window.KRTR_SCHOOL_MASCOTS=${scriptJson(map)};window.KRTR_SCHOOL_ALIASES={};</script>`)
+      .replace(/const SPORTS = \[[\s\S]*?\];/, `const SPORTS = ${scriptJson(classificationSports.map(sport => sport.name))};`)
+      .replace(/const SPORT_SYMBOLS = \{[\s\S]*?\};/, `const SPORT_SYMBOLS = ${scriptJson(Object.fromEntries(classificationSports.map(sport => [sport.name, sport.emoji || ""])))};`)
+      .replace('$("sport").value="Football";', '$("sport").value=SPORTS.includes("Football") ? "Football" : SPORTS[0] || "";')
       .replace('const PRIMARY_DEFAULT = "Union Knights";', `const PRIMARY_DEFAULT = ${scriptJson(defaultName)};`)
       .replace('loadImage("mascots/"+file)', "loadImage(file)")
       .replace("img.src=src;", 'img.crossOrigin="anonymous"; img.src=src;');
