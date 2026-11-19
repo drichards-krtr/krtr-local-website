@@ -4,6 +4,8 @@ Assignment Desk and Radar are adjacent in the newsroom navigation. A Radar entry
 
 Producers and above can choose Skip, Hold, Need More Info, or Assign. Assign requires an active owner with district access and creates one linked story in Reporting, with the pitch details in Story Facts. The linked story follows the ordinary NRCS editorial workflow.
 
+The Assignment Desk lists pitches oldest first. Assigning a pitch moves it to the Archived view, where its linked draft remains accessible. Workbook pitches labeled Previously approved also appear in Archived.
+
 ## Newsroom Jack cutover
 
 After the NRCS deployment, submit new pitches in Assignment Desk. Review the linked story after an assignment is approved. Use Radar for developing leads that need monitoring. Historical workbook decisions are visible in the desk. Prior approvals are labeled Previously approved and preserve the original notes.

@@ -17,6 +17,11 @@ const labels: Record<string, string> = {
   pending: "Pending", skip: "Skip", hold: "Hold", need_more_info: "Need More Info", assigned: "Assigned",
   legacy_do: "Previously approved", legacy_conditional: "Previously approved with conditions",
 };
+const archivedDecisions = ["assigned", "legacy_do"];
+const assignmentViews = {
+  all: "Active pitches", pending: labels.pending, skip: labels.skip, hold: labels.hold,
+  need_more_info: labels.need_more_info, legacy_conditional: labels.legacy_conditional, archived: "Archived",
+};
 const tables = { assignments: "nrcs_assignments", radar: "nrcs_radar" } as const;
 const paths = { assignments: "/assignment-desk", radar: "/radar" } as const;
 const input = "rounded border border-neutral-300 p-2";
@@ -33,7 +38,7 @@ export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode;
 
   const districtKey = district.district_key;
   const supabase = await createNrcsServerClient();
-  const views = radar ? { active: "Active", archived: "Archived" } : { all: "All decisions", ...labels };
+  const views = radar ? { active: "Active", archived: "Archived" } : assignmentViews;
   const view = params.view && Object.hasOwn(views, params.view) ? params.view : radar ? "active" : "all";
   const page = Math.min(100000, Math.max(1, Number.parseInt(params.page || "1", 10) || 1));
   const pageSize = 25;
@@ -41,9 +46,13 @@ export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode;
   let query = supabase.from(tables[mode]).select("*").eq("district_key", districtKey);
   if (params.entry) query = query.eq("id", params.entry);
   else if (radar) query = view === "archived" ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+  else if (view === "archived") query = query.in("decision", archivedDecisions);
   else if (view !== "all") query = query.eq("decision", view);
+  else query = query.not("decision", "in", `(${archivedDecisions.join(",")})`);
+  const ordered = query.order("created_at", { ascending: !radar });
+  if (!radar) ordered.order("legacy_key");
   const [result, ownerResult] = await Promise.all([
-    query.order("created_at", { ascending: false }).order("id").range((page - 1) * pageSize, page * pageSize),
+    ordered.order("id").range((page - 1) * pageSize, page * pageSize),
     producer && !radar ? supabase.rpc("nrcs_assignment_owners", { p_district: districtKey }) : null,
   ]);
   const owners: { id: string; name: string }[] = ownerResult?.data ?? [];
@@ -73,12 +82,14 @@ export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode;
     "use server";
     await requireNrcsStaff("producer");
     const db = await createNrcsServerClient();
+    const decision = String(form.get("decision") || "");
     const { error } = await db.rpc("nrcs_decide_assignment", {
       p_id: id,
-      p_decision: String(form.get("decision") || ""),
+      p_decision: decision,
       p_owner: String(form.get("owner") || "") || null,
       p_note: String(form.get("note") || "").trim().slice(0, 4000),
     });
+    if (!error && decision === "assigned") redirect(base);
     redirect(`${base}&entry=${id}${error ? `&error=${encodeURIComponent(error.message)}` : ""}`);
   }
 
@@ -137,7 +148,7 @@ export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode;
             {owners.find(owner => owner.id === row.owner_id)?.name}
           </div>}
           {row.decision_note && <p className="whitespace-pre-wrap text-neutral-600">{row.decision_note}</p>}
-          {producer && !radar && !row.story_id && (
+          {producer && !radar && !row.story_id && !archivedDecisions.includes(row.decision || "pending") && (
             <AssignmentDecision action={decide.bind(null, row.id)} decision={row.decision || "pending"} note={row.decision_note || ""} owners={owners} />
           )}
         </article>
