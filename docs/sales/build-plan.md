@@ -18,6 +18,16 @@ subsequent clarifications in this chat. The original PDF remains at
 - Provider-neutral financial domain comes early; Stripe adapter near the end.
 - Sales is a separate Vercel app in this repository; app-only commits must not
   redeploy unrelated projects.
+- Added November 18, 2026: include the existing Chamber Event Highlight
+  administration handoff to Sales. Schedule it as Chunk 6B below; this scope
+  addition authorizes planning now, not immediate implementation or retirement
+  of the existing NRCS controls. See [the handoff plan](./chamber-highlight-handoff-plan.md).
+
+Current infrastructure status: the dedicated Sales database is now created,
+the existing migrations and hosted clearance fix are applied, and Dan confirmed
+successful owner sign-in on the live Sales app. Historical connected-check gates
+below are partly satisfied; remaining verification is tracked in
+[the hosted setup record](./hosted-setup-2026-11-18.md). Chunk 5 has not started.
 
 ## Chunks and gates
 
@@ -41,6 +51,14 @@ subsequent clarifications in this chat. The original PDF remains at
 6. **Website migration:** eligible Sales-backed public interfaces, shared
    root/DLPC placement behavior, new sizes/layouts, concurrent-safe rotation,
    tracking, calendar and archived coverage credit; remove obsolete CMS ads.
+   **6B. Chamber Event Highlight administration handoff:** add the authorized
+   Sales account/contact/status/district-coverage workflows using the existing
+   CMS API and dedicated Sales credential. Preserve CMS record authority and IDs,
+   NRCS event assignment/publication, and existing calendar presentation. Confirm
+   Sales administrator roles and district mapping; verify the complete handoff
+   while retaining NRCS administration. Request Dan's explicit cutover approval
+   only after Sales is deployed and verified, then retire the NRCS admin surface
+   through the flags on both apps and verify that event highlights still work.
 7. **NRCS fulfillment:** agreed video layouts, authenticated idempotent contracts,
    rundown insertion/order/picker, persistent alerts, restore and delivery reports.
 8. **Operations:** cancellation, refunds/make-goods, renewals, source-aware metrics,
@@ -49,7 +67,13 @@ subsequent clarifications in this chat. The original PDF remains at
 9. **Stripe plugin:** hosted checkout, verified webhooks, return verification,
    reconciliation, refunds, idempotency and late-payment conflict handling.
 10. **Launch verification:** required four-Tuesday acceptance scenario, paid
-    artwork scenario, complete edge cases, evidence and operational instructions.
+    artwork scenario, Chamber handoff/cutover regression, complete edge cases,
+    evidence and operational instructions.
+
+Chunk numbering stays stable. From the current pause after Chunk 4, six numbered
+chunks remain (5–10), plus the added 6B work package. Chunk 6B precedes Chunk 7;
+it does not depend on Stripe and does not define a new catalogue price or billing
+policy. It has its own verified-deployment and explicit-retirement approval gate.
 
 Security, audits, meaningful tests and recovery are part of each chunk. Test
 records/payments precede live campaigns. Employee payroll stays inactive until

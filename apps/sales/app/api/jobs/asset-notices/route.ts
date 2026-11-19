@@ -1,0 +1,3 @@
+import {timingSafeEqual} from "node:crypto";import {deliverAssetNotices} from "@/lib/asset-notices";
+export const runtime="nodejs";
+export async function GET(request:Request){const secret=process.env.SALES_CRON_SECRET;const actual=request.headers.get("authorization")||"";const expected="Bearer "+secret;if(!secret||secret.length<32||Buffer.byteLength(actual)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return Response.json({error:"Unauthorized"},{status:401});const result=await deliverAssetNotices();return Response.json(result,{status:result.state==="processed"?200:503});}

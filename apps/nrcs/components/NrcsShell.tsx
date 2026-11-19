@@ -6,6 +6,8 @@ import NrcsLogoutButton from "./NrcsLogoutButton";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
+  { label: "Assignment Desk", href: "/assignment-desk" },
+  { label: "Radar", href: "/radar" },
   { label: "Stories", href: "/stories" },
   { label: "Homepage & Alerts", href: "/homepage", minimumRole: "producer" },
   { label: "Programs", href: "/programs", minimumRole: "producer" },
