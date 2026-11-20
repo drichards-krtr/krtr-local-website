@@ -31,6 +31,7 @@ export function NrcsMuxUploader({
   categoryId,
   categories,
   tags,
+  onReady,
 }: {
   storyId?: string;
   editionId?: string;
@@ -38,6 +39,7 @@ export function NrcsMuxUploader({
   categoryId?: string | null;
   categories: CategoryOption[];
   tags: TagOption[];
+  onReady?: (asset: { id: string; title: string; asset_type: "video"; thumbnail_url: string | null }) => void;
 }) {
   const [title, setTitle] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId || "");
@@ -45,6 +47,9 @@ export function NrcsMuxUploader({
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [uploadedAssetId, setUploadedAssetId] = useState("");
+  const [uploadedTitle, setUploadedTitle] = useState("");
 
   async function uploadVideo(file: File) {
     setUploading(true);
@@ -67,6 +72,8 @@ export function NrcsMuxUploader({
       if (!response.ok || !payload?.uploadUrl) {
         throw new Error(payload?.error || "Unable to create Mux upload.");
       }
+      setUploadedAssetId(payload.assetId);
+      setUploadedTitle(title || file.name);
 
       setStatus("Uploading video...");
       const uploadResponse = await fetch(payload.uploadUrl, {
@@ -81,6 +88,27 @@ export function NrcsMuxUploader({
       setStatus(null);
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function refreshStatus() {
+    if (!uploadedAssetId) return;
+    setRefreshing(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/mux/assets/${uploadedAssetId}/sync`, { method: "POST" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Unable to refresh Mux status.");
+      if (payload.mux_status === "ready" && payload.mux_playback_id) {
+        setStatus("Mux processing complete. The video is ready to select.");
+        onReady?.({ id: uploadedAssetId, title: uploadedTitle || "Video", asset_type: "video", thumbnail_url: payload.thumbnail_url || null });
+      } else {
+        setStatus(`Mux status: ${payload.mux_status || "processing"}. Try again shortly.`);
+      }
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : "Unable to refresh Mux status.");
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -129,6 +157,11 @@ export function NrcsMuxUploader({
       />
       {status && <p className="text-xs text-neutral-600">{status}</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
+      {uploadedAssetId && (
+        <button type="button" disabled={uploading || refreshing} onClick={refreshStatus} className="w-fit rounded border border-neutral-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">
+          {refreshing ? "Checking Mux..." : "Refresh Mux Status"}
+        </button>
+      )}
     </div>
   );
 }
@@ -154,6 +187,7 @@ export function NrcsMuxLibraryPicker({
   const [loading, setLoading] = useState(false);
   const [videos, setVideos] = useState<VideoResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [syncingId, setSyncingId] = useState("");
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -194,6 +228,27 @@ export function NrcsMuxLibraryPicker({
     }
     setOpen(false);
     window.location.reload();
+  }
+
+  async function refreshVideo(video: VideoResult) {
+    setSyncingId(video.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/mux/assets/${video.id}/sync`, { method: "POST" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Unable to refresh Mux status.");
+      setVideos((current) => current.map((item) => item.id === video.id ? {
+        ...item,
+        mux_status: payload.mux_status || item.mux_status,
+        mux_playback_id: payload.mux_playback_id || item.mux_playback_id,
+        thumbnail_url: payload.thumbnail_url || item.thumbnail_url,
+        selectable: payload.mux_status === "ready" && Boolean(payload.mux_playback_id),
+      } : item));
+    } catch (syncError) {
+      setError(syncError instanceof Error ? syncError.message : "Unable to refresh Mux status.");
+    } finally {
+      setSyncingId("");
+    }
   }
 
   return (
@@ -260,14 +315,13 @@ export function NrcsMuxLibraryPicker({
                     <div className="text-xs text-neutral-500">
                       {video.category_name || "No category"} - {video.district_key || "shared"} - {video.mux_status}
                     </div>
-                    <button
-                      type="button"
-                      disabled={!video.selectable}
-                      onClick={() => insertVideo(video.id)}
-                      className="mt-3 rounded bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white disabled:bg-neutral-300"
-                    >
-                      {video.selectable ? "Insert Video" : "Not Ready"}
-                    </button>
+                    {video.selectable ? (
+                      <button type="button" onClick={() => insertVideo(video.id)} className="mt-3 rounded bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white">Insert Video</button>
+                    ) : (
+                      <button type="button" disabled={syncingId === video.id} onClick={() => refreshVideo(video)} className="mt-3 rounded border border-neutral-300 px-3 py-1.5 text-sm font-semibold disabled:opacity-50">
+                        {syncingId === video.id ? "Checking..." : "Refresh Status"}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
