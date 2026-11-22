@@ -28,7 +28,7 @@ const labels: Record<string, string> = {
 };
 const archivedDecisions = ["assigned", "legacy_do"];
 const assignmentViews = {
-  all: "Active pitches", pending: labels.pending, skip: labels.skip, hold: labels.hold,
+  all: "Active pitches", pending: labels.pending, skip: "Skipped", hold: labels.hold,
   need_more_info: labels.need_more_info, legacy_conditional: labels.legacy_conditional, archived: "Archived",
 };
 const tables = { assignments: "nrcs_assignments", radar: "nrcs_radar" } as const;
@@ -79,7 +79,7 @@ export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode;
     query = query.gte("created_at", fromRange.startIso).lt("created_at", toRange.endIso);
     if (view === "archived") query = query.in("decision", archivedDecisions);
     else if (view !== "all") query = query.eq("decision", view);
-    else query = query.not("decision", "in", `(${archivedDecisions.join(",")})`);
+    else query = query.not("decision", "in", `(${[...archivedDecisions, "skip"].join(",")})`);
   }
   const ordered = query.order("created_at", { ascending: !radar });
   if (!radar) ordered.order("legacy_key");
