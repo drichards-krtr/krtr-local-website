@@ -4,9 +4,18 @@ import { requireNrcsStaff } from "@/lib/auth";
 import { getNrcsDistrictContext } from "@/lib/districts";
 import { hasNrcsRoleAtLeast } from "@/lib/roles";
 import { createNrcsServerClient } from "@/lib/server";
+import { getDateTextInTimeZone, getDayRangeInTimeZone } from "@/lib/localDates";
 import AssignmentDecision from "./NrcsAssignmentDecision";
 
-export type DeskParams = { district?: string; view?: string; page?: string; error?: string; entry?: string };
+export type DeskParams = {
+  district?: string;
+  view?: string;
+  from?: string;
+  to?: string;
+  page?: string;
+  error?: string;
+  entry?: string;
+};
 type Mode = "assignments" | "radar";
 type Entry = {
   id: string; title: string; details: string; created_at: string; archived_at?: string;
@@ -26,6 +35,18 @@ const tables = { assignments: "nrcs_assignments", radar: "nrcs_radar" } as const
 const paths = { assignments: "/assignment-desk", radar: "/radar" } as const;
 const input = "rounded border border-neutral-300 p-2";
 const button = "rounded border border-neutral-300 px-3 py-2 hover:bg-neutral-100";
+function isDateText(value: string | undefined): value is string {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.toISOString().slice(0, 10) === value;
+}
+
+function shiftDate(dateText: string, days: number) {
+  const [year, month, day] = dateText.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+}
 
 export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode; params: DeskParams }) {
   const { profile } = await requireNrcsStaff();
@@ -39,16 +60,27 @@ export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode;
   const districtKey = district.district_key;
   const supabase = await createNrcsServerClient();
   const views = radar ? { active: "Active", archived: "Archived" } : assignmentViews;
-  const view = params.view && Object.hasOwn(views, params.view) ? params.view : radar ? "active" : "all";
+  const view = params.view && Object.hasOwn(views, params.view) ? params.view : radar ? "active" : "pending";
+  const today = getDateTextInTimeZone(new Date(), district.timezone);
+  const defaultFrom = shiftDate(today, -6);
+  let from = isDateText(params.from) ? params.from : defaultFrom;
+  let to = isDateText(params.to) ? params.to : today;
+  if (from > to) [from, to] = [to, from];
   const page = Math.min(100000, Math.max(1, Number.parseInt(params.page || "1", 10) || 1));
   const pageSize = 25;
-  const base = `${paths[mode]}?district=${encodeURIComponent(districtKey)}&view=${view}`;
+  const dateQuery = radar ? "" : `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  const base = `${paths[mode]}?district=${encodeURIComponent(districtKey)}&view=${view}${dateQuery}`;
   let query = supabase.from(tables[mode]).select("*").eq("district_key", districtKey);
   if (params.entry) query = query.eq("id", params.entry);
   else if (radar) query = view === "archived" ? query.not("archived_at", "is", null) : query.is("archived_at", null);
-  else if (view === "archived") query = query.in("decision", archivedDecisions);
-  else if (view !== "all") query = query.eq("decision", view);
-  else query = query.not("decision", "in", `(${archivedDecisions.join(",")})`);
+  else {
+    const fromRange = getDayRangeInTimeZone(from, district.timezone);
+    const toRange = getDayRangeInTimeZone(to, district.timezone);
+    query = query.gte("created_at", fromRange.startIso).lt("created_at", toRange.endIso);
+    if (view === "archived") query = query.in("decision", archivedDecisions);
+    else if (view !== "all") query = query.eq("decision", view);
+    else query = query.not("decision", "in", `(${archivedDecisions.join(",")})`);
+  }
   const ordered = query.order("created_at", { ascending: !radar });
   if (!radar) ordered.order("legacy_key");
   const [result, ownerResult] = await Promise.all([
@@ -109,6 +141,10 @@ export default async function NrcsAssignmentDesk({ mode, params }: { mode: Mode;
             {Object.entries(views).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
           </select>
         </label>
+        {!radar && <>
+          <label className="grid gap-1">Created from<input type="date" name="from" className={input} defaultValue={from} /></label>
+          <label className="grid gap-1">Created through<input type="date" name="to" className={input} defaultValue={to} /></label>
+        </>}
         <button className={button}>Filter</button>
         {params.entry && <Link href={base} className={button}>Back to list</Link>}
       </form>
