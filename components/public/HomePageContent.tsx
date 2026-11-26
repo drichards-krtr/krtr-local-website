@@ -287,7 +287,7 @@ export default async function HomePageContent({
 
       {priorityAlert && <section role="alert" className="mb-8 border-l-4 border-yellow-500 bg-yellow-100 p-6 text-black"><h1 className="break-words text-2xl font-semibold">{priorityAlert.headline}</h1><p className="mt-3 whitespace-pre-wrap break-words">{priorityAlert.message}</p>{priorityAlert.link_url && <a href={priorityAlert.link_url} className="mt-4 inline-block font-semibold underline">More Information</a>}</section>}
       {!priorityAlert && heroStory && (
-        <section className="mb-8 rounded-lg bg-white p-4">
+        <section className="mb-8 rounded-lg bg-white p-4 lg:mx-auto lg:max-w-[50%]">
           <a href={storyHref(heroStory)} className="block">
             {heroStory.image_url && (
               <img
